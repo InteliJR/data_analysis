@@ -6,10 +6,10 @@ import type * as Preset from "@docusaurus/preset-classic";
 
 const config: Config = {
   // Ajustar com o nome do projeto
-  title: "NovoProjeto Docs",
-  baseUrl: "/template-repo/",
-  projectName: "template-repo",
-  tagline: "Documentação do projeto NovoProjeto",
+  title: "Data Analysis Docs",
+  baseUrl: "/data_analysis/",
+  projectName: "data_analysis",
+  tagline: "Documentação do projeto Data Analysis",
 
 
   favicon: "img/favicon.ico",
