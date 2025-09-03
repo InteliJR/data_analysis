@@ -4,34 +4,35 @@ sidebar_position: 2
 
 # 📄 Visão de Produto
 
-<!-- Este documento deve ser preenchido pela área de Visão de Produto para cada novo projeto. -->
 
 ## 🗓 Informações Gerais
 
 - **Nome do Projeto:** 
-<!-- Exemplo: Sistema de Gestão de Reservas para Biblioteca -->
+Sistema de calculo de valor de produto.
 
 - **Cliente:** 
-<!-- Exemplo: Faculdade XYZ - Departamento de Biblioteconomia -->
+GR Water Solutions
 
 - **Responsável da Visão de Produto (PO):**
-<!-- Nome da pessoa responsável pelo acompanhamento e comunicação com o cliente -->
+Yanomã Fernandes Piont Konwski
 
 - **Duração Total Estimada:** 
-<!-- Exemplo: 10 semanas -->
+10 semanas
 
 - **Período na Etapa de Design (estimado):** 
-<!-- Exemplo: 2 semanas -->
+3 semanas:
+- 2 semanas para wireframe 
+- 1 semanas para protótipo 
 
 - **Período na Etapa de Desenvolvimento (estimado):** 
-<!-- Exemplo: 8 semanas -->
+6 semanas
 
 ---
 
 ## ✅ Checklist de Entrada (para iniciar o projeto)
 
-- [ ] Reunião de Kickoff com o cliente realizada
-- [ ] Objetivo do projeto compreendido
+- [X] Reunião de Kickoff com o cliente realizada
+- [X] Objetivo do projeto compreendido
 - [ ] Tecnologias necessárias mapeadas
 - [ ] Estimativa de esforço feita
 - [ ] Capacidade do time verificada
@@ -41,58 +42,66 @@ sidebar_position: 2
 
 ## 📤 Checklist de Saída (para encaminhar o projeto às próximas áreas)
 
-- [ ] Documento de Visão preenchido e validado
-- [ ] Matriz “é/não é/faz/não faz” definida
+- [X] Documento de Visão preenchido e validado
+- [X] Matriz “é/não é/faz/não faz” definida
 - [ ] Wireframes (se aplicável) finalizados
-- [ ] Epics e User Stories redigidas
-- [ ] Datas de entrada/saída em cada área definidas
-- [ ] Contrato e escopo revisados e claros
+- [X] Epics e User Stories redigidas
+- [X] Datas de entrada/saída em cada área definidas
+- [X] Contrato e escopo revisados e claros
 - [ ] Alinhamento com área de Design ou Desenvolvimento realizado
 
 ---
 
 ## 📘 Resumo do Projeto
 
-<!-- Explique brevemente o que é o projeto, sua motivação, e o problema que resolve. -->
+O projeto consiste em um sistema web para cálculo do valor de produtos, voltado para a empresa GR Water Solutions. O sistema permite cadastrar e atualizar matérias-primas, seus preços e o valor do frete fornecido por diferentes fornecedores. Além disso, possibilita o cálculo do valor dos produtos com e sem impostos, utilizando uma tabela editável de percentuais de impostos. O sistema também oferece uma área para criação e edição de fórmulas de produtos, onde é possível alocar todas as matérias-primas disponíveis. Por fim, há uma funcionalidade de simulação do valor final dos produtos e exportação dos dados em formato CSV para integração com o sistema RP da empresa. A motivação é automatizar e facilitar o processo de precificação, tornando-o mais ágil, preciso e integrado às necessidades do negócio.
 
 **Descrição:**
-<!-- Exemplo: Desenvolver um sistema web para gerenciar as reservas de salas e equipamentos da biblioteca da Faculdade XYZ. -->
+Desenvolver um sistema web para gerenciar o cadastro de matérias-primas, fórmulas de produtos, preços, frete, impostos e simulações de valores, com exportação de dados em CSV para integração com RP próprio da empresa.
 
 **Objetivos:**
-<!-- Exemplo: Digitalizar o processo de reservas, aumentar o controle de disponibilidade, facilitar a comunicação com os usuários. -->
+Automatizar o cálculo do valor de produtos.
+Facilitar a atualização de preços de matérias-primas e frete.
+Permitir simulação de valores com diferentes cenários de impostos.
+Gerar arquivos CSV para integração com RP.
+Oferecer interface para criação/edição de fórmulas de produtos.
 
 **Público-Alvo:**
-<!-- Exemplo: Alunos e funcionários da biblioteca. -->
+Equipe de precificação da GR Water Solutions, gestores de produção e analistas financeiros.
 
 ## 👤 Personas
 
-<!-- 
+
 Liste aqui as personas envolvidas no uso da aplicação. Não é necessário criar nomes fictícios ou descrições elaboradas — o objetivo é identificar os tipos de usuários que interagem com o sistema, suas funções ou necessidades principais.
 
 Exemplos:
 - Aluno: acessa o sistema para reservar salas e consultar reservas.
 - Funcionário da Biblioteca: administra reservas e atualiza a disponibilidade.
 - Professor: visualiza dados de alunos e solicita salas para atividades.
--->
 
 **Principais Funcionalidades:**
-<!-- Exemplo:
-- Cadastro e login de usuários
-- Reserva de equipamentos
-- Notificações por e-mail
-- Painel administrativo -->
+Exemplo:
+Analista de precificação: atualiza preços, simula valores e exporta dados.
+Gestor de produção: cria/edita fórmulas de produtos.
+Financeiro: analisa impacto dos impostos e custos.
 
 ---
+Cadastro e edição de matérias-primas, seus preços e impostos.
+Cadastro e edição de fórmulas de produtos.
+Tabela editável de impostos (percentuais).
+Cadastro e edição de frete (por fornecedor e transporte interno).
+Simulação do valor final do produto (com/sem impostos).
+Exportação de dados em CSV para RP.
 
 ## 🧩 Matriz "É / Não É / Faz / Não Faz"
 <div align="center">
 
 | Categoria  | Descrição |
 |-----------|-----------|
-| **É**     | <!-- Ex: Uma aplicação web acessível por desktop e mobile --> |
-| **Não É** | <!-- Ex: Um aplicativo nativo para celular --> |
-| **Faz**   | <!-- Ex: Permite reservas de salas, equipamentos, exporta relatórios em PDF --> |
-| **Não Faz** | <!-- Ex: Controle de acesso físico aos espaços da biblioteca --> |
+| **É**     | Sistema web para cálculo e simulação de valores de produtos, com exportação de dados. |
+| **Não É** | Aplicativo nativo para celular, sistema de controle físico de estoque. |
+| **Faz**   | Calcula valores de produtos, simula cenários, edita fórmulas, exporta CSV, atualiza preços e impostos. |
+| **Não Faz** | Não realiza controle de estoque físico, não faz vendas, não integra diretamente com sistemas externos. |
 
 </div>
 
@@ -100,24 +109,13 @@ Exemplos:
 
 ## 🧠 Matriz de Certezas, Suposições e Dúvidas
 
-<!--
-Esta matriz deve ser utilizada para mapear o que já sabemos com segurança (certezas), o que acreditamos mas ainda precisa ser validado (suposições), e o que ainda não sabemos ou precisa ser investigado (dúvidas).
-
-Ela pode ser preenchida em diferentes momentos:
-- Logo após a reunião de repasse da área de vendas;
-- Durante o processo de elaboração do escopo com o cliente;
-- Sempre que surgirem novas informações relevantes.
-
-Essa matriz é útil para orientar as conversas com o cliente, levantar riscos, validar premissas e organizar pontos pendentes.
--->
-
 <div align="center">
 
 | Tipo        | Descrição                                                                |
 |-------------|--------------------------------------------------------------------------|
-| **Certeza**   | <!-- Ex: O sistema deve ter autenticação via e-mail institucional -->    |
-| **Suposição** | <!-- Ex: Acreditamos que o sistema será usado principalmente via mobile --> |
-| **Dúvida**    | <!-- Ex: O cliente precisa de integração com sistema acadêmico? -->      |
+| **Certeza**   | O sistema deve permitir editar preços, fórmulas e impostos; exportar CSV. |
+| **Suposição** | O usuário irá atualizar preços e impostos com frequência.               |
+| **Dúvida**    | Qual o formato exato do CSV para o RP? Quais campos são obrigatórios?   |
 
 </div>
 
@@ -128,81 +126,68 @@ Essa matriz é útil para orientar as conversas com o cliente, levantar riscos, 
 
 ### 🔹 Epics
 
-<!-- Exemplo: -->
-- Epic 1: Gerenciamento de Usuários
-- Epic 2: Sistema de Reservas
-- Epic 3: Notificações e Alertas
-- Epic 4: Relatórios
+- Epic 1: Gerenciamento de Matérias-Primas
+- Epic 2: Gerenciamento de Fórmulas de Produtos
+- Epic 3: Simulação de Valores
+- Epic 4: Exportação de Dados
+- Epic 5: Gerenciamento de Impostos e Frete
 
 ### 🔸 User Stories
 
-<!-- Exemplo de User Story: -->
 #### US1
-- **Usuário:** Como um aluno
-- **Objetivo:** Quero reservar uma sala de estudo
-- **Justificativa:** Para garantir que terei um espaço disponível no horário desejado
-
-<br/>
+- **Usuário:** Como analista de precificação
+- **Objetivo:** Quero atualizar os preços das matérias-primas
+- **Justificativa:** Para garantir que os cálculos estejam sempre corretos
 
 #### US2
-- **Usuário:** Como um professor
-- **Objetivo:** Quero ver os alunos da minha turma
-- **Justificativa:** Para garantir que consigo acompanhá-los granularmente durante o ano letivo
+- **Usuário:** Como gestor de produção
+- **Objetivo:** Quero criar e editar fórmulas de produtos
+- **Justificativa:** Para adaptar os produtos conforme necessidade
 
-<!-- Repetir para cada funcionalidade importante -->
+#### US3
+- **Usuário:** Como analista financeiro
+- **Objetivo:** Quero simular valores com diferentes impostos
+- **Justificativa:** Para prever custos e margens
+
+#### US4
+- **Usuário:** Como analista de precificação
+- **Objetivo:** Quero exportar os dados em CSV
+- **Justificativa:** Para integrar com o sistema RP
 
 ---
 
 ## ⚙️ Requisitos Funcionais
 
-<!-- 
-Liste os requisitos funcionais do sistema, ou seja, o que o sistema deve fazer de forma objetiva. Pense em ações, comportamentos e regras que precisam estar presentes no produto final.
+RF01 - O sistema deve permitir o cadastro e edição de matérias-primas e seus preços.
 
-Os Requisitos Funcionais (RFs) podem ser:
-- Inferidos a partir de User Stories.
-- Traduções técnicas de uma US, visando o ponto de vista da implementação.
-- Divisões mais específicas e técnicas de uma única US (ou seja, uma US pode originar vários RFs).
+RF02 - O sistema deve permitir o cadastro e edição de fórmulas de produtos.
 
-Enquanto as US estão centradas nas necessidades do usuário, os RFs são mais voltados à engenharia e ao desenvolvimento. Servem como base para orientar o time técnico na hora de implementar funcionalidades específicas.
--->
+RF03 - O sistema deve permitir o cadastro e edição de percentuais de impostos.
 
-<!-- Dica 1: Numerar os requisitos ajuda na rastreabilidade durante o projeto. -->
+RF04 - O sistema deve permitir o cadastro e edição de valores de frete (fornecedor e interno).
 
-<!-- Dica 2: Agrupar os RFs por página ou outro tipo de agrupamento pode ser muito útil. -->
+RF05 - O sistema deve calcular o valor do produto com e sem impostos.
 
-<!-- 
-### Exemplo de Formato:
+RF06 - O sistema deve permitir simulação de valores de produtos.
 
-RF01 - O sistema deve permitir que usuários se cadastrem utilizando nome, e-mail institucional e senha.
-RF02 - O sistema deve permitir a criação de reservas de salas com data, horário e descrição.
-RF03 - O administrador deve poder visualizar e aprovar reservas pendentes.
-RF04 - O sistema deve enviar um e-mail automático de confirmação após uma reserva ser realizada.
--->
+RF07 - O sistema deve exportar os dados em CSV em formato específico para o RP.
 
-<!-- Preencha abaixo com os requisitos do seu projeto -->
-
-- RF01 - 
-- RF02 - 
-- RF03 - 
-- RF04 - 
+RF08 - O sistema deve poder identificar as datas de adição de cada um dos processos, a caso seja atualizado essa data deve ser alterada para data da atualização.
 
 ## 📱 Responsividade
 
 **O projeto será responsivo?**
-- [ ] Sim
-- [ ] Não
-
-**Se sim, até qual ponto?**
-- [ ] Mobile-first
-- [ ] Adaptável para tablets
-- [ ] Desktops Grandes e notebooks menores
-- [ ] Totalmente responsivo (desktop, tablet, mobile)
+- [x] Não, mas deve ser adaptável as diferentes telas de descktop. 
 
 ---
 
 ## 📌 Observações Finais
 
-<!-- Qualquer observação relevante, como restrições legais, técnicas, dependências externas ou riscos conhecidos. -->
+
+- É necessário definir o formato exato do CSV para exportação, com base na necessidade do cliente, template está sendo levantado, responsável irá adicionar em breve.
+- O impostos serão editados manualmente, lembrando que todos os impostos serão fixos, são esses impostos: IPI, PIS, CONFINS, ICMS e CONFINS.
+- Dependência de atualização frequente dos preços das matérias-primas e frete, com isso deve ter uma interface modular.
+- Risco: integração com RP depende do formato correto do CSV.
 
 ---
 
