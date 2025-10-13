@@ -4,130 +4,105 @@ sidebar_position: 3
 
 # 🎨 Design
 
-<!-- Este documento deve ser preenchido pela área de Design assim que o projeto for repassado pela área de Visão de Produto. -->
-
 ## 🗓 Informações Gerais
 
 - **Nome do Projeto:**
-<!-- Exemplo: Sistema de Gestão de Reservas para Biblioteca -->
+Sistema de Cálculo de Valor de Produto
 
 - **Responsável de Design:**
-<!-- Nome da pessoa responsável pela coordenação e entrega da parte visual do projeto -->
+Davi Nascimento de Jesus
 
 - **Data de Entrada no Design:**
-<!-- Exemplo: 05/04/2025 -->
+03/09/2025
 
 - **Data de Entrega Estimada para Desenvolvimento:**
-<!-- Exemplo: 19/04/2025 -->
+10/10/2025
 
 - **Link para Documento de Visão de Produto:**
-<!-- Exemplo: https://github.com/empresa/docs/projeto-reservas/visao.md -->
+[Visão de Produto](./visao-produto.md)
 
 ---
 
 ## ✅ Checklist de Entrada (antes de iniciar o design)
 
-- [ ] Documento de Visão de Produto recebido e validado
-- [ ] Escopo e funcionalidades compreendidos
-- [ ] Personas identificadas
-- [ ] Alinhamento com PO realizado
-- [ ] Capacidade da equipe verificada
-- [ ] Deadline estabelecido
+- [x] Documento de Visão de Produto recebido e validado
+- [x] Escopo e funcionalidades compreendidos
+- [x] Personas identificadas
+- [x] Alinhamento com PO realizado
+- [x] Capacidade da equipe verificada
+- [x] Deadline estabelecido
 
 ---
 
 ## 📤 Checklist de Saída (antes de repassar para Desenvolvimento)
 
-- [ ] Wireframes
-- [ ] Protótipo final validado pelo cliente
-- [ ] Layouts organizados no Figma
-- [ ] Especificações visuais claras (cores, tamanhos, espaçamentos)
-- [ ] Responsividade definida
-- [ ] Assets entregues (logos, imagens, ícones)
+- [x] Wireframes
+- [x] Protótipo final validado pelo cliente
+- [x] Layouts organizados no Figma
+- [x] Especificações visuais claras (cores, tamanhos, espaçamentos)
+- [x] Responsividade definida
+- [x] Assets entregues (logos, imagens, ícones)
 
 ---
 
 ## 🎯 Objetivo do Design
 
-<!-- Explique brevemente o que o design precisa atingir em termos de comunicação visual, clareza de uso, tom da marca etc. -->
-
-<!-- **Exemplo:**
-Criar uma interface moderna, clara e acessível para facilitar reservas de salas em uma biblioteca universitária. A identidade visual deve transmitir profissionalismo e simplicidade, voltada para estudantes e servidores. -->
-
+Validar as funcionalidades descritas na Visão de Produto, garantindo que cada etapa do processo atualmente feito em planilhas possa ser totalmente desenvolvida e operacionalizada dentro da plataforma, por meio de interfaces claras e organizadas.
 ---
 
 ## 🖼 Wireframes
 
-<!-- Inserir aqui os wireframes iniciais do projeto, com links para Figma ou imagens embutidas, se possível -->
-<!-- Os wireframes devem ser validados com o cliente a fim de se determinar o fluxo da solução junto ao cliente. -->
+[Figma](https://www.figma.com/design/sEFyigQSx69tsCe503Q4lI/GR-Water?node-id=0-1&p=f&t=RywGLagU4COYauu6-0)
 
-**Link para protótipo (Figma, Excalidraw, etc):**
-<!-- Exemplo: https://figma.com/projeto-reservas -->
-
+**Link para protótipo:**
+[Figma](https://www.figma.com/design/sEFyigQSx69tsCe503Q4lI/GR-Water?node-id=0-1&p=f&t=RywGLagU4COYauu6-0)
 ---
 
-## 🖌 Identidade Visual
+### 🖌 Identidade Visual
 
-### 🅰️ Tipografia
+#### 🅰️ Tipografia
 
-- **Fonte Primária:** 
-<!-- Exemplo: Inter -->
-
-<!-- - **Fonte Secundária (se houver):** -->
-<!-- Exemplo: Roboto Mono -->
-
+- **Fonte Primária:** Inter  
 - **Tamanhos padrão:**
-<!-- Exemplo:
-  - Títulos: 24px / Semibold
-  - Texto: 16px / Regular
-  - Notas secundárias: 12px / Light
--->
+  - Títulos: 24px  
+  - Subtítulos e botões: 16px  
+  - Texto da tabela e menus: 14px  
 
 ---
 
-### 🎨 Paleta de Cores
+#### 🎨 Paleta de Cores
 
-- **Cor Primária:** `#003366` <!-- Exemplo: Azul escuro -->
-- **Cor Secundária:** `#F4A261` <!-- Exemplo: Laranja suave -->
-- **Cor de Fundo:** `#FFFFFF`
-- **Texto Principal:** `#333333`
-- **Feedback positivo:** `#2A9D8F`
-- **Feedback negativo:** `#E76F51`
-
-<!-- Pode-se adicionar um print ou link para o sistema de design no Figma -->
-
----
-
-### 🧩 Estilo de Ícones
-
-- [ ] Filled
-- [ ] Outlined
-- [ ] Duotone
-- [ ] Outro (especifique): ____________
-
-**Fonte dos ícones:**
-<!-- Exemplo: Lucide, Feather Icons, Material Symbols, etc -->
+| Elemento             | Cor (Hex)     | Observação                                |
+|----------------------|---------------|--------------------------------------------|
+| Cor Primária         | `#003366`     | Azul escuro (menu lateral)                |
+| Cor Secundária       | `#F4A261`     | Laranja claro (ícones/realces)            |
+| Fundo principal      | `#FFFFFF`     | Branco                                     |
+| Fundo da tabela      | `#FAF5F1`     | Bege claro nas linhas alternadas da tabela |
+| Texto principal      | `#333333`     | Cinza escuro (texto geral)                 |
+| Feedback positivo    | `#2A9D8F`     | Verde (confirmações, sucesso)              |
+| Feedback negativo    | `#E76F51`     | Vermelho (erros, alertas)                  |
 
 ---
 
-## 🧼 Limitações e Restrições Visuais
+#### 🧩 Estilo de Ícones
 
-<!-- Alguma exigência por parte do cliente? Algo que deve ser evitado (ex: "sem imagens", "evitar uso de ícones", etc)? -->
+- **Estilo:** Outlined  
+- **Fonte dos ícones:** Iconify  
 
-<!-- 
-**Exemplo:**
-Cliente não quer o uso de imagens de pessoas reais. Todo o visual deve ser baseado em formas, ícones e cores neutras. 
--->
+---
+
+### 🧼 Limitações e Restrições Visuais
+
+- Ícones são monocromáticos e discretos, alinhados ao estilo outlined  
+- A paleta de cores é sóbria; não devem ser usados tons vibrantes fora da identidade definida  
+- A tipografia deve manter legibilidade e hierarquia visual consistente nos diferentes contextos da plataforma  
 
 ---
 
 ## 🖼 Protótipo
 
 **Link para protótipo navegável (Figma, Adobe XD, etc):**
-<!-- Exemplo: https://figma.com/projeto-reservas -->
-
-**Observações sobre navegação e testes:**
-<!-- Exemplo: A tela de confirmação de reserva ainda será validada com o cliente -->
+[Figma](https://www.figma.com/proto/sEFyigQSx69tsCe503Q4lI/GR-Water?node-id=76-147&t=RywGLagU4COYauu6-0&scaling=min-zoom&content-scaling=fixed&page-id=0%3A1)
 
 ---
 
@@ -137,23 +112,20 @@ Cliente não quer o uso de imagens de pessoas reais. Todo o visual deve ser base
 
 - [ ] Mobile
 - [ ] Tablet
-- [ ] Desktop
+- [x] Desktop
 - [ ] Outros: ____________
 
 **Observações:**
-<!-- Exemplo: Algumas tabelas estão otimizadas apenas para tablet e desktop. -->
+Não foi solicitado para o projeto nenhum outro critério de responsividade até o momento. Ponto passível de alteração posterior.
 
 ---
 
 ## 📌 Observações Finais
 
-<!-- Algum risco, dependência externa ou algo a ser monitorado? -->
-<!-- Também pode incluir aprendizados para o próximo projeto. -->
-
-<!-- 
-**Exemplo:**
-Cliente pediu uma versão dark mode, mas isso não foi incluído no escopo inicial. Pode ser discutido como melhoria futura. 
--->
+- O botão de **subir arquivos em lote** ainda está em análise.  
+  A funcionalidade poderá ser descartada caso a **integração futura com o sistema Protheus** cubra a necessidade de inserção em massa.  
+- Caso a necessidade permaneça, será definida uma estrutura para upload múltiplo com validação de conteúdo, formatos permitidos e feedback visual claro.  
+- Recomenda-se manter a modularidade da interface por componente funcional (cadastro, fórmula, simulação, exportação), facilitando testes e possíveis iterações futuras.  
 
 ---
 
