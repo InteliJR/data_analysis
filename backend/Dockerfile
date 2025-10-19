@@ -11,8 +11,8 @@ RUN apk add --no-cache openssl libc6-compat
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Instalar TODAS as dependências (incluindo devDependencies)
-RUN npm install
+# Instalar TODAS as dependências com --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 # Gerar Prisma Client
 RUN npx prisma generate
@@ -39,8 +39,8 @@ RUN apk add --no-cache openssl libc6-compat
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Instalar dependências
-RUN npm ci
+# Instalar dependências com --legacy-peer-deps
+RUN npm ci --legacy-peer-deps
 
 # Gerar Prisma Client
 RUN npx prisma generate
