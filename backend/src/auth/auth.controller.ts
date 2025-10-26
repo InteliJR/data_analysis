@@ -58,15 +58,6 @@ export class AuthController {
     return this.authService.logout(req.user.id, refreshToken);
   }
 
-  // Logout de todos os dispositivos
-  @SkipThrottle()
-  @UseGuards(JwtAuthGuard)
-  @Post('logout-all')
-  @HttpCode(HttpStatus.OK)
-  async logoutAll(@Request() req: any) {
-    return this.authService.logoutAllDevices(req.user.id);
-  }
-
   // Perfil: sem rate limiting (usuário autenticado)
   @SkipThrottle()
   @UseGuards(JwtAuthGuard)

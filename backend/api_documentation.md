@@ -47,6 +47,10 @@ Authorization: Bearer <token>
 - `400 Bad Request`: Dados inválidos ou email já cadastrado
 - `422 Unprocessable Entity`: Validação falhou
 
+**Nota:** 
+- Campo `role` é opcional. Se não informado, será criado com role padrão definido no sistema.
+- Usuário é criado com `isActive: false` e precisa ser ativado por um ADMIN para fazer login.
+
 ---
 
 ### 2. Login
@@ -66,14 +70,14 @@ Authorization: Bearer <token>
 **Response:** `200 OK`
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": "uuid-v4",
-    "email": "usuario@exemplo.com",
-    "name": "Nome do Usuário",
-    "role": "COMERCIAL",
-    "isActive": true
-  }
+ "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+ "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+ "user": {
+  "id": "uuid-v4",
+  "email": "usuario@exemplo.com",
+  "name": "Nome do Usuário",
+  "createdAt": "2025-10-26T10:00:00.000Z"
+ }
 }
 ```
 
@@ -93,6 +97,14 @@ Authorization: Bearer <token>
 ```
 Authorization: Bearer <token>
 ```
+
+**Request Body:**
+```json
+{
+ "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
 
 **Response:** `200 OK`
 ```json
@@ -114,10 +126,43 @@ Authorization: Bearer <token>
 Authorization: Bearer <token>
 ```
 
+**Request Body:**
+```json
+{
+ "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
 **Response:** `200 OK`
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+ "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+ "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+---
+
+### 4.5. Obter Perfil do Usuário Autenticado
+
+**GET** `/auth/me`
+
+**Permissões:** Usuário autenticado
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response:** `200 OK`
+```json
+{
+ "id": "uuid-v4",
+ "email": "usuario@exemplo.com",
+ "name": "Nome do Usuário",
+ "role": "COMERCIAL",
+ "isActive": true,
+ "createdAt": "2025-10-26T10:00:00.000Z"
 }
 ```
 
@@ -141,6 +186,8 @@ Authorization: Bearer <token>
 &sortBy=name
 &sortOrder=asc
 ```
+
+_**Nota:** Usuários desativados (isActive: false) não conseguem fazer login, mas permanecem no sistema para preservar integridade dos logs e relações._
 
 **Response:** `200 OK`
 ```json
@@ -200,9 +247,10 @@ Authorization: Bearer <token>
 **Request Body:**
 ```json
 {
-  "name": "Novo Nome",
-  "role": "LOGISTICA",
-  "isActive": false
+ "name": "Novo Nome",
+ "role": "LOGISTICA",
+ "isActive": false,
+ "password": "nova_senha_segura_123"
 }
 ```
 
@@ -219,20 +267,77 @@ Authorization: Bearer <token>
 }
 ```
 
+**Nota:** 
+- _Para desativar um usuário, envie `isActive: false`. Usuários desativados não conseguem fazer login._
+- _O campo `password` é opcional e permite que o ADMIN redefina a senha do usuário._
+- _Apenas ADMIN pode modificar `role` e `isActive`._
+
+**Nota sobre Exclusão de Usuários:** 
+- _Não é possível deletar usuários do sistema devido às relações de auditoria (logs de alterações em matérias-primas, produtos criados, etc.). Para impedir acesso, desative o usuário através do endpoint de atualização enviando `isActive: false`._
+
 ---
 
-### 8. Deletar Usuário
+### 8. Atualizar Próprio Perfil
 
-**DELETE** `/users/:id`
+**PATCH** `/users/me`
 
-**Permissões:** ADMIN
+**Permissões:** Usuário autenticado
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Request Body:**
+```json
+{
+ "name": "Novo Nome",
+ "password": "nova_senha_123"
+}
+```
 
 **Response:** `200 OK`
 ```json
 {
-  "message": "Usuário deletado com sucesso"
+ "id": "uuid-v4",
+ "email": "usuario@exemplo.com",
+ "name": "Novo Nome",
+ "role": "COMERCIAL",
+ "isActive": true,
+ "createdAt": "2025-10-26T10:00:00.000Z",
+ "updatedAt": "2025-10-26T10:30:00.000Z"
 }
 ```
+
+_**Nota:** Usuários comuns só podem alterar seu próprio nome e senha. Não podem modificar email, role ou status._
+
+---
+
+### 9. Obter Próprio Perfil
+
+**GET** `/users/me`
+
+**Permissões:** Usuário autenticado
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Response:** `200 OK`
+```json
+{
+  "id": "uuid-v4",
+  "email": "usuario@exemplo.com",
+  "name": "Nome do Usuário",
+  "role": "COMERCIAL",
+  "isActive": true,
+  "createdAt": "2025-10-26T10:00:00.000Z",
+  "updatedAt": "2025-10-26T10:00:00.000Z"
+}
+```
+
+_Nota: Este endpoint retorna os dados completos do usuário autenticado. Diferente do /auth/me que retorna apenas informações básicas._
 
 ---
 
@@ -822,7 +927,7 @@ uuid-1,Transporte Rodoviário,Frete com prazo de 5 dias,30,150.00,BRL,25.50,"ICM
 
 **GET** `/raw-materials`
 
-**Permissões:** ADMIN, COMERCIAL
+**Permissões:** ADMIN, COMERCIAL, IMPOSTO
 
 **Query Parameters:**
 ```
@@ -883,7 +988,7 @@ uuid-1,Transporte Rodoviário,Frete com prazo de 5 dias,30,150.00,BRL,25.50,"ICM
 
 **GET** `/raw-materials/:id`
 
-**Permissões:** ADMIN, COMERCIAL
+**Permissões:** ADMIN, COMERCIAL, IMPOSTO
 
 **Query Parameters:**
 ```
@@ -1093,8 +1198,7 @@ uuid-1,Transporte Rodoviário,Frete com prazo de 5 dias,30,150.00,BRL,25.50,"ICM
   "filters": {
     "search": "resina",
     "inputGroup": "Resinas",
-    "measurement": "",
-    "Unit": "KG"
+    "measurementUnit": "KG"
   },
   "includeDetails": true
 }
@@ -2076,11 +2180,12 @@ Impostos marcados como `recoverable: true` são considerados premissas recuperá
 - Visualizar e gerenciar produtos
 - Visualizar e gerenciar matérias-primas
 - Visualizar impostos (para associar a matérias-primas)
-- Visualizar fretes (para associar a matérias-primas)
-- Não pode gerenciar usuários, impostos ou fretes
+- Visualizar fretes existentes apenas através de autocomplete (para associar a matérias-primas, sem acesso à gestão completa)
+- Não pode gerenciar usuários, impostos ou criar/editar/deletar fretes
 
 **LOGISTICA:**
-- Visualizar e gerenciar fretes
+- Visualizar e gerenciar fretes (CRUD completo)
+- Único além de ADMIN que tem acesso à gestão completa de fretes
 - Não acessa produtos, matérias-primas, impostos ou usuários
 
 **IMPOSTO:**
@@ -2219,22 +2324,15 @@ Todos os endpoints de exportação suportam:
 }
 ```
 
-**Excel (futuro):**
-```json
-{
-  "format": "xlsx",
-  "sheetName": "Dados"
-}
-```
-
----
-
 ## Rate Limiting
 
 A API implementa rate limiting para proteger contra abuso:
 
-- **Autenticação:** 5 tentativas por IP a cada 15 minutos
-- **Endpoints gerais:** 100 requisições por minuto por usuário
+- **Registro:** 5 tentativas por minuto
+- **Login:** 3 tentativas por minuto (proteção contra brute force)
+- **Refresh Token:** 10 tentativas por minuto
+- **Logout, Perfil (me) e endpoints gerais autenticados:** Sem rate limiting (usuário já autenticado)
+- **Outros endpoints públicos:** 100 requisições por minuto por IP
 - **Exportações:** 10 requisições por hora por usuário
 
 **Headers de Rate Limit:**
@@ -2247,10 +2345,11 @@ X-RateLimit-Reset: 1698345600
 ## Validações de Dados
 
 ### Usuários
-- `email`: Formato de email válido, único no sistema
-- `password`: Mínimo 8 caracteres, contendo letras e números
+- `email`: Formato de email válido, único no sistema, não pode ser alterado após criação
+- `password`: Mínimo 8 caracteres, sem requisitos adicionais de complexidade
 - `name`: Mínimo 3 caracteres, máximo 100
-- `role`: Deve ser um dos valores do enum UserRole
+- `role`: Deve ser um dos valores do enum UserRole (apenas ADMIN pode alterar)
+- `isActive`: Boolean, padrão true (apenas ADMIN pode alterar)
 
 ### Impostos
 - `name`: Obrigatório, mínimo 3 caracteres
@@ -2306,14 +2405,17 @@ Todos os campos alterados são registrados em `RawMaterialChangeLog`:
 - Usuário que fez a alteração
 - Data e hora da alteração
 
-### Acessos ao Sistema (Futuro)
-- Login/logout de usuários
-- Tentativas de acesso negado
-- Operações críticas (criação/exclusão)
-
 ---
 
 ## Endpoints de Busca e Autocomplete
+
+Os endpoints de busca/autocomplete são essenciais para a usabilidade do sistema. São utilizados quando:
+- O usuário precisa **associar uma matéria-prima a um produto** e precisa buscar na lista de matérias-primas disponíveis
+- Ao criar/editar uma matéria-prima e precisa **selecionar um imposto** da lista de impostos cadastrados
+- Ao criar/editar uma matéria-prima e precisa **selecionar um frete** da lista de fretes cadastrados  
+- Ao criar/editar um produto e precisa **selecionar um custo fixo** (opcional)
+
+Estes endpoints retornam resultados filtrados rapidamente enquanto o usuário digita, melhorando significativamente a experiência de uso.
 
 ### 45. Buscar Matérias-Primas (Autocomplete)
 
@@ -2438,141 +2540,6 @@ Todos os campos alterados são registrados em `RawMaterialChangeLog`:
 
 ---
 
-## Estatísticas e Dashboard (Futuro)
-
-### 49. Obter Estatísticas Gerais
-
-**GET** `/statistics/overview`
-
-**Permissões:** ADMIN
-
-**Response:** `200 OK`
-```json
-{
-  "products": {
-    "total": 200,
-    "withFixedCost": 150,
-    "averagePrice": 125.50
-  },
-  "rawMaterials": {
-    "total": 350,
-    "byMeasurementUnit": {
-      "KG": 120,
-      "L": 80,
-      "UN": 150
-    },
-    "averagePrice": 45.30
-  },
-  "taxes": {
-    "total": 8,
-    "withRecoverableItems": 5
-  },
-  "freights": {
-    "total": 15,
-    "byCurrency": {
-      "BRL": 10,
-      "USD": 3,
-      "EUR": 2
-    }
-  },
-  "fixedCosts": {
-    "total": 5,
-    "totalCostSum": 515510.45,
-    "averageOverhead": 0.6500
-  },
-  "users": {
-    "total": 25,
-    "active": 22,
-    "byRole": {
-      "ADMIN": 2,
-      "COMERCIAL": 15,
-      "LOGISTICA": 5,
-      "IMPOSTO": 3
-    }
-  }
-}
-```
-
----
-
-## Batch Operations (Operações em Lote)
-
-### 50. Atualizar Múltiplos Produtos
-
-**PATCH** `/products/batch`
-
-**Permissões:** ADMIN
-
-**Request Body:**
-```json
-{
-  "productIds": ["uuid-1", "uuid-2", "uuid-3"],
-  "updates": {
-    "fixedCostId": "uuid-fixed-cost"
-  }
-}
-```
-
-**Response:** `200 OK`
-```json
-{
-  "updated": 3,
-  "failed": 0,
-  "results": [
-    {
-      "id": "uuid-1",
-      "success": true
-    },
-    {
-      "id": "uuid-2",
-      "success": true
-    },
-    {
-      "id": "uuid-3",
-      "success": true
-    }
-  ]
-}
-```
-
----
-
-### 51. Atualizar Múltiplas Matérias-Primas
-
-**PATCH** `/raw-materials/batch`
-
-**Permissões:** ADMIN
-
-**Request Body:**
-```json
-{
-  "rawMaterialIds": ["uuid-1", "uuid-2"],
-  "updates": {
-    "taxId": "uuid-new-tax"
-  }
-}
-```
-
-**Response:** `200 OK`
-```json
-{
-  "updated": 2,
-  "failed": 0,
-  "results": [
-    {
-      "id": "uuid-1",
-      "success": true
-    },
-    {
-      "id": "uuid-2",
-      "success": true
-    }
-  ]
-}
-```
-
----
-
 ## Importação de Dados
 
 ### 52. Importar Matérias-Primas (CSV)
@@ -2692,15 +2659,16 @@ code,name,description,fixedCostCode,rawMaterialCode1,quantity1,rawMaterialCode2,
 
 | Módulo | Endpoints | Permissões Principais |
 |--------|-----------|----------------------|
-| Auth | 4 | Público, Autenticado |
-| Users | 5 | ADMIN |
+| Auth | 5 | Público, Autenticado |
+| Users | 5 | ADMIN, Próprio usuário |
 | Taxes | 6 | ADMIN, IMPOSTO |
 | Freights | 6 | ADMIN, LOGISTICA |
-| Raw Materials | 8 | ADMIN, COMERCIAL |
+| Raw Materials | 8 | ADMIN, COMERCIAL, IMPOSTO (read) |
 | Products | 7 | ADMIN, COMERCIAL |
 | Fixed Costs | 7 | ADMIN |
 | Export | 1 | ADMIN |
 | Search | 4 | Variado |
+| Import | 2 | ADMIN |
 | Health | 1 | Público |
 
-**Total: 49 endpoints principais + 4 futuros/planejados**
+**Total: 52 endpoints principais**

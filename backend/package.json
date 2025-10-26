@@ -1,8 +1,8 @@
 {
-  "name": "backend",
+  "name": "gw-backend",
   "version": "0.0.1",
   "description": "",
-  "author": "",
+  "author": "Inteli_Junior",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
