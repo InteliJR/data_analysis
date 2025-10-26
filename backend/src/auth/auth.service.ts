@@ -2,6 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
 import { TokenRevocationService } from '../token-revocation/token-revocation.service';
+import { UserRole } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -11,9 +12,9 @@ export class AuthService {
     private tokenRevocationService: TokenRevocationService,
   ) {}
 
-  async register(email: string, name: string, password: string) {
-    const user = await this.usersService.create(email, name, password);
-    const tokens = await this.generateTokens(user.id, user.email);
+  async register(email: string, name: string, password: string, role?: UserRole) {
+    const user = await this.usersService.create(email, name, password, role);
+    const tokens = await this.generateTokens(user.id, user.email, user.role);
 
     return {
       user,
@@ -24,7 +25,7 @@ export class AuthService {
   async login(email: string, password: string) {
     const user = await this.usersService.findByEmail(email);
 
-    if (!user) {
+    if (!user || !user.isActive) {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
@@ -37,13 +38,14 @@ export class AuthService {
       throw new UnauthorizedException('Credenciais inválidas');
     }
 
-    const tokens = await this.generateTokens(user.id, user.email);
+    const tokens = await this.generateTokens(user.id, user.email, user.role);
 
     return {
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
+        role: user.role,
         createdAt: user.createdAt,
       },
       ...tokens,
@@ -54,8 +56,8 @@ export class AuthService {
     return this.usersService.findById(userId);
   }
 
-  private async generateTokens(userId: string, email: string) {
-    const payload = { sub: userId, email };
+  private async generateTokens(userId: string, email: string, role: UserRole) {
+    const payload = { sub: userId, email, role };
 
     const accessToken = await this.jwtService.signAsync(payload);
 
@@ -72,7 +74,6 @@ export class AuthService {
 
   async refreshTokens(refreshToken: string) {
     try {
-      // Verifica se o token está na blacklist
       const isRevoked =
         await this.tokenRevocationService.isTokenRevoked(refreshToken);
       if (isRevoked) {
@@ -83,7 +84,7 @@ export class AuthService {
         secret: process.env.JWT_REFRESH_SECRET || 'refresh-secret-key',
       });
 
-      return this.generateTokens(payload.sub, payload.email);
+      return this.generateTokens(payload.sub, payload.email, payload.role);
     } catch {
       throw new UnauthorizedException('Refresh token inválido');
     }
@@ -91,14 +92,12 @@ export class AuthService {
 
   async logout(userId: string, refreshToken: string) {
     try {
-      // Decodifica o token para pegar a data de expiração
       const decoded = await this.jwtService.verifyAsync(refreshToken, {
         secret: process.env.JWT_REFRESH_SECRET || 'refresh-secret-key',
       });
 
       const expiresAt = new Date(decoded.exp * 1000);
 
-      // Adiciona à blacklist
       await this.tokenRevocationService.revokeToken(
         refreshToken,
         userId,

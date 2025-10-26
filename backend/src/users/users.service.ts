@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { UserRole } from '@prisma/client';
 import * as argon2 from 'argon2';
 
 @Injectable()
@@ -12,7 +13,12 @@ export class UsersService {
 
   private readonly pepper = process.env.PASSWORD_PEPPER || '';
 
-  async create(email: string, name: string, password: string) {
+  async create(
+    email: string,
+    name: string,
+    password: string,
+    role: UserRole = UserRole.COMERCIAL,
+  ) {
     const existingUser = await this.prisma.user.findUnique({
       where: { email },
     });
@@ -34,11 +40,15 @@ export class UsersService {
         email,
         name,
         password: hashedPassword,
+        role,
+        isActive: true,
       },
       select: {
         id: true,
         email: true,
         name: true,
+        role: true,
+        isActive: true,
         createdAt: true,
       },
     });
@@ -59,6 +69,8 @@ export class UsersService {
         id: true,
         email: true,
         name: true,
+        role: true,
+        isActive: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -69,6 +81,41 @@ export class UsersService {
     }
 
     return user;
+  }
+
+  async findAll() {
+    return this.prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async update(
+    id: string,
+    data: { name?: string; role?: UserRole; isActive?: boolean },
+  ) {
+    await this.findById(id);
+
+    return this.prisma.user.update({
+      where: { id },
+      data,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        isActive: true,
+        updatedAt: true,
+      },
+    });
   }
 
   async validatePassword(user: any, password: string): Promise<boolean> {
