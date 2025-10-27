@@ -78,7 +78,7 @@ export default function Login() {
             - 'w-full' e 'max-w-lg' (512px) fazem ela ser grande e responsiva.
             - 'mb-10' para dar mais espaço.
           */}
-          <div className="rounded-3xl bg-gray-100/30 p-4 mb-2">
+          <div className="rounded-3xl bg-gray-100/30 p-4 pb-6 mb-6">
               <img
                 src="/logo_symbol_and_letters_light.png"
                 alt="Logo Sistema de Precificação"
