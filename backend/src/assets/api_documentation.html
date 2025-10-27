@@ -1905,7 +1905,7 @@ Content-Disposition: attachment; filename="relatorio-consolidado-2025-10-26.zip"
   "version": "1.0.0"
 }
 </code></pre>
-<hr />
+<hr /> <h3 id="435exibirdocumentacao">43.5. Exibir Documentação da API</h3> <p><strong>GET</strong> <code>/docs</code></p> <p><strong>Permissões:</strong> Público</p> <p><strong>Response (Success):</strong> <code>200 OK</code></p> <ul> <li>Retorna uma página <code>Content-Type: text/html</code> com a documentação estática da API.</li> </ul> <p><strong>Response (Error):</strong> <code>404 Not Found</code></p> <pre><code class="json language-json">{ "statusCode": 404, "message": "Documentation file not found", "error": "Not Found" } </code></pre> <hr />
 <h2 id="regrasdenegciodetalhadas">Regras de Negócio Detalhadas</h2>
 <h3 id="clculodepreosdeprodutos">Cálculo de Preços de Produtos</h3>
 <p>O preço de um produto é calculado seguindo estas etapas:</p>
@@ -2386,19 +2386,77 @@ updateExisting: false
 </ul>
 <hr />
 <h2 id="resumodeendpointspormdulo">Resumo de Endpoints por Módulo</h2>
-<p>| Módulo | Endpoints | Permissões Principais |
-    |--------|-----------|----------------------|
-    | Auth | 5 | Público, Autenticado |
-    | Users | 5 | ADMIN, Próprio usuário |
-    | Taxes | 6 | ADMIN, IMPOSTO |
-    | Freights | 6 | ADMIN, LOGISTICA |
-    | Raw Materials | 8 | ADMIN, COMERCIAL, IMPOSTO (read) |
-    | Products | 7 | ADMIN, COMERCIAL |
-    | Fixed Costs | 7 | ADMIN |
-    | Export | 1 | ADMIN |
-    | Search | 4 | Variado |
-    | Import | 2 | ADMIN |
-    | Health | 1 | Público |</p>
-<p><strong>Total: 52 endpoints principais</strong></p>
+<table>
+  <thead>
+    <tr>
+      <th>Módulo</th>
+      <th>Endpoints</th>
+      <th>Permissões Principais</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Auth</td>
+      <td>5</td>
+      <td>Público, Autenticado</td>
+    </tr>
+    <tr>
+      <td>Users</td>
+      <td>5</td>
+      <td>ADMIN, Próprio usuário</td>
+    </tr>
+    <tr>
+      <td>Taxes</td>
+      <td>6</td>
+      <td>ADMIN, IMPOSTO</td>
+    </tr>
+    <tr>
+      <td>Freights</td>
+      <td>6</td>
+      <td>ADMIN, LOGISTICA</td>
+    </tr>
+    <tr>
+      <td>Raw Materials</td>
+      <td>8</td>
+      <td>ADMIN, COMERCIAL, IMPOSTO (read)</td>
+    </tr>
+    <tr>
+      <td>Products</td>
+      <td>7</td>
+      <td>ADMIN, COMERCIAL</td>
+    </tr>
+    <tr>
+      <td>Fixed Costs</td>
+      <td>7</td>
+      <td>ADMIN</td>
+    </tr>
+    <tr>
+      <td>Export</td>
+      <td>1</td>
+      <td>ADMIN</td>
+    </tr>
+    <tr>
+      <td>Search</td>
+      <td>4</td>
+      <td>Variado</td>
+    </tr>
+    <tr>
+      <td>Import</td>
+      <td>2</td>
+      <td>ADMIN</td>
+    </tr>
+    <tr>
+      <td>Health</td>
+      <td>1</td>
+      <td>Público</td>
+    </tr>
+    <tr>
+      <td>docs</td>
+      <td>1</td>
+      <td>Público</td>
+    </tr>
+  </tbody>
+</table>
+<p><strong>Total: 53 endpoints principais</strong></p>
 </body>
 </html>

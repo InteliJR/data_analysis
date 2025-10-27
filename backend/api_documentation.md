@@ -2109,6 +2109,28 @@ Content-Disposition: attachment; filename="relatorio-consolidado-2025-10-26.zip"
 
 ---
 
+### 43.5. Exibir Documentação da AP
+
+**GET** `/docs`
+
+**Permissões:** Público
+
+**Response (Success):** `200 OK`
+
+  * Retorna uma página `Content-Type: text/html` com a documentação estática da API.
+
+**Response (Error):** `404 Not Found`
+
+```json
+{
+  "statusCode": 404,
+  "message": "Documentation file not found",
+  "error": "Not Found"
+}
+```
+
+---
+
 ## Regras de Negócio Detalhadas
 
 ### Cálculo de Preços de Produtos
@@ -2669,6 +2691,6 @@ code,name,description,fixedCostCode,rawMaterialCode1,quantity1,rawMaterialCode2,
 | Export | 1 | ADMIN |
 | Search | 4 | Variado |
 | Import | 2 | ADMIN |
-| Health | 1 | Público |
+| Health | 2 | Público |
 
-**Total: 52 endpoints principais**
+**Total: 53 endpoints principais**
