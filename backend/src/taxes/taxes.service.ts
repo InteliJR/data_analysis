@@ -1,7 +1,10 @@
+// src/taxes/taxes.service.ts
+
 import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFreightTaxDto } from './dto/create-freight-tax.dto';
@@ -27,33 +30,35 @@ export class TaxesService {
     const sortBy = query.sortBy || 'name';
     const sortOrder = query.sortOrder || 'asc';
 
-    // Construir filtro de busca
     const where: Prisma.FreightTaxWhereInput = {};
 
     if (query.search) {
-      where.OR = [
-        { name: { contains: query.search, mode: 'insensitive' } },
-        // Busca se ALGUM frete associado tem esse nome
-        {
-          freights: {
-            some: {
-              name: { contains: query.search, mode: 'insensitive' },
-            },
-          },
-        },
-      ];
+      where.name = { contains: query.search, mode: 'insensitive' };
     }
 
-    // Executar consulta com paginação
+    const validSortFields = ['name', 'rate', 'createdAt', 'updatedAt'];
+    const shouldSortByCount = sortBy === 'freightsCount';
+
+    let orderBy: any = {};
+    if (validSortFields.includes(sortBy)) {
+      orderBy = { [sortBy]: sortOrder };
+    } else if (!shouldSortByCount) {
+      orderBy = { name: 'asc' };
+    }
+
     const [data, total] = await Promise.all([
       this.prisma.freightTax.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { [sortBy]: sortOrder },
+        orderBy: shouldSortByCount ? undefined : orderBy,
         include: {
+          _count: {
+            select: {
+              freights: true,
+            },
+          },
           freights: {
-            // PLURAL
             select: {
               id: true,
               name: true,
@@ -64,8 +69,20 @@ export class TaxesService {
       this.prisma.freightTax.count({ where }),
     ]);
 
+    let processedData = data.map((tax) => ({
+      ...tax,
+      freightsCount: tax._count.freights,
+    }));
+
+    if (shouldSortByCount) {
+      processedData.sort((a, b) => {
+        const diff = a.freightsCount - b.freightsCount;
+        return sortOrder === 'asc' ? diff : -diff;
+      });
+    }
+
     return {
-      data,
+      data: processedData,
       meta: {
         total,
         page,
@@ -80,10 +97,20 @@ export class TaxesService {
       where: { id },
       include: {
         freights: {
-          // PLURAL
           select: {
             id: true,
             name: true,
+            unitPrice: true,
+            currency: true,
+            originCity: true,
+            originUf: true,
+            destinationCity: true,
+            destinationUf: true,
+          },
+        },
+        _count: {
+          select: {
+            freights: true,
           },
         },
       },
@@ -93,48 +120,102 @@ export class TaxesService {
       throw new NotFoundException('Imposto de frete não encontrado');
     }
 
-    return tax;
+    return {
+      ...tax,
+      freightsCount: tax._count.freights,
+    };
   }
 
   async createFreightTax(dto: CreateFreightTaxDto) {
-    // Opcional: Verificar se todos os fretes existem antes de criar
-    // O Prisma lançaria erro se um ID não existisse, mas validar manualmente dá mensagens melhores.
+    // Verifica se já existe um imposto com este nome
+    const existing = await this.prisma.freightTax.findUnique({
+      where: { name: dto.name },
+    });
+
+    if (existing) {
+      throw new ConflictException('Já existe um imposto com este nome');
+    }
+
+    // Se houver fretes para conectar, valida
     if (dto.freightIds && dto.freightIds.length > 0) {
-      const count = await this.prisma.freight.count({
+      const freights = await this.prisma.freight.findMany({
         where: { id: { in: dto.freightIds } },
+        include: {
+          freightTaxes: true,
+        },
       });
-      if (count !== dto.freightIds.length) {
+
+      if (freights.length !== dto.freightIds.length) {
         throw new BadRequestException(
-          'Um ou mais IDs de frete não foram encontrados',
+          'Um ou mais fretes não foram encontrados',
         );
+      }
+
+      // Verifica se algum frete já tem um imposto com o mesmo nome
+      for (const freight of freights) {
+        const hasTax = freight.freightTaxes.some((t) => t.name === dto.name);
+        if (hasTax) {
+          throw new ConflictException(
+            `O frete "${freight.name}" já possui um imposto com o nome "${dto.name}"`,
+          );
+        }
       }
     }
 
-    // Criar o imposto
     const tax = await this.prisma.freightTax.create({
       data: {
         name: dto.name,
         rate: new Prisma.Decimal(dto.rate),
-        freights: {
-          // Conecta a lista de IDs
-          connect: dto.freightIds.map((id) => ({ id })),
-        },
+        freights:
+          dto.freightIds && dto.freightIds.length > 0
+            ? {
+                connect: dto.freightIds.map((id) => ({ id })),
+              }
+            : undefined,
       },
       include: {
         freights: {
           select: {
             id: true,
             name: true,
+            unitPrice: true,
+            currency: true,
+            originCity: true,
+            originUf: true,
+            destinationCity: true,
+            destinationUf: true,
+          },
+        },
+        _count: {
+          select: {
+            freights: true,
           },
         },
       },
     });
 
-    return tax;
+    return {
+      ...tax,
+      freightsCount: tax._count.freights,
+    };
   }
 
   async updateFreightTax(id: string, dto: UpdateFreightTaxDto) {
-    await this.findOneFreightTax(id);
+    const currentTax = await this.findOneFreightTax(id);
+
+    // Se está mudando o nome, verifica duplicação
+    if (dto.name && dto.name !== currentTax.name) {
+      const existing = await this.prisma.freightTax.findFirst({
+        where: {
+          name: dto.name,
+          id: { not: id },
+        },
+      });
+
+      if (existing) {
+        throw new ConflictException('Já existe um imposto com este nome');
+      }
+    }
 
     const updateData: Prisma.FreightTaxUpdateInput = {};
 
@@ -146,10 +227,42 @@ export class TaxesService {
       updateData.rate = new Prisma.Decimal(dto.rate);
     }
 
-    if (dto.freightIds !== undefined) {
-      // 'set' substitui toda a lista atual pela nova lista
+    // Se está enviando novos fretes para associar
+    if (dto.freightIds !== undefined && dto.freightIds.length > 0) {
+      const freights = await this.prisma.freight.findMany({
+        where: { id: { in: dto.freightIds } },
+        include: {
+          freightTaxes: true,
+        },
+      });
+
+      if (freights.length !== dto.freightIds.length) {
+        throw new BadRequestException(
+          'Um ou mais fretes não foram encontrados',
+        );
+      }
+
+      // Verifica se algum dos novos fretes já tem um imposto com este nome
+      const taxName = dto.name || currentTax.name;
+      for (const freight of freights) {
+        const hasTax = freight.freightTaxes.some(
+          (t) => t.name === taxName && t.id !== id,
+        );
+        if (hasTax) {
+          throw new ConflictException(
+            `O frete "${freight.name}" já possui um imposto com o nome "${taxName}"`,
+          );
+        }
+      }
+
+      // CORREÇÃO: Adiciona os novos fretes SEM remover os existentes
+      const currentFreightIds = currentTax.freights?.map((f) => f.id) || [];
+      const allFreightIds = [
+        ...new Set([...currentFreightIds, ...dto.freightIds]),
+      ];
+
       updateData.freights = {
-        set: dto.freightIds.map((fid) => ({ id: fid })),
+        set: allFreightIds.map((id) => ({ id })),
       };
     }
 
@@ -161,12 +274,26 @@ export class TaxesService {
           select: {
             id: true,
             name: true,
+            unitPrice: true,
+            currency: true,
+            originCity: true,
+            originUf: true,
+            destinationCity: true,
+            destinationUf: true,
+          },
+        },
+        _count: {
+          select: {
+            freights: true,
           },
         },
       },
     });
 
-    return tax;
+    return {
+      ...tax,
+      freightsCount: tax._count.freights,
+    };
   }
 
   async removeFreightTax(id: string) {
@@ -183,42 +310,52 @@ export class TaxesService {
     const where: Prisma.FreightTaxWhereInput = {};
 
     if (dto.filters?.search) {
-      where.OR = [
-        { name: { contains: dto.filters.search, mode: 'insensitive' } },
-        {
-          freights: {
-            some: {
-              name: { contains: dto.filters.search, mode: 'insensitive' },
-            },
-          },
-        },
-      ];
+      where.name = { contains: dto.filters.search, mode: 'insensitive' };
+    }
+
+    const validSortFields = ['name', 'rate', 'createdAt', 'updatedAt'];
+    const shouldSortByCount = sortBy === 'freightsCount';
+
+    let orderBy: any = {};
+    if (validSortFields.includes(sortBy)) {
+      orderBy = { [sortBy]: sortOrder };
+    } else if (!shouldSortByCount) {
+      orderBy = { name: 'asc' };
     }
 
     const taxes = await this.prisma.freightTax.findMany({
       where,
       take: limit,
-      orderBy: { [sortBy]: sortOrder },
+      orderBy: shouldSortByCount ? undefined : orderBy,
       include: {
-        freights: {
-          // PLURAL
-          select: { name: true },
+        _count: {
+          select: {
+            freights: true,
+          },
         },
       },
     });
 
-    const header = 'Nome,Taxa (%),Fretes Associados,Data de Criação';
-    const rows = taxes.map((tax) => {
+    let processedTaxes = taxes.map((tax) => ({
+      ...tax,
+      freightsCount: tax._count.freights,
+    }));
+
+    if (shouldSortByCount) {
+      processedTaxes.sort((a, b) => {
+        const diff = a.freightsCount - b.freightsCount;
+        return sortOrder === 'asc' ? diff : -diff;
+      });
+    }
+
+    const header = 'Nome,Taxa (%),Quantidade de Fretes,Data de Criação';
+    const rows = processedTaxes.map((tax) => {
       const name = this.escapeCsv(tax.name);
       const rate = Number(tax.rate).toFixed(2);
-
-      // Juntar nomes dos fretes
-      const freightNames = tax.freights.map((f) => f.name).join('; ');
-      const freightNamesEscaped = this.escapeCsv(freightNames || 'N/A');
-
+      const freightsCount = tax.freightsCount;
       const createdAt = new Date(tax.createdAt).toLocaleDateString('pt-BR');
 
-      return `${name},${rate},${freightNamesEscaped},${createdAt}`;
+      return `${name},${rate},${freightsCount},${createdAt}`;
     });
 
     return [header, ...rows].join('\n');
@@ -238,20 +375,24 @@ export class TaxesService {
     const where: Prisma.RawMaterialTaxWhereInput = {};
 
     if (query.search) {
-      where.OR = [
-        { name: { contains: query.search, mode: 'insensitive' } },
-        // Busca em items relacionados
-        {
-          rawMaterials: {
-            some: {
-              OR: [
-                { name: { contains: query.search, mode: 'insensitive' } },
-                { code: { contains: query.search, mode: 'insensitive' } },
-              ],
-            },
-          },
-        },
-      ];
+      where.name = { contains: query.search, mode: 'insensitive' };
+    }
+
+    const validSortFields = [
+      'name',
+      'rate',
+      'recoverable',
+      'createdAt',
+      'updatedAt',
+    ];
+    const shouldSortByCount =
+      sortBy === 'rawMaterialsCount' || sortBy === 'productsCount';
+
+    let orderBy: any = {};
+    if (validSortFields.includes(sortBy)) {
+      orderBy = { [sortBy]: sortOrder };
+    } else if (!shouldSortByCount) {
+      orderBy = { name: 'asc' };
     }
 
     const [data, total] = await Promise.all([
@@ -259,10 +400,14 @@ export class TaxesService {
         where,
         skip,
         take: limit,
-        orderBy: { [sortBy]: sortOrder },
+        orderBy: shouldSortByCount ? undefined : orderBy,
         include: {
+          _count: {
+            select: {
+              rawMaterials: true,
+            },
+          },
           rawMaterials: {
-            // PLURAL
             select: {
               id: true,
               name: true,
@@ -274,8 +419,42 @@ export class TaxesService {
       this.prisma.rawMaterialTax.count({ where }),
     ]);
 
+    const dataWithCounts = await Promise.all(
+      data.map(async (tax) => {
+        const productsCount = await this.prisma.product.count({
+          where: {
+            productRawMaterials: {
+              some: {
+                rawMaterial: {
+                  rawMaterialTaxes: {
+                    some: {
+                      id: tax.id,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        return {
+          ...tax,
+          rawMaterialsCount: tax._count.rawMaterials,
+          productsCount,
+        };
+      }),
+    );
+
+    if (shouldSortByCount) {
+      dataWithCounts.sort((a, b) => {
+        const field = sortBy as 'rawMaterialsCount' | 'productsCount';
+        const diff = a[field] - b[field];
+        return sortOrder === 'asc' ? diff : -diff;
+      });
+    }
+
     return {
-      data,
+      data: dataWithCounts,
       meta: {
         total,
         page,
@@ -290,11 +469,18 @@ export class TaxesService {
       where: { id },
       include: {
         rawMaterials: {
-          // PLURAL
           select: {
             id: true,
             name: true,
             code: true,
+            acquisitionPrice: true,
+            currency: true,
+            measurementUnit: true,
+          },
+        },
+        _count: {
+          select: {
+            rawMaterials: true,
           },
         },
       },
@@ -304,19 +490,61 @@ export class TaxesService {
       throw new NotFoundException('Imposto de matéria-prima não encontrado');
     }
 
-    return tax;
+    const productsCount = await this.prisma.product.count({
+      where: {
+        productRawMaterials: {
+          some: {
+            rawMaterial: {
+              rawMaterialTaxes: {
+                some: {
+                  id: tax.id,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      ...tax,
+      rawMaterialsCount: tax._count.rawMaterials,
+      productsCount,
+    };
   }
 
   async createRawMaterialTax(dto: CreateRawMaterialTaxDto) {
-    // Validar existência
+    const existing = await this.prisma.rawMaterialTax.findUnique({
+      where: { name: dto.name },
+    });
+
+    if (existing) {
+      throw new ConflictException('Já existe um imposto com este nome');
+    }
+
     if (dto.rawMaterialIds && dto.rawMaterialIds.length > 0) {
-      const count = await this.prisma.rawMaterial.count({
+      const rawMaterials = await this.prisma.rawMaterial.findMany({
         where: { id: { in: dto.rawMaterialIds } },
+        include: {
+          rawMaterialTaxes: true,
+        },
       });
-      if (count !== dto.rawMaterialIds.length) {
+
+      if (rawMaterials.length !== dto.rawMaterialIds.length) {
         throw new BadRequestException(
           'Uma ou mais matérias-primas não foram encontradas',
         );
+      }
+
+      for (const rawMaterial of rawMaterials) {
+        const hasTax = rawMaterial.rawMaterialTaxes.some(
+          (t) => t.name === dto.name,
+        );
+        if (hasTax) {
+          throw new ConflictException(
+            `A matéria-prima "${rawMaterial.name}" já possui um imposto com o nome "${dto.name}"`,
+          );
+        }
       }
     }
 
@@ -325,9 +553,12 @@ export class TaxesService {
         name: dto.name,
         rate: new Prisma.Decimal(dto.rate),
         recoverable: dto.recoverable,
-        rawMaterials: {
-          connect: dto.rawMaterialIds.map((id) => ({ id })),
-        },
+        rawMaterials:
+          dto.rawMaterialIds && dto.rawMaterialIds.length > 0
+            ? {
+                connect: dto.rawMaterialIds.map((id) => ({ id })),
+              }
+            : undefined,
       },
       include: {
         rawMaterials: {
@@ -335,16 +566,57 @@ export class TaxesService {
             id: true,
             name: true,
             code: true,
+            acquisitionPrice: true,
+            currency: true,
+            measurementUnit: true,
+          },
+        },
+        _count: {
+          select: {
+            rawMaterials: true,
           },
         },
       },
     });
 
-    return tax;
+    const productsCount = await this.prisma.product.count({
+      where: {
+        productRawMaterials: {
+          some: {
+            rawMaterial: {
+              rawMaterialTaxes: {
+                some: {
+                  id: tax.id,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      ...tax,
+      rawMaterialsCount: tax._count.rawMaterials,
+      productsCount,
+    };
   }
 
   async updateRawMaterialTax(id: string, dto: UpdateRawMaterialTaxDto) {
-    await this.findOneRawMaterialTax(id);
+    const currentTax = await this.findOneRawMaterialTax(id);
+
+    if (dto.name && dto.name !== currentTax.name) {
+      const existing = await this.prisma.rawMaterialTax.findFirst({
+        where: {
+          name: dto.name,
+          id: { not: id },
+        },
+      });
+
+      if (existing) {
+        throw new ConflictException('Já existe um imposto com este nome');
+      }
+    }
 
     const updateData: Prisma.RawMaterialTaxUpdateInput = {};
 
@@ -352,9 +624,41 @@ export class TaxesService {
     if (dto.rate !== undefined) updateData.rate = new Prisma.Decimal(dto.rate);
     if (dto.recoverable !== undefined) updateData.recoverable = dto.recoverable;
 
-    if (dto.rawMaterialIds !== undefined) {
+    // CORREÇÃO: Adiciona as novas matérias-primas SEM remover as existentes
+    if (dto.rawMaterialIds !== undefined && dto.rawMaterialIds.length > 0) {
+      const rawMaterials = await this.prisma.rawMaterial.findMany({
+        where: { id: { in: dto.rawMaterialIds } },
+        include: {
+          rawMaterialTaxes: true,
+        },
+      });
+
+      if (rawMaterials.length !== dto.rawMaterialIds.length) {
+        throw new BadRequestException(
+          'Uma ou mais matérias-primas não foram encontradas',
+        );
+      }
+
+      const taxName = dto.name || currentTax.name;
+      for (const rawMaterial of rawMaterials) {
+        const hasTax = rawMaterial.rawMaterialTaxes.some(
+          (t) => t.name === taxName && t.id !== id,
+        );
+        if (hasTax) {
+          throw new ConflictException(
+            `A matéria-prima "${rawMaterial.name}" já possui um imposto com o nome "${taxName}"`,
+          );
+        }
+      }
+
+      const currentRawMaterialIds =
+        currentTax.rawMaterials?.map((rm) => rm.id) || [];
+      const allRawMaterialIds = [
+        ...new Set([...currentRawMaterialIds, ...dto.rawMaterialIds]),
+      ];
+
       updateData.rawMaterials = {
-        set: dto.rawMaterialIds.map((rid) => ({ id: rid })),
+        set: allRawMaterialIds.map((id) => ({ id })),
       };
     }
 
@@ -367,12 +671,40 @@ export class TaxesService {
             id: true,
             name: true,
             code: true,
+            acquisitionPrice: true,
+            currency: true,
+            measurementUnit: true,
+          },
+        },
+        _count: {
+          select: {
+            rawMaterials: true,
           },
         },
       },
     });
 
-    return tax;
+    const productsCount = await this.prisma.product.count({
+      where: {
+        productRawMaterials: {
+          some: {
+            rawMaterial: {
+              rawMaterialTaxes: {
+                some: {
+                  id: tax.id,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      ...tax,
+      rawMaterialsCount: tax._count.rawMaterials,
+      productsCount,
+    };
   }
 
   async removeRawMaterialTax(id: string) {
@@ -389,52 +721,84 @@ export class TaxesService {
     const where: Prisma.RawMaterialTaxWhereInput = {};
 
     if (dto.filters?.search) {
-      where.OR = [
-        { name: { contains: dto.filters.search, mode: 'insensitive' } },
-        {
-          rawMaterials: {
-            some: {
-              OR: [
-                { name: { contains: dto.filters.search, mode: 'insensitive' } },
-                { code: { contains: dto.filters.search, mode: 'insensitive' } },
-              ],
-            },
-          },
-        },
-      ];
+      where.name = { contains: dto.filters.search, mode: 'insensitive' };
+    }
+
+    const validSortFields = [
+      'name',
+      'rate',
+      'recoverable',
+      'createdAt',
+      'updatedAt',
+    ];
+    const shouldSortByCount =
+      sortBy === 'rawMaterialsCount' || sortBy === 'productsCount';
+
+    let orderBy: any = {};
+    if (validSortFields.includes(sortBy)) {
+      orderBy = { [sortBy]: sortOrder };
+    } else if (!shouldSortByCount) {
+      orderBy = { name: 'asc' };
     }
 
     const taxes = await this.prisma.rawMaterialTax.findMany({
       where,
       take: limit,
-      orderBy: { [sortBy]: sortOrder },
+      orderBy: shouldSortByCount ? undefined : orderBy,
       include: {
-        rawMaterials: {
+        _count: {
           select: {
-            name: true,
-            code: true,
+            rawMaterials: true,
           },
         },
       },
     });
 
+    const taxesWithCounts = await Promise.all(
+      taxes.map(async (tax) => {
+        const productsCount = await this.prisma.product.count({
+          where: {
+            productRawMaterials: {
+              some: {
+                rawMaterial: {
+                  rawMaterialTaxes: {
+                    some: {
+                      id: tax.id,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        return {
+          ...tax,
+          rawMaterialsCount: tax._count.rawMaterials,
+          productsCount,
+        };
+      }),
+    );
+
+    if (shouldSortByCount) {
+      taxesWithCounts.sort((a, b) => {
+        const field = sortBy as 'rawMaterialsCount' | 'productsCount';
+        const diff = a[field] - b[field];
+        return sortOrder === 'asc' ? diff : -diff;
+      });
+    }
+
     const header =
-      'Nome,Taxa (%),Recuperável,Matérias-Primas,Códigos,Data de Criação';
-    const rows = taxes.map((tax) => {
+      'Nome,Taxa (%),Recuperável,Qtd. Matérias-Primas,Qtd. Produtos,Data de Criação';
+    const rows = taxesWithCounts.map((tax) => {
       const name = this.escapeCsv(tax.name);
       const rate = Number(tax.rate).toFixed(2);
       const recoverable = tax.recoverable ? 'Sim' : 'Não';
-
-      // Juntar listas
-      const rawMaterialNames = tax.rawMaterials.map((r) => r.name).join('; ');
-      const codes = tax.rawMaterials.map((r) => r.code).join('; ');
-
-      const rmEscaped = this.escapeCsv(rawMaterialNames || 'N/A');
-      const codesEscaped = this.escapeCsv(codes || '-');
-
+      const rawMaterialsCount = tax.rawMaterialsCount;
+      const productsCount = tax.productsCount;
       const createdAt = new Date(tax.createdAt).toLocaleDateString('pt-BR');
 
-      return `${name},${rate},${recoverable},${rmEscaped},${codesEscaped},${createdAt}`;
+      return `${name},${rate},${recoverable},${rawMaterialsCount},${productsCount},${createdAt}`;
     });
 
     return [header, ...rows].join('\n');

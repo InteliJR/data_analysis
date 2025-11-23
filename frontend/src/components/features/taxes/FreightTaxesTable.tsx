@@ -70,11 +70,23 @@ export function FreightTaxesTable({
         <table className="w-full min-w-max table-fixed">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <SortableHeader column="name" label="Nome do Imposto" width="250px" />
-              <SortableHeader column="rate" label="Taxa (%)" width="120px" />
-              <SortableHeader column="freight" label="Frete Associado" width="280px" />
-              <SortableHeader column="createdAt" label="Data de Criação" width="180px" />
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[100px]">
+              <SortableHeader
+                column="name"
+                label="Nome do Imposto"
+                width="300px"
+              />
+              <SortableHeader column="rate" label="Taxa (%)" width="150px" />
+              <SortableHeader
+                column="freightsCount"
+                label="Qtd. Fretes"
+                width="150px"
+              />
+              <SortableHeader
+                column="createdAt"
+                label="Data de Criação"
+                width="200px"
+              />
+              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[120px]">
                 Ações
               </th>
             </tr>
@@ -89,7 +101,10 @@ export function FreightTaxesTable({
                 {/* Nome */}
                 <td className="px-4 py-3" title={tax.name}>
                   <div className={truncateClass}>
-                    <Text variant="caption" className="font-semibold text-gray-900">
+                    <Text
+                      variant="caption"
+                      className="font-semibold text-gray-900"
+                    >
                       {tax.name}
                     </Text>
                   </div>
@@ -102,13 +117,11 @@ export function FreightTaxesTable({
                   </span>
                 </td>
 
-                {/* Frete Associado */}
-                <td className="px-4 py-3" title={tax.freight?.name || "N/A"}>
-                  <div className="max-w-[260px] truncate">
-                    <Text variant="caption" className="text-gray-700">
-                      {tax.freight?.name || "N/A"}
-                    </Text>
-                  </div>
+                {/* Quantidade de Fretes */}
+                <td className="px-4 py-3">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                    {tax.freightsCount || 0}
+                  </span>
                 </td>
 
                 {/* Data de Criação */}

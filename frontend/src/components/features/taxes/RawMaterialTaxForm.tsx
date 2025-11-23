@@ -1,15 +1,19 @@
 // src/components/features/taxes/RawMaterialTaxForm.tsx
 
+import { useState } from "react";
 import { useForm } from "react-hook-form";
-import type { RawMaterialTax } from "@/types/taxes";
-import type { CreateRawMaterialTaxDTO } from "@/api/taxes";
 import { Input } from "@/components/common/Input";
 import { Label } from "@/components/common/Label";
-import { Select } from "@/components/common/Select";
-import { Checkbox } from "@/components/common/Checkbox";
 import { Text } from "@/components/common/Text";
-import { useQuery } from "@tanstack/react-query";
-import { apiClient } from "@/api/client";
+import { Checkbox } from "@/components/common/Checkbox";
+import { Autocomplete } from "@/components/common/Autocomplete";
+import { SecondaryButton } from "@/components/common/SecondaryButton";
+import { FiTrash2 } from "react-icons/fi";
+import { useRawMaterialsQuery } from "@/api/rawMaterials";
+import { useDebounce } from "@/hooks/useDebounce";
+import type { RawMaterialTax } from "@/types/taxes";
+import type { CreateRawMaterialTaxDTO } from "@/api/taxes";
+import { formatCurrency } from "@/lib/utils";
 
 interface RawMaterialTaxFormProps {
   tax?: RawMaterialTax | null;
@@ -17,94 +21,129 @@ interface RawMaterialTaxFormProps {
   isLoading?: boolean;
 }
 
-const validateNotEmpty = (value: string | undefined): boolean => {
-  return !!value && value.trim().length > 0;
-};
-
 export function RawMaterialTaxForm({
   tax,
   onSubmit,
   isLoading,
 }: RawMaterialTaxFormProps) {
+  const [rawMaterialSearch, setRawMaterialSearch] = useState("");
+  const [selectedRawMaterialIds, setSelectedRawMaterialIds] = useState<
+    string[]
+  >([]);
+
   const {
     register,
     handleSubmit,
+    setValue,
     watch,
     formState: { errors },
   } = useForm<CreateRawMaterialTaxDTO>({
     defaultValues: tax
       ? {
           name: tax.name,
-          rate: tax.rate,
+          rate: Number(tax.rate),
           recoverable: tax.recoverable,
-          rawMaterialId: tax.rawMaterialId,
+          rawMaterialIds: [],
         }
       : {
           name: "",
           rate: 0,
           recoverable: false,
-          rawMaterialId: "",
+          rawMaterialIds: [],
         },
   });
 
-  // Buscar matérias-primas disponíveis
-  const { data: rawMaterialsData, isLoading: isLoadingRawMaterials } = useQuery({
-    queryKey: ["raw-materials-all"],
-    queryFn: async () => {
-      const { data } = await apiClient.get("/raw-materials", {
-        params: { page: 1, limit: 1000 },
-      });
-      return data;
-    },
-  });
+  // Query para buscar matérias-primas
+  const { data: rawMaterialsData, isLoading: isLoadingRawMaterials } =
+    useRawMaterialsQuery({
+      page: 1,
+      limit: 100,
+      search: rawMaterialSearch,
+    });
 
-  const rate = Number(watch("rate")) || 0;
+  const debouncedSetRawMaterialSearch = useDebounce((value: string) => {
+    setRawMaterialSearch(value);
+  }, 300);
+
+  const rate = watch("rate");
   const recoverable = watch("recoverable");
+
+  // Obter IDs das matérias-primas já associadas ao imposto (se editando)
+  const alreadyAssociatedRawMaterialIds =
+    tax?.rawMaterials?.map((rm) => rm.id) || [];
+
+  // Adicionar matéria-prima à seleção
+  const addRawMaterial = (rawMaterialId: string) => {
+    if (!selectedRawMaterialIds.includes(rawMaterialId)) {
+      const newSelection = [...selectedRawMaterialIds, rawMaterialId];
+      setSelectedRawMaterialIds(newSelection);
+      setValue("rawMaterialIds", newSelection);
+    }
+    setRawMaterialSearch("");
+  };
+
+  // Remover matéria-prima da seleção
+  const removeRawMaterial = (rawMaterialId: string) => {
+    const newSelection = selectedRawMaterialIds.filter(
+      (id) => id !== rawMaterialId
+    );
+    setSelectedRawMaterialIds(newSelection);
+    setValue("rawMaterialIds", newSelection);
+  };
+
+  const getCurrencySymbol = (currency: string) => {
+    const symbols = { BRL: "R$", USD: "US$", EUR: "€" };
+    return symbols[currency as keyof typeof symbols] || currency;
+  };
 
   const handleFormSubmit = (data: CreateRawMaterialTaxDTO) => {
     const cleanedData = {
       ...data,
       name: data.name.trim(),
       rate: Number(data.rate),
+      recoverable: data.recoverable,
+      rawMaterialIds:
+        selectedRawMaterialIds.length > 0 ? selectedRawMaterialIds : undefined,
     };
     onSubmit(cleanedData);
   };
+
+  // Matérias-primas disponíveis para seleção (excluindo já associadas e já selecionadas)
+  const availableRawMaterials =
+    rawMaterialsData?.data?.filter(
+      (rm) =>
+        !alreadyAssociatedRawMaterialIds.includes(rm.id) &&
+        !selectedRawMaterialIds.includes(rm.id)
+    ) || [];
 
   return (
     <form
       id="raw-material-tax-form"
       onSubmit={handleSubmit(handleFormSubmit)}
-      className="max-h-[70vh] overflow-y-auto px-2 space-y-6"
+      className="space-y-6"
     >
-      {/* Nome do Imposto */}
+      {/* Nome */}
       <div>
         <Label htmlFor="name">
           Nome do Imposto <span className="text-red-500">*</span>
         </Label>
         <Input
           id="name"
-          placeholder="Ex: PIS, COFINS, ICMS, IPI, IR, CSLL"
+          placeholder="Ex: ICMS, IPI, PIS"
           maxLength={40}
           {...register("name", {
-            required: "Nome do imposto é obrigatório",
-            validate: {
-              notEmpty: (value) =>
-                validateNotEmpty(value) || "Nome não pode conter apenas espaços",
+            required: "Nome é obrigatório",
+            minLength: {
+              value: 2,
+              message: "Nome deve ter no mínimo 2 caracteres",
             },
-            minLength: { 
-              value: 2, 
-              message: "Nome deve ter no mínimo 2 caracteres" 
-            },
-            maxLength: { 
-              value: 40, 
-              message: "Nome deve ter no máximo 40 caracteres" 
+            maxLength: {
+              value: 40,
+              message: "Nome deve ter no máximo 40 caracteres",
             },
           })}
           error={errors.name?.message}
         />
-        <Text className="text-xs text-gray-400 mt-1">
-          Máximo de 40 caracteres
-        </Text>
       </div>
 
       {/* Taxa */}
@@ -112,7 +151,7 @@ export function RawMaterialTaxForm({
         <Label htmlFor="rate">
           Taxa (%) <span className="text-red-500">*</span>
         </Label>
-        <div className="flex gap-2 items-center">
+        <div className="flex items-center gap-2">
           <Input
             id="rate"
             type="number"
@@ -120,95 +159,138 @@ export function RawMaterialTaxForm({
             min="0.01"
             max="100"
             placeholder="0.00"
+            className="flex-1"
             {...register("rate", {
               required: "Taxa é obrigatória",
-              min: { 
-                value: 0.01, 
-                message: "Taxa deve ser maior que 0%" 
-              },
-              max: { 
-                value: 100, 
-                message: "Taxa deve ser no máximo 100%" 
-              },
+              min: { value: 0.01, message: "Taxa deve ser maior que 0%" },
+              max: { value: 100, message: "Taxa deve ser no máximo 100%" },
               valueAsNumber: true,
             })}
             error={errors.rate?.message}
           />
-          <span className="text-lg font-bold text-gray-700">%</span>
+          <span className="text-gray-700 font-medium">%</span>
         </div>
-        <Text className="text-xs text-gray-400 mt-1">
-          Taxa entre 0,01% e 100%
-        </Text>
       </div>
 
       {/* Recuperável */}
-      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+      <div>
         <Checkbox
           id="recoverable"
-          label="Imposto recuperável"
+          label="Imposto Recuperável"
           {...register("recoverable")}
         />
-        <Text className="text-xs text-gray-500 mt-2 ml-6">
-          Marque esta opção se o imposto pode ser recuperado posteriormente
+        <Text className="text-xs text-gray-500 mt-1">
+          Impostos recuperáveis não impactam o custo final da matéria-prima
         </Text>
       </div>
 
-      {/* Matéria-Prima Associada */}
+      {/* Matérias-Primas Associadas */}
       <div>
-        <Label htmlFor="rawMaterialId">
-          Matéria-Prima Associada <span className="text-red-500">*</span>
-        </Label>
-        <Select
-          id="rawMaterialId"
-          disabled={isLoadingRawMaterials || !!tax}
-          {...register("rawMaterialId", {
-            required: "Selecione uma matéria-prima",
-          })}
-          error={errors.rawMaterialId?.message}
-        >
-          <option value="">Selecione uma matéria-prima</option>
-          {rawMaterialsData?.data?.map((rawMaterial: any) => (
-            <option key={rawMaterial.id} value={rawMaterial.id}>
-              {rawMaterial.code} - {rawMaterial.name}
-            </option>
-          ))}
-        </Select>
-        {tax && (
-          <Text className="text-xs text-gray-500 mt-1">
-            A matéria-prima não pode ser alterada após a criação
-          </Text>
-        )}
+        <Label>Matérias-Primas Associadas (Opcional)</Label>
+        <div className="space-y-3">
+          <Autocomplete
+            options={availableRawMaterials.map((rm) => ({
+              value: rm.id,
+              label: `${rm.code} - ${rm.name}`,
+              description: `${getCurrencySymbol(rm.currency)} ${formatCurrency(
+                Number(rm.acquisitionPrice) || 0
+              )
+                .replace("R$", "")
+                .trim()} • ${rm.measurementUnit}`,
+            }))}
+            value=""
+            searchValue={rawMaterialSearch}
+            onChange={addRawMaterial}
+            onSearchChange={(value) => {
+              setRawMaterialSearch(value);
+              debouncedSetRawMaterialSearch(value);
+            }}
+            placeholder="Buscar e adicionar matéria-prima..."
+            emptyMessage="Nenhuma matéria-prima disponível"
+            isLoading={isLoadingRawMaterials}
+          />
+
+          {availableRawMaterials.length === 0 &&
+            !isLoadingRawMaterials &&
+            !rawMaterialSearch && (
+              <Text className="text-sm text-gray-500">
+                Nenhuma matéria-prima disponível
+              </Text>
+            )}
+
+          {selectedRawMaterialIds.length > 0 && (
+            <div className="space-y-2">
+              <Text className="text-sm font-medium text-gray-700">
+                {selectedRawMaterialIds.length} matéria(s)-prima(s) nova(s)
+                selecionada(s)
+              </Text>
+              {selectedRawMaterialIds.map((rawMaterialId) => {
+                const rawMaterial = rawMaterialsData?.data?.find(
+                  (rm) => rm.id === rawMaterialId
+                );
+                if (!rawMaterial) return null;
+
+                return (
+                  <div
+                    key={rawMaterialId}
+                    className="flex items-center justify-between bg-gray-50 p-3 rounded-lg"
+                  >
+                    <div className="flex-1">
+                      <Text variant="caption" className="font-semibold">
+                        {rawMaterial.code} - {rawMaterial.name}
+                      </Text>
+                      <Text className="text-xs text-gray-500">
+                        {getCurrencySymbol(rawMaterial.currency)}{" "}
+                        {formatCurrency(
+                          Number(rawMaterial.acquisitionPrice) || 0
+                        )
+                          .replace("R$", "")
+                          .trim()}{" "}
+                        • {rawMaterial.measurementUnit}
+                      </Text>
+                    </div>
+                    <SecondaryButton
+                      type="button"
+                      variant="ghost"
+                      leftIcon={FiTrash2}
+                      onClick={() => removeRawMaterial(rawMaterialId)}
+                      className="cursor-pointer text-red-600 hover:bg-red-50"
+                      aria-label="Remover matéria-prima"
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Preview */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
-        <Text className="font-semibold text-blue-900">Preview</Text>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <Text className="text-gray-600">Taxa aplicada:</Text>
-            <Text className="font-bold text-lg text-blue-900">
-              {rate.toFixed(2)}%
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <Text className="font-semibold text-blue-900 mb-2">
+          Preview do Imposto
+        </Text>
+        <div className="space-y-1 text-sm">
+          <div className="flex justify-between">
+            <Text className="text-gray-600">Taxa:</Text>
+            <Text className="font-semibold">{rate.toFixed(2)}%</Text>
+          </div>
+          <div className="flex justify-between">
+            <Text className="text-gray-600">Tipo:</Text>
+            <Text className="font-semibold">
+              {recoverable ? "Recuperável" : "Não Recuperável"}
             </Text>
           </div>
-          <div>
-            <Text className="text-gray-600">Recuperável:</Text>
-            <Text className={`font-semibold ${recoverable ? 'text-green-700' : 'text-gray-700'}`}>
-              {recoverable ? "Sim" : "Não"}
+          <div className="flex justify-between">
+            <Text className="text-gray-600">Matérias-primas selecionadas:</Text>
+            <Text className="font-semibold">
+              {selectedRawMaterialIds.length}
             </Text>
           </div>
         </div>
       </div>
 
-      {/* Validação */}
-      {rate <= 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-          <Text className="text-red-700 text-sm font-medium">
-            ⚠️ A taxa deve ser maior que zero para submeter o formulário
-          </Text>
-        </div>
-      )}
-
-      <p className="text-xs text-gray-500 pb-4">
+      <p className="text-xs text-gray-500">
         <span className="text-red-500">*</span> Campos obrigatórios
       </p>
     </form>

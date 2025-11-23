@@ -70,15 +70,33 @@ export function RawMaterialTaxesTable({
         <table className="w-full min-w-max table-fixed">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <SortableHeader column="name" label="Nome do Imposto" width="200px" />
-              <SortableHeader column="rate" label="Taxa (%)" width="110px" />
-              <SortableHeader column="recoverable" label="Recuperável" width="130px" />
-              <SortableHeader column="rawMaterial" label="Matéria-Prima" width="220px" />
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[130px]">
-                Código
-              </th>
-              <SortableHeader column="createdAt" label="Data de Criação" width="170px" />
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[100px]">
+              <SortableHeader
+                column="name"
+                label="Nome do Imposto"
+                width="250px"
+              />
+              <SortableHeader column="rate" label="Taxa (%)" width="130px" />
+              <SortableHeader
+                column="recoverable"
+                label="Recuperável"
+                width="150px"
+              />
+              <SortableHeader
+                column="rawMaterialsCount"
+                label="Qtd. Matérias"
+                width="160px"
+              />
+              <SortableHeader
+                column="productsCount"
+                label="Qtd. Produtos"
+                width="160px"
+              />
+              <SortableHeader
+                column="createdAt"
+                label="Data de Criação"
+                width="190px"
+              />
+              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[120px]">
                 Ações
               </th>
             </tr>
@@ -93,7 +111,10 @@ export function RawMaterialTaxesTable({
                 {/* Nome */}
                 <td className="px-4 py-3" title={tax.name}>
                   <div className={truncateClass}>
-                    <Text variant="caption" className="font-semibold text-gray-900">
+                    <Text
+                      variant="caption"
+                      className="font-semibold text-gray-900"
+                    >
                       {tax.name}
                     </Text>
                   </div>
@@ -121,20 +142,18 @@ export function RawMaterialTaxesTable({
                   )}
                 </td>
 
-                {/* Matéria-Prima */}
-                <td className="px-4 py-3" title={tax.rawMaterial?.name || "N/A"}>
-                  <div className="max-w-[200px] truncate">
-                    <Text variant="caption" className="text-gray-700">
-                      {tax.rawMaterial?.name || "N/A"}
-                    </Text>
-                  </div>
+                {/* Quantidade de Matérias-Primas */}
+                <td className="px-4 py-3">
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                    {tax.rawMaterialsCount || 0}
+                  </span>
                 </td>
 
-                {/* Código */}
+                {/* Quantidade de Produtos */}
                 <td className="px-4 py-3">
-                  <Text variant="caption" className="text-gray-600 font-mono">
-                    {tax.rawMaterial?.code || "-"}
-                  </Text>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium bg-orange-100 text-orange-800">
+                    {tax.productsCount || 0}
+                  </span>
                 </td>
 
                 {/* Data de Criação */}

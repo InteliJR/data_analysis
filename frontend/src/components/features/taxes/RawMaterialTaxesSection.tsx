@@ -22,8 +22,8 @@ const EXPORT_COLUMNS = [
   { key: "name", label: "Nome do Imposto" },
   { key: "rate", label: "Taxa (%)" },
   { key: "recoverable", label: "Recuperável" },
-  { key: "rawMaterialName", label: "Matéria-Prima" },
-  { key: "rawMaterialCode", label: "Código" },
+  { key: "rawMaterialsCount", label: "Qtd. Matérias-Primas" },
+  { key: "productsCount", label: "Qtd. Produtos" },
   { key: "createdAt", label: "Data de Criação" },
 ];
 
@@ -40,13 +40,14 @@ export function RawMaterialTaxesSection() {
   const [editingTax, setEditingTax] = useState<RawMaterialTax | null>(null);
   const [deletingTaxId, setDeletingTaxId] = useState<string | null>(null);
 
-  const { data, isLoading, isError, isFetching, refetch } = useRawMaterialTaxesQuery({
-    page,
-    limit,
-    search,
-    sortBy,
-    sortOrder,
-  });
+  const { data, isLoading, isError, isFetching, refetch } =
+    useRawMaterialTaxesQuery({
+      page,
+      limit,
+      search,
+      sortBy,
+      sortOrder,
+    });
 
   const deleteMutation = useDeleteRawMaterialTaxMutation();
   const exportMutation = useExportRawMaterialTaxesMutation();
@@ -118,7 +119,9 @@ export function RawMaterialTaxesSection() {
         filters: { search },
       });
 
-      const filename = `impostos-materia-prima-${new Date().toISOString().split("T")[0]}.csv`;
+      const filename = `impostos-materia-prima-${
+        new Date().toISOString().split("T")[0]
+      }.csv`;
       triggerCsvDownload(blob, filename);
       toast.success("CSV exportado com sucesso");
       setIsExportModalOpen(false);
@@ -153,7 +156,9 @@ export function RawMaterialTaxesSection() {
           searchValue={searchInput}
         />
         <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-          <p className="text-red-600 font-semibold">Erro ao carregar impostos</p>
+          <p className="text-red-600 font-semibold">
+            Erro ao carregar impostos
+          </p>
           <p className="text-sm text-gray-500 mt-2">
             Tente recarregar a página ou entre em contato com o suporte
           </p>
@@ -176,7 +181,9 @@ export function RawMaterialTaxesSection() {
 
       {!hasTaxes && !search ? (
         <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-          <p className="text-gray-500">Nenhum imposto de matéria-prima cadastrado</p>
+          <p className="text-gray-500">
+            Nenhum imposto de matéria-prima cadastrado
+          </p>
           <p className="text-sm text-gray-400 mt-2">
             Clique em "Novo Imposto" para começar
           </p>

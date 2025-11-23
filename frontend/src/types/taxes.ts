@@ -2,41 +2,42 @@
 
 export interface FreightTax {
   id: string;
-  freightId: string;
   name: string;
   rate: number;
   createdAt: string;
   updatedAt: string;
-  freight?: {
+  freights?: Array<{
     id: string;
     name: string;
-  };
+  }>;
+  freightsCount?: number;
 }
 
 export interface RawMaterialTax {
   id: string;
-  rawMaterialId: string;
   name: string;
   rate: number;
   recoverable: boolean;
   createdAt: string;
   updatedAt: string;
-  rawMaterial?: {
+  rawMaterials?: Array<{
     id: string;
     name: string;
     code: string;
-  };
+  }>;
+  rawMaterialsCount?: number;
+  productsCount?: number;
 }
 
 export interface FreightTaxFormData {
   name: string;
   rate: number;
-  freightId: string;
+  freightIds?: string[]; // Array para múltiplos fretes
 }
 
 export interface RawMaterialTaxFormData {
   name: string;
   rate: number;
   recoverable: boolean;
-  rawMaterialId: string;
+  rawMaterialIds?: string[]; // Array para múltiplas matérias-primas
 }

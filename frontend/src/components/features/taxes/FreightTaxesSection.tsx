@@ -21,7 +21,7 @@ import { triggerCsvDownload } from "@/lib/utils";
 const EXPORT_COLUMNS = [
   { key: "name", label: "Nome do Imposto" },
   { key: "rate", label: "Taxa (%)" },
-  { key: "freightName", label: "Frete" },
+  { key: "freightsCount", label: "Quantidade de Fretes" },
   { key: "createdAt", label: "Data de Criação" },
 ];
 
@@ -38,13 +38,14 @@ export function FreightTaxesSection() {
   const [editingTax, setEditingTax] = useState<FreightTax | null>(null);
   const [deletingTaxId, setDeletingTaxId] = useState<string | null>(null);
 
-  const { data, isLoading, isError, isFetching, refetch } = useFreightTaxesQuery({
-    page,
-    limit,
-    search,
-    sortBy,
-    sortOrder,
-  });
+  const { data, isLoading, isError, isFetching, refetch } =
+    useFreightTaxesQuery({
+      page,
+      limit,
+      search,
+      sortBy,
+      sortOrder,
+    });
 
   const deleteMutation = useDeleteFreightTaxMutation();
   const exportMutation = useExportFreightTaxesMutation();
@@ -116,7 +117,9 @@ export function FreightTaxesSection() {
         filters: { search },
       });
 
-      const filename = `impostos-frete-${new Date().toISOString().split("T")[0]}.csv`;
+      const filename = `impostos-frete-${
+        new Date().toISOString().split("T")[0]
+      }.csv`;
       triggerCsvDownload(blob, filename);
       toast.success("CSV exportado com sucesso");
       setIsExportModalOpen(false);
@@ -151,7 +154,9 @@ export function FreightTaxesSection() {
           searchValue={searchInput}
         />
         <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-          <p className="text-red-600 font-semibold">Erro ao carregar impostos</p>
+          <p className="text-red-600 font-semibold">
+            Erro ao carregar impostos
+          </p>
           <p className="text-sm text-gray-500 mt-2">
             Tente recarregar a página ou entre em contato com o suporte
           </p>

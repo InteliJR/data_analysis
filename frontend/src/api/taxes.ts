@@ -1,8 +1,8 @@
 // src/api/taxes.ts
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from './client';
-import type { FreightTax, RawMaterialTax } from '@/types/taxes';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "./client";
+import type { FreightTax, RawMaterialTax } from "@/types/taxes";
 
 // ========================================
 // Tipagens de Requisição e Resposta
@@ -11,7 +11,7 @@ import type { FreightTax, RawMaterialTax } from '@/types/taxes';
 export interface CreateFreightTaxDTO {
   name: string;
   rate: number;
-  freightId: string;
+  freightIds?: string[]; // Array para múltiplos fretes
 }
 
 export interface UpdateFreightTaxDTO extends Partial<CreateFreightTaxDTO> {}
@@ -20,10 +20,11 @@ export interface CreateRawMaterialTaxDTO {
   name: string;
   rate: number;
   recoverable: boolean;
-  rawMaterialId: string;
+  rawMaterialIds?: string[]; // Array para múltiplas matérias-primas
 }
 
-export interface UpdateRawMaterialTaxDTO extends Partial<CreateRawMaterialTaxDTO> {}
+export interface UpdateRawMaterialTaxDTO
+  extends Partial<CreateRawMaterialTaxDTO> {}
 
 export interface PaginatedTaxesResponse<T> {
   data: T[];
@@ -40,14 +41,14 @@ export interface FindAllTaxesQuery {
   limit?: number;
   search?: string;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface ExportTaxesPayload {
-  format: 'csv';
+  format: "csv";
   limit?: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
   filters?: {
     search?: string;
   };
@@ -57,12 +58,12 @@ export interface ExportTaxesPayload {
 // Funções de API - Freight Taxes
 // ========================================
 
-const FREIGHT_TAXES_QUERY_KEY = 'freight-taxes';
+const FREIGHT_TAXES_QUERY_KEY = "freight-taxes";
 
 export async function getFreightTaxes(
-  query: FindAllTaxesQuery,
+  query: FindAllTaxesQuery
 ): Promise<PaginatedTaxesResponse<FreightTax>> {
-  const { data } = await apiClient.get('/taxes/freight', { params: query });
+  const { data } = await apiClient.get("/taxes/freight", { params: query });
   return data;
 }
 
@@ -71,8 +72,10 @@ export async function getFreightTaxById(id: string): Promise<FreightTax> {
   return data;
 }
 
-export async function createFreightTax(payload: CreateFreightTaxDTO): Promise<FreightTax> {
-  const { data } = await apiClient.post('/taxes/freight', payload);
+export async function createFreightTax(
+  payload: CreateFreightTaxDTO
+): Promise<FreightTax> {
+  const { data } = await apiClient.post("/taxes/freight", payload);
   return data;
 }
 
@@ -91,9 +94,11 @@ export async function deleteFreightTax(id: string): Promise<void> {
   await apiClient.delete(`/taxes/freight/${id}`);
 }
 
-export async function exportFreightTaxes(payload: ExportTaxesPayload): Promise<Blob> {
-  const { data } = await apiClient.post('/taxes/freight/export', payload, {
-    responseType: 'blob',
+export async function exportFreightTaxes(
+  payload: ExportTaxesPayload
+): Promise<Blob> {
+  const { data } = await apiClient.post("/taxes/freight/export", payload, {
+    responseType: "blob",
   });
   return data;
 }
@@ -102,22 +107,28 @@ export async function exportFreightTaxes(payload: ExportTaxesPayload): Promise<B
 // Funções de API - Raw Material Taxes
 // ========================================
 
-const RAW_MATERIAL_TAXES_QUERY_KEY = 'raw-material-taxes';
+const RAW_MATERIAL_TAXES_QUERY_KEY = "raw-material-taxes";
 
 export async function getRawMaterialTaxes(
-  query: FindAllTaxesQuery,
+  query: FindAllTaxesQuery
 ): Promise<PaginatedTaxesResponse<RawMaterialTax>> {
-  const { data } = await apiClient.get('/taxes/raw-material', { params: query });
+  const { data } = await apiClient.get("/taxes/raw-material", {
+    params: query,
+  });
   return data;
 }
 
-export async function getRawMaterialTaxById(id: string): Promise<RawMaterialTax> {
+export async function getRawMaterialTaxById(
+  id: string
+): Promise<RawMaterialTax> {
   const { data } = await apiClient.get(`/taxes/raw-material/${id}`);
   return data;
 }
 
-export async function createRawMaterialTax(payload: CreateRawMaterialTaxDTO): Promise<RawMaterialTax> {
-  const { data } = await apiClient.post('/taxes/raw-material', payload);
+export async function createRawMaterialTax(
+  payload: CreateRawMaterialTaxDTO
+): Promise<RawMaterialTax> {
+  const { data } = await apiClient.post("/taxes/raw-material", payload);
   return data;
 }
 
@@ -136,9 +147,11 @@ export async function deleteRawMaterialTax(id: string): Promise<void> {
   await apiClient.delete(`/taxes/raw-material/${id}`);
 }
 
-export async function exportRawMaterialTaxes(payload: ExportTaxesPayload): Promise<Blob> {
-  const { data } = await apiClient.post('/taxes/raw-material/export', payload, {
-    responseType: 'blob',
+export async function exportRawMaterialTaxes(
+  payload: ExportTaxesPayload
+): Promise<Blob> {
+  const { data } = await apiClient.post("/taxes/raw-material/export", payload, {
+    responseType: "blob",
   });
   return data;
 }
@@ -224,7 +237,9 @@ export function useCreateRawMaterialTaxMutation() {
   return useMutation({
     mutationFn: createRawMaterialTax,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [RAW_MATERIAL_TAXES_QUERY_KEY] });
+      queryClient.invalidateQueries({
+        queryKey: [RAW_MATERIAL_TAXES_QUERY_KEY],
+      });
     },
   });
 }
@@ -234,7 +249,9 @@ export function useUpdateRawMaterialTaxMutation() {
   return useMutation({
     mutationFn: updateRawMaterialTax,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [RAW_MATERIAL_TAXES_QUERY_KEY] });
+      queryClient.invalidateQueries({
+        queryKey: [RAW_MATERIAL_TAXES_QUERY_KEY],
+      });
     },
   });
 }
@@ -244,7 +261,9 @@ export function useDeleteRawMaterialTaxMutation() {
   return useMutation({
     mutationFn: deleteRawMaterialTax,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [RAW_MATERIAL_TAXES_QUERY_KEY] });
+      queryClient.invalidateQueries({
+        queryKey: [RAW_MATERIAL_TAXES_QUERY_KEY],
+      });
     },
   });
 }
