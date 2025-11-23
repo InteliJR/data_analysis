@@ -214,7 +214,7 @@ async function main() {
 
   const rmTaxPISRecuperavel = await prisma.rawMaterialTax.create({
     data: {
-      name: 'PIS',
+      name: 'PIS (AC)',
       rate: 1.65,
       recoverable: true,
     },
@@ -222,7 +222,7 @@ async function main() {
 
   const rmTaxCOFINSRecuperavel = await prisma.rawMaterialTax.create({
     data: {
-      name: 'COFINS',
+      name: 'COFINS (SP)',
       rate: 7.6,
       recoverable: true,
     },
@@ -246,7 +246,7 @@ async function main() {
 
   const rmTaxIPI10 = await prisma.rawMaterialTax.create({
     data: {
-      name: 'IPI',
+      name: 'IPI (BA)',
       rate: 10.0,
       recoverable: false,
     },
@@ -270,7 +270,7 @@ async function main() {
 
   const rmTaxCOFINSNaoRecuperavel = await prisma.rawMaterialTax.create({
     data: {
-      name: 'COFINS',
+      name: 'COFINS (RS)',
       rate: 9.65,
       recoverable: false,
     },
@@ -286,7 +286,7 @@ async function main() {
 
   const rmTaxPISPresumido = await prisma.rawMaterialTax.create({
     data: {
-      name: 'PIS',
+      name: 'PIS (MG)',
       rate: 0.65,
       recoverable: false,
     },

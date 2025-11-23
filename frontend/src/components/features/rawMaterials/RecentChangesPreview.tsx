@@ -110,14 +110,14 @@ export function RecentChangesPreview() {
               <div className="flex items-center gap-2 text-xs mb-2">
                 {log.oldValue && (
                   <>
-                    <span className="text-red-600 line-through truncate max-w-[200px]">
+                    <span className="text-red-600 line-through truncate max-w-[300px]">
                       {log.oldValue}
                     </span>
                     <span className="text-gray-400">→</span>
                   </>
                 )}
                 {log.newValue && (
-                  <span className="text-green-600 font-medium truncate max-w-[200px]">
+                  <span className="text-green-600 font-medium truncate max-w-[300px]">
                     {log.newValue}
                   </span>
                 )}

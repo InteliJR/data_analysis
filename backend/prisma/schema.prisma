@@ -93,7 +93,7 @@ model Freight {
 
 model FreightTax {
   id        String   @id @default(uuid())
-  name      String
+  name      String   @unique
   rate      Decimal  @db.Decimal(5, 2)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -132,8 +132,6 @@ model RawMaterial {
   priceConvertedBrl Decimal         @db.Decimal(12, 2)
   additionalCost    Decimal         @default(0) @db.Decimal(12, 2)
   
-  // REMOVIDO: freightId e relação singular freight
-  
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
@@ -171,7 +169,7 @@ model RawMaterialChangeLog {
 
 model RawMaterialTax {
   id          String   @id @default(uuid())
-  name        String
+  name        String   @unique
   rate        Decimal  @db.Decimal(5, 2)
   recoverable Boolean  @default(false)
   createdAt   DateTime @default(now())

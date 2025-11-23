@@ -1,9 +1,10 @@
 // src/components/features/rawMaterials/RawMaterialForm.tsx
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import type { RawMaterial } from "@/types/rawMaterial";
 import type { CreateRawMaterialDTO } from "@/api/rawMaterials";
+import { toast } from "react-hot-toast";
 
 import { Input } from "@/components/common/Input";
 import { Label } from "@/components/common/Label";
@@ -60,7 +61,6 @@ export function RawMaterialForm({
     control,
     formState: { errors },
   } = useForm<CreateRawMaterialDTO>({
-    // CORREÇÃO: Forçamos a conversão para Number aqui para evitar strings no input
     defaultValues: rawMaterial
       ? {
           code: rawMaterial.code,
@@ -124,6 +124,15 @@ export function RawMaterialForm({
 
   const totalBeforeTaxes = acquisitionPrice + additionalCost;
 
+  // CORREÇÃO: Calcular total de fretes baseado nos IDs selecionados
+  const totalFreightCost = (selectedFreightIds || []).reduce(
+    (sum, freightId) => {
+      const freight = freightsData?.data?.find((f) => f.id === freightId);
+      return sum + (freight ? Number(freight.unitPrice || 0) : 0);
+    },
+    0
+  );
+
   const recoverableTaxes = rawMaterialTaxes.reduce((sum, tax) => {
     if (tax.recoverable) {
       const rate = Number(tax.rate) || 0;
@@ -140,7 +149,15 @@ export function RawMaterialForm({
     return sum;
   }, 0);
 
-  const totalCost = totalBeforeTaxes + nonRecoverableTaxes;
+  // CORREÇÃO: Incluir frete no cálculo final
+  const totalCost = totalBeforeTaxes + totalFreightCost + nonRecoverableTaxes;
+
+  // Verificar se um imposto já foi adicionado
+  const isTaxAlreadyAdded = (taxId: string, taxName: string): boolean => {
+    return rawMaterialTaxes.some(
+      (t) => t.id === taxId || t.name.toLowerCase() === taxName.toLowerCase()
+    );
+  };
 
   const addTax = () => {
     append({ name: "", rate: 0, recoverable: false });
@@ -149,12 +166,18 @@ export function RawMaterialForm({
   const addExistingTax = (taxId: string) => {
     const tax = existingTaxesData?.data?.find((t) => t.id === taxId);
     if (tax) {
+      if (isTaxAlreadyAdded(tax.id, tax.name)) {
+        toast.error(`O imposto "${tax.name}" já foi adicionado`);
+        return;
+      }
+
       append({
         id: tax.id,
         name: tax.name,
-        rate: Number(tax.rate), // Garante número
+        rate: Number(tax.rate),
         recoverable: tax.recoverable,
       });
+      toast.success(`Imposto "${tax.name}" adicionado`);
     }
     setTaxSearch("");
   };
@@ -172,7 +195,26 @@ export function RawMaterialForm({
   };
 
   const handleFormSubmit = (data: CreateRawMaterialDTO) => {
-    // CORREÇÃO CRÍTICA: Convertemos tudo para Number antes de enviar ao backend
+    // Validar impostos duplicados
+    const taxNames = data.rawMaterialTaxes.map((t) =>
+      t.name.trim().toLowerCase()
+    );
+    const hasDuplicates = taxNames.length !== new Set(taxNames).size;
+
+    if (hasDuplicates) {
+      toast.error(
+        "Existem impostos duplicados. Cada imposto deve ter um nome único."
+      );
+      return;
+    }
+
+    // Verificar nomes vazios
+    const hasEmptyNames = data.rawMaterialTaxes.some((t) => !t.name.trim());
+    if (hasEmptyNames) {
+      toast.error("Todos os impostos devem ter um nome");
+      return;
+    }
+
     const cleanedData = {
       ...data,
       code: data.code.trim().toUpperCase(),
@@ -182,15 +224,15 @@ export function RawMaterialForm({
       paymentTerm: Number(data.paymentTerm),
       acquisitionPrice: Number(data.acquisitionPrice),
       additionalCost: Number(data.additionalCost),
-      // Se for BRL, o convertido é igual ao aquisição. Se não, mantemos o que veio (ou 0 se nulo)
-      priceConvertedBrl: data.currency === 'BRL' 
-        ? Number(data.acquisitionPrice) 
-        : Number(data.priceConvertedBrl || 0),
-        
+      priceConvertedBrl:
+        data.currency === "BRL"
+          ? Number(data.acquisitionPrice)
+          : Number(data.priceConvertedBrl || 0),
+
       rawMaterialTaxes: data.rawMaterialTaxes.map((tax) => ({
         ...tax,
         name: tax.name.trim(),
-        rate: Number(tax.rate), // Garante que a taxa é number
+        rate: Number(tax.rate),
       })),
     };
     onSubmit(cleanedData);
@@ -205,7 +247,7 @@ export function RawMaterialForm({
     <form
       id="raw-material-form"
       onSubmit={handleSubmit(handleFormSubmit)}
-      className="max-h-[70vh] overflow-y-auto px-2 space-y-6"
+      className="max-h-[68vh] overflow-y-auto px-2 space-y-6"
     >
       {/* SEÇÃO 1: INFORMAÇÕES BÁSICAS */}
       <div>
@@ -491,7 +533,7 @@ export function RawMaterialForm({
           <Autocomplete
             options={
               existingTaxesData?.data
-                ?.filter((t) => !rawMaterialTaxes.some((rt) => rt.id === t.id))
+                ?.filter((t) => !isTaxAlreadyAdded(t.id, t.name))
                 .map((t) => ({
                   value: t.id,
                   label: t.name,
@@ -595,7 +637,7 @@ export function RawMaterialForm({
         )}
       </div>
 
-      {/* PREVIEW */}
+      {/* PREVIEW CORRIGIDO */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
         <Text className="font-semibold text-blue-900">Preview de Custos</Text>
         <div className="grid grid-cols-2 gap-2 text-sm">
@@ -609,6 +651,12 @@ export function RawMaterialForm({
             <Text className="text-gray-600">Custo Adicional:</Text>
             <Text className="font-semibold">
               {formatCurrency(additionalCost)}
+            </Text>
+          </div>
+          <div>
+            <Text className="text-gray-600">Total de Fretes:</Text>
+            <Text className="font-semibold text-purple-600">
+              {formatCurrency(totalFreightCost)}
             </Text>
           </div>
           <div>
@@ -640,7 +688,6 @@ export function RawMaterialForm({
           </Text>
         </div>
       )}
-
       <p className="text-xs text-gray-500 pb-4">
         <span className="text-red-500">*</span> Campos obrigatórios
       </p>

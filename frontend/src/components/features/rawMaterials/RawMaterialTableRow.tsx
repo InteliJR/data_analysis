@@ -37,13 +37,7 @@ export function RawMaterialTableRow({
     return labels[unit] || unit;
   };
 
-  const truncateClass =
-    "max-w-[140px] truncate overflow-hidden text-ellipsis whitespace-nowrap";
-
-  const truncateWide =
-    "max-w-[200px] truncate overflow-hidden text-ellipsis whitespace-nowrap";
-
-  // Calcular total de fretes
+  // Frete total
   const totalFreightCost = (rawMaterial.freights || []).reduce(
     (sum, freight) => sum + Number(freight.unitPrice || 0),
     0
@@ -51,79 +45,103 @@ export function RawMaterialTableRow({
 
   const freightCount = rawMaterial.freights?.length || 0;
 
+  // Base e final
+  const basePrice =
+    Number(rawMaterial.acquisitionPrice) +
+    Number(rawMaterial.additionalCost || 0);
+
+  const nonRecoverableTaxes = (rawMaterial.rawMaterialTaxes || [])
+    .filter((tax) => !tax.recoverable)
+    .reduce((sum, tax) => sum + basePrice * (Number(tax.rate) / 100), 0);
+
+  const finalPrice = basePrice + totalFreightCost + nonRecoverableTaxes;
+
   return (
-    <tr className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+    <tr className="border-b border-gray-200 hover:bg-gray-50 transition-colors align-top">
       {/* Código */}
       <td className="px-4 py-3" title={rawMaterial.code}>
         <Text variant="caption" className="font-semibold text-gray-900">
-          <span className="max-w-[110px] truncate inline-block">
+          <span className="max-w-[110px] inline-block truncate">
             {rawMaterial.code}
           </span>
         </Text>
       </td>
 
-      {/* Nome + Descrição */}
-      <td className="px-4 py-3 align-top">
-        <div title={rawMaterial.name} className={truncateWide}>
-          <Text variant="caption" className="font-semibold text-gray-900">
-            {rawMaterial.name.slice(0, 25)}
-            {rawMaterial.name.length > 25 && "..."}
+      {/* Nome + Descrição com multiline + truncamento por overflow */}
+      <td className="px-4 py-3">
+        <div
+          className="max-w-[260px] max-h-[56px] overflow-hidden"
+          title={rawMaterial.name}
+        >
+          <Text
+            variant="caption"
+            className="font-semibold text-gray-900 leading-tight"
+          >
+            {rawMaterial.name}
           </Text>
         </div>
+
         {rawMaterial.description && (
           <div
+            className="text-gray-500 text-xs mt-1 max-w-[260px] max-h-[48px] overflow-hidden leading-snug"
             title={rawMaterial.description}
-            className="text-gray-500 text-xs mt-1 max-w-[200px] truncate"
           >
-            {rawMaterial.description.slice(0, 35)}
-            {rawMaterial.description.length > 35 && "..."}
+            {rawMaterial.description}
           </div>
         )}
       </td>
 
-      {/* Unidade de Medida */}
+      {/* Unidade */}
       <td className="px-4 py-3">
         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
           {getMeasurementUnitLabel(rawMaterial.measurementUnit)}
         </span>
       </td>
 
-      {/* Grupo de Insumo */}
+      {/* Grupo */}
       <td className="px-4 py-3" title={rawMaterial.inputGroup || "-"}>
-        <span className={truncateClass}>
+        <span className="max-w-[140px] inline-block overflow-hidden text-ellipsis whitespace-nowrap">
           {rawMaterial.inputGroup || <span className="text-gray-400">-</span>}
         </span>
       </td>
 
-      {/* Prazo de Pagamento */}
+      {/* Prazo */}
       <td className="px-4 py-3">
         <Text variant="caption" className="text-gray-700">
           {rawMaterial.paymentTerm} dias
         </Text>
       </td>
 
-      {/* Preço */}
+      {/* Preços */}
       <td className="px-4 py-3">
-        <div>
-          <Text variant="caption" className="font-semibold text-gray-900">
-            {getCurrencySymbol(rawMaterial.currency)}{" "}
-            {formatCurrency(rawMaterial.acquisitionPrice)
-              .replace("R$", "")
-              .trim()}
-          </Text>
-          {rawMaterial.additionalCost > 0 && (
-            <Text variant="caption" className="text-xs text-gray-500">
-              +{formatCurrency(rawMaterial.additionalCost)} adicional
+        <div className="space-y-1">
+          <div>
+            <Text variant="small" className="text-gray-500">
+              Base:
             </Text>
-          )}
+            <Text variant="caption" className="font-medium text-gray-900">
+              {getCurrencySymbol(rawMaterial.currency)}{" "}
+              {formatCurrency(basePrice).replace("R$", "").trim()}
+            </Text>
+          </div>
+
+          <div className="pt-1 border-t border-gray-200">
+            <Text variant="small" className="text-gray-500">
+              Final:
+            </Text>
+            <Text variant="caption" className="font-semibold text-blue-900">
+              {getCurrencySymbol(rawMaterial.currency)}{" "}
+              {formatCurrency(finalPrice).replace("R$", "").trim()}
+            </Text>
+          </div>
         </div>
       </td>
 
-      {/* Frete(s) - CORRIGIDO */}
+      {/* Fretes */}
       <td className="px-4 py-3">
         {freightCount > 0 ? (
           <div
-            className="max-w-[140px]"
+            className="max-w-[160px] max-h-[56px] overflow-hidden"
             title={rawMaterial.freights
               ?.map(
                 (f) =>
@@ -138,7 +156,7 @@ export function RawMaterialTableRow({
             <Text variant="caption" className="text-gray-700 font-medium">
               {freightCount} {freightCount === 1 ? "frete" : "fretes"}
             </Text>
-            <Text variant="small" className="text-gray-500">
+            <Text variant="small" className="text-gray-500 block">
               Total: {formatCurrency(totalFreightCost)}
             </Text>
           </div>
@@ -147,29 +165,24 @@ export function RawMaterialTableRow({
         )}
       </td>
 
-      {/* Impostos */}
+      {/* Impostos - multiline + truncate por overflow */}
       <td className="px-4 py-3">
         <div
-          className="max-w-[150px] truncate"
+          className="max-w-[200px] max-h-[64px] overflow-hidden"
           title={rawMaterial.rawMaterialTaxes
             ?.map((t) => `${t.name} (${t.rate}%)`)
             .join(", ")}
         >
           {rawMaterial.rawMaterialTaxes?.length ? (
-            <div className="flex gap-1 flex-nowrap overflow-hidden">
-              {rawMaterial.rawMaterialTaxes.slice(0, 2).map((tax, index) => (
+            <div className="flex flex-wrap gap-1">
+              {rawMaterial.rawMaterialTaxes.map((tax, index) => (
                 <span
                   key={tax.id || index}
-                  className="inline-flex px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 whitespace-nowrap"
+                  className="inline-flex px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700"
                 >
                   {tax.name} ({tax.rate}%)
                 </span>
               ))}
-              {rawMaterial.rawMaterialTaxes.length > 2 && (
-                <span className="text-xs text-gray-500">
-                  +{rawMaterial.rawMaterialTaxes.length - 2}
-                </span>
-              )}
             </div>
           ) : (
             <span className="text-gray-400">-</span>

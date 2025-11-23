@@ -67,10 +67,22 @@ export function RawMaterialTable({
             <tr>
               <SortableHeader column="code" label="Código" width="120px" />
               <SortableHeader column="name" label="Nome" width="200px" />
-              <SortableHeader column="measurementUnit" label="Unidade" width="100px" />
+              <SortableHeader
+                column="measurementUnit"
+                label="Unidade"
+                width="100px"
+              />
               <SortableHeader column="inputGroup" label="Grupo" width="140px" />
-              <SortableHeader column="paymentTerm" label="Prazo Pgto" width="120px" />
-              <SortableHeader column="acquisitionPrice" label="Preço" width="130px" />
+              <SortableHeader
+                column="paymentTerm"
+                label="Prazo Pgto"
+                width="120px"
+              />
+              <SortableHeader
+                column="acquisitionPrice"
+                label="Preços"
+                width="160px"
+              />
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[140px]">
                 Frete
               </th>

@@ -27,7 +27,7 @@ export class RawMaterialsService {
       );
     }
 
-    // 2. Verifica se os fretes existem (se houver IDs)
+    // 2. Verifica se os fretes existem
     if (
       createRawMaterialDto.freightIds &&
       createRawMaterialDto.freightIds.length > 0
@@ -42,7 +42,46 @@ export class RawMaterialsService {
       }
     }
 
-    // 3. Cria a matéria-prima
+    // 3. Validar impostos (verificar duplicados na lista enviada)
+    this.validateTaxList(createRawMaterialDto.rawMaterialTaxes);
+
+    // 4. Processar impostos: SEMPRE usar connect para impostos com ID
+    const taxesToConnect: string[] = [];
+    const taxesToCreate: any[] = [];
+
+    for (const tax of createRawMaterialDto.rawMaterialTaxes) {
+      if (tax.id) {
+        // Imposto existente - apenas conectar (o ID já garante que existe)
+        const exists = await this.prisma.rawMaterialTax.findUnique({
+          where: { id: tax.id },
+        });
+        if (!exists) {
+          throw new BadRequestException(
+            `Imposto com ID ${tax.id} não encontrado`,
+          );
+        }
+        taxesToConnect.push(tax.id);
+      } else {
+        // Novo imposto - verificar se nome já existe
+        const existing = await this.prisma.rawMaterialTax.findUnique({
+          where: { name: tax.name.trim() },
+        });
+
+        if (existing) {
+          throw new ConflictException(
+            `Já existe um imposto com o nome "${tax.name}". Selecione o imposto existente da lista.`,
+          );
+        }
+
+        taxesToCreate.push({
+          name: tax.name.trim(),
+          rate: tax.rate,
+          recoverable: tax.recoverable,
+        });
+      }
+    }
+
+    // 5. Cria a matéria-prima
     const rawMaterial = await this.prisma.rawMaterial.create({
       data: {
         code: createRawMaterialDto.code.toUpperCase(),
@@ -55,34 +94,34 @@ export class RawMaterialsService {
         currency: createRawMaterialDto.currency,
         priceConvertedBrl: createRawMaterialDto.priceConvertedBrl,
         additionalCost: createRawMaterialDto.additionalCost,
-        // Conexão N:M com Fretes
         freights: {
           connect: createRawMaterialDto.freightIds.map((id) => ({ id })),
         },
-        // Criação aninhada de Impostos
         rawMaterialTaxes: {
-          create: createRawMaterialDto.rawMaterialTaxes.map((tax) => ({
-            name: tax.name,
-            rate: tax.rate,
-            recoverable: tax.recoverable,
-          })),
+          // Conecta impostos existentes
+          connect: taxesToConnect.map((id) => ({ id })),
+          // Cria novos impostos
+          create: taxesToCreate,
         },
       },
       include: {
         freights: {
-          // PLURAL
           select: {
             id: true,
             name: true,
             unitPrice: true,
             currency: true,
+            originCity: true,
+            originUf: true,
+            destinationCity: true,
+            destinationUf: true,
           },
         },
         rawMaterialTaxes: true,
       },
     });
 
-    // 4. Log
+    // 6. Log de criação
     await this.createChangeLog(
       rawMaterial.id,
       'created',
@@ -107,7 +146,6 @@ export class RawMaterialsService {
 
     const skip = (page - 1) * limit;
 
-    // Construir filtros
     const where: Prisma.RawMaterialWhereInput = {
       AND: [
         search
@@ -143,6 +181,10 @@ export class RawMaterialsService {
               name: true,
               unitPrice: true,
               currency: true,
+              originCity: true,
+              originUf: true,
+              destinationCity: true,
+              destinationUf: true,
               freightTaxes: {
                 select: {
                   id: true,
@@ -186,7 +228,10 @@ export class RawMaterialsService {
             name: true,
             unitPrice: true,
             currency: true,
-            // CRÍTICO: Incluir os impostos dos fretes
+            originCity: true,
+            originUf: true,
+            destinationCity: true,
+            destinationUf: true,
             freightTaxes: {
               select: {
                 id: true,
@@ -222,13 +267,17 @@ export class RawMaterialsService {
     // 1. Busca o existente
     const existing = await this.prisma.rawMaterial.findUnique({
       where: { id },
-      include: { freights: { select: { id: true } } },
+      include: {
+        freights: { select: { id: true, name: true } },
+        rawMaterialTaxes: true,
+      },
     });
 
     if (!existing) {
       throw new NotFoundException('Matéria-prima não encontrada');
-    } // 2. Validação de Código Único
+    }
 
+    // 2. Validação de Código Único
     if (updateRawMaterialDto.code) {
       const codeExists = await this.prisma.rawMaterial.findFirst({
         where: {
@@ -241,8 +290,9 @@ export class RawMaterialsService {
           'Já existe uma matéria-prima com este código',
         );
       }
-    } // 3. Validação de Fretes (se fornecidos)
+    }
 
+    // 3. Validação de Fretes
     if (updateRawMaterialDto.freightIds) {
       const count = await this.prisma.freight.count({
         where: { id: { in: updateRawMaterialDto.freightIds } },
@@ -250,10 +300,73 @@ export class RawMaterialsService {
       if (count !== updateRawMaterialDto.freightIds.length) {
         throw new BadRequestException('Um ou mais fretes não encontrados');
       }
-    } // 4. Registrar Log de Mudanças
+    }
 
-    await this.logChanges(existing, updateRawMaterialDto, userId); // 5. Preparar dados do Update
+    // 4. Validar e processar impostos
+    let taxData: any = undefined;
 
+    if (updateRawMaterialDto.rawMaterialTaxes) {
+      this.validateTaxList(updateRawMaterialDto.rawMaterialTaxes);
+
+      const taxesToConnect: string[] = [];
+      const taxesToCreate: any[] = [];
+
+      // Processar impostos do DTO
+      for (const tax of updateRawMaterialDto.rawMaterialTaxes) {
+        if (tax.id) {
+          // Imposto existente
+          const exists = await this.prisma.rawMaterialTax.findUnique({
+            where: { id: tax.id },
+          });
+
+          if (!exists) {
+            throw new BadRequestException(
+              `Imposto com ID ${tax.id} não encontrado`,
+            );
+          }
+
+          await this.prisma.rawMaterialTax.update({
+            where: { id: tax.id },
+            data: {
+              name: tax.name.trim(),
+              rate: tax.rate,
+              recoverable: tax.recoverable,
+            },
+          });
+
+          taxesToConnect.push(tax.id);
+        } else {
+          const existingTax = await this.prisma.rawMaterialTax.findUnique({
+            where: { name: tax.name.trim() },
+          });
+
+          if (existingTax) {
+            // Se já existe com esse nome, mas veio sem ID, é um conflito ou devemos usar o existente.
+            // Como é um update, lançar conflito é mais seguro para evitar sobrescrita acidental
+            throw new ConflictException(
+              `Já existe um imposto com o nome "${tax.name}". Selecione o imposto existente da lista.`,
+            );
+          }
+
+          taxesToCreate.push({
+            name: tax.name.trim(),
+            rate: tax.rate,
+            recoverable: tax.recoverable,
+          });
+        }
+      }
+
+      // Usar set para substituir completamente a lista de conexões
+      taxData = {
+        set: taxesToConnect.map((id) => ({ id })),
+        create: taxesToCreate,
+      };
+    }
+
+    // 5. Registrar Log de Mudanças (ANTES da atualização)
+    await this.logChanges(existing, updateRawMaterialDto, userId);
+
+    // 6. Preparar dados do Update
     const data: Prisma.RawMaterialUpdateInput = {
       ...(updateRawMaterialDto.code && {
         code: updateRawMaterialDto.code.toUpperCase(),
@@ -283,37 +396,35 @@ export class RawMaterialsService {
       ...(updateRawMaterialDto.additionalCost !== undefined && {
         additionalCost: updateRawMaterialDto.additionalCost,
       }),
-    }; // Atualização de Fretes (N:M)
+    };
 
+    // Atualização de Fretes
     if (updateRawMaterialDto.freightIds !== undefined) {
       data.freights = {
         set: updateRawMaterialDto.freightIds.map((fid) => ({ id: fid })),
       };
-    } // Atualização de Impostos
+    }
 
-    if (updateRawMaterialDto.rawMaterialTaxes) {
-      data.rawMaterialTaxes = {
-        set: [],
-        create: updateRawMaterialDto.rawMaterialTaxes.map((tax) => ({
-          name: tax.name,
-          rate: tax.rate,
-          recoverable: tax.recoverable,
-        })),
-      };
-    } // 6. Executar Update
+    // Atualização de Impostos
+    if (taxData) {
+      data.rawMaterialTaxes = taxData;
+    }
 
+    // 7. Executar Update
     const updated = await this.prisma.rawMaterial.update({
       where: { id },
       data,
       include: {
-        // REMOVIDO: freight: { ... } <- Isso causava o erro
         freights: {
-          // Mantido apenas o Plural
           select: {
             id: true,
             name: true,
             unitPrice: true,
             currency: true,
+            originCity: true,
+            originUf: true,
+            destinationCity: true,
+            destinationUf: true,
           },
         },
         rawMaterialTaxes: true,
@@ -326,7 +437,6 @@ export class RawMaterialsService {
   async remove(id: string) {
     await this.findOne(id);
 
-    // Verifica dependência em Produtos
     const productsUsing = await this.prisma.productRawMaterial.count({
       where: { rawMaterialId: id },
     });
@@ -342,10 +452,33 @@ export class RawMaterialsService {
   }
 
   // ==========================================
+  // VALIDAÇÃO DE IMPOSTOS
+  // ==========================================
+
+  private validateTaxList(taxes: any[]): void {
+    if (!taxes || taxes.length === 0) return;
+
+    // Verificar duplicados na lista enviada
+    const names = taxes.map((t) => t.name.trim().toLowerCase());
+    const hasDuplicates = names.length !== new Set(names).size;
+
+    if (hasDuplicates) {
+      throw new BadRequestException(
+        'Existem impostos duplicados na lista. Cada imposto deve ter um nome único.',
+      );
+    }
+
+    // Verificar nomes vazios
+    const hasEmptyNames = taxes.some((t) => !t.name || !t.name.trim());
+    if (hasEmptyNames) {
+      throw new BadRequestException('Todos os impostos devem ter um nome');
+    }
+  }
+
+  // ==========================================
   // LOGS E HISTÓRICO
   // ==========================================
 
-  // 1. Histórico específico de uma Matéria-Prima (CORRIGIDO)
   async getChangeLogs(id: string, page: number = 1, limit: number = 20) {
     await this.findOne(id);
 
@@ -373,16 +506,8 @@ export class RawMaterialsService {
     const totalPages = Math.ceil(total / limit);
     const hasMore = page < totalPages;
 
-    // Formatar resposta para incluir changedBy como string legível
-    const formattedData = data.map((log) => ({
-      ...log,
-      changedBy: log.user
-        ? `${log.user.name} (${log.user.email})`
-        : 'Usuário desconhecido',
-    }));
-
     return {
-      data: formattedData,
+      data,
       meta: {
         total,
         page,
@@ -393,7 +518,6 @@ export class RawMaterialsService {
     };
   }
 
-  // 2. Lista geral das últimas alterações (CORRIGIDO)
   async getRecentChanges(limit: number = 10) {
     const logs = await this.prisma.rawMaterialChangeLog.findMany({
       take: limit,
@@ -414,17 +538,11 @@ export class RawMaterialsService {
       },
     });
 
-    // Formatar resposta para incluir changedBy como string legível
-    return logs.map((log) => ({
-      ...log,
-      changedBy: log.user
-        ? `${log.user.name} (${log.user.email})`
-        : 'Usuário desconhecido',
-    }));
+    return logs;
   }
 
   // ==========================================
-  // MÉTODOS PRIVADOS DE LOG (Adicione isso à sua classe)
+  // MÉTODOS PRIVADOS DE LOG
   // ==========================================
 
   private async createChangeLog(
@@ -446,7 +564,6 @@ export class RawMaterialsService {
       });
     } catch (error) {
       console.error('Erro ao criar log de mudança:', error);
-      // Não queremos que o log falhe a transação principal, então apenas logamos o erro
     }
   }
 
@@ -468,21 +585,16 @@ export class RawMaterialsService {
       'additionalCost',
     ];
 
+    // Log de campos simples
     for (const field of fieldsToTrack) {
       const newValue = newData[field];
       const oldValue = oldData[field];
 
-      // Se o valor não foi enviado no DTO, ignora
       if (newValue === undefined) continue;
 
-      // Tratamento especial para Decimal vs Number
       let areDifferent = newValue !== oldValue;
 
-      if (
-        oldValue &&
-        typeof oldValue === 'object' &&
-        'toFixed' in oldValue // Verifica se é um Decimal do Prisma
-      ) {
+      if (oldValue && typeof oldValue === 'object' && 'toFixed' in oldValue) {
         areDifferent = Number(oldValue) !== Number(newValue);
       }
 
@@ -492,6 +604,56 @@ export class RawMaterialsService {
           field,
           oldValue !== null && oldValue !== undefined ? String(oldValue) : '',
           String(newValue),
+          userId,
+        );
+      }
+    }
+
+    // Log de fretes
+    if (newData.freightIds !== undefined) {
+      const oldFreightIds = oldData.freights.map((f: any) => f.id).sort();
+      const newFreightIds = [...newData.freightIds].sort();
+
+      const areFreightsDifferent =
+        JSON.stringify(oldFreightIds) !== JSON.stringify(newFreightIds);
+
+      if (areFreightsDifferent) {
+        const oldFreightNames = oldData.freights
+          .map((f: any) => f.name)
+          .join(', ');
+
+        const newFreights = await this.prisma.freight.findMany({
+          where: { id: { in: newData.freightIds } },
+          select: { name: true },
+        });
+        const newFreightNames = newFreights.map((f) => f.name).join(', ');
+
+        await this.createChangeLog(
+          oldData.id,
+          'freights',
+          oldFreightNames || 'Nenhum',
+          newFreightNames || 'Nenhum',
+          userId,
+        );
+      }
+    }
+
+    // Log de impostos
+    if (newData.rawMaterialTaxes !== undefined) {
+      const oldTaxes = oldData.rawMaterialTaxes
+        .map((t: any) => `${t.name} (${t.rate}%)`)
+        .join(', ');
+
+      const newTaxes = newData.rawMaterialTaxes
+        .map((t: any) => `${t.name} (${t.rate}%)`)
+        .join(', ');
+
+      if (oldTaxes !== newTaxes) {
+        await this.createChangeLog(
+          oldData.id,
+          'rawMaterialTaxes',
+          oldTaxes || 'Nenhum',
+          newTaxes || 'Nenhum',
           userId,
         );
       }
@@ -539,16 +701,29 @@ export class RawMaterialsService {
       take: limit,
       orderBy: { [sortBy]: sortOrder },
       include: {
-        freights: true, // PLURAL
+        freights: true,
         rawMaterialTaxes: true,
       },
     });
 
     const formattedData = data.map((item) => {
-      // Formatar lista de fretes para uma única string
       const freightsStr = item.freights
         .map((f) => `${f.name} (${f.currency} ${f.unitPrice})`)
         .join('; ');
+
+      // Calcular preço final
+      const basePrice =
+        Number(item.acquisitionPrice) + Number(item.additionalCost);
+      const freightTotal = item.freights.reduce(
+        (sum, f) => sum + Number(f.unitPrice),
+        0,
+      );
+
+      const nonRecoverableTaxes = item.rawMaterialTaxes
+        .filter((t) => !t.recoverable)
+        .reduce((sum, t) => sum + basePrice * (Number(t.rate) / 100), 0);
+
+      const finalPrice = basePrice + freightTotal + nonRecoverableTaxes;
 
       return {
         Código: item.code,
@@ -557,11 +732,11 @@ export class RawMaterialsService {
         'Unidade de Medida': item.measurementUnit,
         'Grupo de Insumo': item.inputGroup || '',
         'Prazo de Pagamento': `${item.paymentTerm} dias`,
-        'Preço de Aquisição': item.acquisitionPrice.toString(),
+        'Preço Base': item.acquisitionPrice.toString(),
+        'Preço Final': finalPrice.toFixed(2),
         Moeda: item.currency,
         'Preço em BRL': item.priceConvertedBrl.toString(),
         'Custo Adicional': item.additionalCost.toString(),
-        // Fretes agora é uma lista formatada
         Fretes: freightsStr,
         Impostos: item.rawMaterialTaxes
           .map(
