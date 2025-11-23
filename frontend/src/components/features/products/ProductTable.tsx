@@ -67,6 +67,13 @@ export function ProductsTable({
   const truncateWide =
     "max-w-[200px] truncate overflow-hidden text-ellipsis whitespace-nowrap";
 
+  // Função para calcular o preço final real (com custo fixo)
+  const calculateFinalPrice = (product: Product) => {
+    const basePrice = Number(product.priceWithTaxesAndFreight) || 0;
+    const overhead = Number(product.fixedCost?.overheadPerUnit) || 0;
+    return basePrice + overhead;
+  };
+
   return (
     <div className="bg-white shadow-sm rounded-lg overflow-hidden mb-8">
       <div className="overflow-x-auto">
@@ -104,9 +111,9 @@ export function ProductsTable({
 
           <tbody>
             {products.map((product) => {
-              const priceBase = product.priceWithoutTaxesAndFreight || 0;
-              const priceFinal = product.priceWithTaxesAndFreight || 0;
-              const hasMultiplePrices = priceBase > 0 && priceFinal > 0;
+              const priceBase =
+                Number(product.priceWithoutTaxesAndFreight) || 0;
+              const priceFinal = calculateFinalPrice(product);
 
               return (
                 <tr
@@ -205,7 +212,7 @@ export function ProductsTable({
                     )}
                   </td>
 
-                  {/* Preço Final */}
+                  {/* Preço Final (CORRIGIDO) */}
                   <td className="px-4 py-3">
                     {priceFinal > 0 ? (
                       <div>
@@ -215,7 +222,7 @@ export function ProductsTable({
                         >
                           {formatCurrency(priceFinal)}
                         </Text>
-                        {hasMultiplePrices && priceFinal > priceBase && (
+                        {priceBase > 0 && priceFinal > priceBase && (
                           <Text
                             variant="caption"
                             className="text-xs text-gray-500"
@@ -249,7 +256,7 @@ export function ProductsTable({
                         </span>
                         <div className="text-xs text-gray-500">
                           {formatCurrency(
-                            product.fixedCost.overheadPerUnit || 0
+                            Number(product.fixedCost.overheadPerUnit) || 0
                           )}
                           /un
                         </div>

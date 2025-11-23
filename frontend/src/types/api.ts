@@ -164,6 +164,8 @@ export interface RawMaterialChangeLog {
   };
 }
 
+// src/types/api.ts
+
 export interface RawMaterial {
   id: string;
   code: string;
@@ -176,12 +178,12 @@ export interface RawMaterial {
   currency: Currency;
   priceConvertedBrl: number;
   additionalCost: number;
-  taxId: string;
-  freightId: string;
   createdAt: string;
   updatedAt: string;
-  tax?: Tax;
-  freight?: Freight;
+  tax?: Tax; // Se ainda existir a relação direta, senão remova
+  rawMaterialTaxes?: any[]; // Ajustado para array conforme resposta do back
+  freights?: Freight[]; 
+  
   changeLogs?: RawMaterialChangeLog[];
 }
 

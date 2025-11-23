@@ -1,3 +1,5 @@
+// src/products/products.service.ts
+
 import {
   Injectable,
   NotFoundException,
@@ -24,6 +26,7 @@ export class ProductsService {
         throw new ConflictException('Já existe um produto com este código');
       }
 
+      // Validar matérias-primas
       const rawMaterialIds = createProductDto.rawMaterials.map(
         (rm) => rm.rawMaterialId,
       );
@@ -37,6 +40,7 @@ export class ProductsService {
         );
       }
 
+      // Validar custo fixo
       if (createProductDto.fixedCostId) {
         const fixedCost = await this.prisma.fixedCost.findUnique({
           where: { id: createProductDto.fixedCostId },
@@ -47,6 +51,7 @@ export class ProductsService {
         }
       }
 
+      // Validar grupo de produto
       if (createProductDto.productGroupId) {
         const productGroup = await this.prisma.productGroup.findUnique({
           where: { id: createProductDto.productGroupId },
@@ -57,11 +62,28 @@ export class ProductsService {
         }
       }
 
+      // Validar fretes
+      if (
+        createProductDto.freightIds &&
+        createProductDto.freightIds.length > 0
+      ) {
+        const freights = await this.prisma.freight.findMany({
+          where: { id: { in: createProductDto.freightIds } },
+        });
+
+        if (freights.length !== createProductDto.freightIds.length) {
+          throw new BadRequestException('Um ou mais fretes não encontrados');
+        }
+      }
+
+      // Calcular preços
       const calculations = await this.calculateProductPrice({
         rawMaterials: createProductDto.rawMaterials,
         fixedCostId: createProductDto.fixedCostId,
+        freightIds: createProductDto.freightIds,
       });
 
+      // Criar produto
       const product = await this.prisma.product.create({
         data: {
           code: createProductDto.code,
@@ -80,6 +102,12 @@ export class ProductsService {
               quantity: rm.quantity,
             })),
           },
+          ...(createProductDto.freightIds &&
+            createProductDto.freightIds.length > 0 && {
+              freights: {
+                connect: createProductDto.freightIds.map((id) => ({ id })),
+              },
+            }),
         },
         include: {
           creator: {
@@ -96,7 +124,6 @@ export class ProductsService {
               rawMaterial: {
                 include: {
                   freights: {
-                    // PLURAL
                     include: {
                       freightTaxes: true,
                     },
@@ -104,6 +131,11 @@ export class ProductsService {
                   rawMaterialTaxes: true,
                 },
               },
+            },
+          },
+          freights: {
+            include: {
+              freightTaxes: true,
             },
           },
         },
@@ -139,8 +171,21 @@ export class ProductsService {
       const page = query?.page || 1;
       const limit = query?.limit || 10;
       const skip = (page - 1) * limit;
-      const sortBy = query?.sortBy || 'code';
+
+      const rawSortBy = query?.sortBy || 'code';
       const sortOrder = query?.sortOrder || 'asc';
+
+      let orderBy: any = {};
+
+      if (rawSortBy === 'productGroup') {
+        orderBy = { productGroup: { name: sortOrder } };
+      } else if (rawSortBy === 'fixedCost') {
+        orderBy = { fixedCost: { description: sortOrder } };
+      } else if (rawSortBy === 'creator') {
+        orderBy = { creator: { name: sortOrder } };
+      } else {
+        orderBy = { [rawSortBy]: sortOrder };
+      }
 
       const where: any = {};
 
@@ -160,7 +205,7 @@ export class ProductsService {
           where,
           skip,
           take: limit,
-          orderBy: { [sortBy]: sortOrder },
+          orderBy,
           include: {
             creator: {
               select: {
@@ -197,6 +242,14 @@ export class ProductsService {
                     currency: true,
                   },
                 },
+              },
+            },
+            freights: {
+              select: {
+                id: true,
+                name: true,
+                unitPrice: true,
+                currency: true,
               },
             },
           },
@@ -238,7 +291,6 @@ export class ProductsService {
               rawMaterial: {
                 include: {
                   freights: {
-                    // PLURAL
                     include: {
                       freightTaxes: true,
                     },
@@ -246,6 +298,11 @@ export class ProductsService {
                   rawMaterialTaxes: true,
                 },
               },
+            },
+          },
+          freights: {
+            include: {
+              freightTaxes: true,
             },
           },
         },
@@ -271,6 +328,7 @@ export class ProductsService {
         where: { id },
         include: {
           productRawMaterials: true,
+          freights: true,
         },
       });
 
@@ -327,10 +385,21 @@ export class ProductsService {
         }
       }
 
+      if (updateProductDto.freightIds) {
+        const freights = await this.prisma.freight.findMany({
+          where: { id: { in: updateProductDto.freightIds } },
+        });
+
+        if (freights.length !== updateProductDto.freightIds.length) {
+          throw new BadRequestException('Um ou mais fretes não encontrados');
+        }
+      }
+
       let newPrices = {};
       if (
         updateProductDto.rawMaterials ||
-        updateProductDto.fixedCostId !== undefined
+        updateProductDto.fixedCostId !== undefined ||
+        updateProductDto.freightIds
       ) {
         const currentRawMaterials =
           updateProductDto.rawMaterials ||
@@ -344,9 +413,13 @@ export class ProductsService {
             ? updateProductDto.fixedCostId
             : product.fixedCostId;
 
+        const newFreightIds =
+          updateProductDto.freightIds || product.freights.map((f) => f.id);
+
         const calculations = await this.calculateProductPrice({
           rawMaterials: currentRawMaterials,
           fixedCostId: newFixedCostId ? newFixedCostId : undefined,
+          freightIds: newFreightIds.length > 0 ? newFreightIds : undefined,
         });
 
         newPrices = {
@@ -375,6 +448,12 @@ export class ProductsService {
               })),
             },
           }),
+          ...(updateProductDto.freightIds !== undefined && {
+            freights: {
+              set: [],
+              connect: updateProductDto.freightIds.map((id) => ({ id })),
+            },
+          }),
         },
         include: {
           creator: {
@@ -391,7 +470,6 @@ export class ProductsService {
               rawMaterial: {
                 include: {
                   freights: {
-                    // PLURAL
                     include: {
                       freightTaxes: true,
                     },
@@ -399,6 +477,11 @@ export class ProductsService {
                   rawMaterialTaxes: true,
                 },
               },
+            },
+          },
+          freights: {
+            include: {
+              freightTaxes: true,
             },
           },
         },
@@ -445,10 +528,16 @@ export class ProductsService {
     }
   }
 
+  /**
+   * CÁLCULO CONSOLIDADO DE PREÇOS
+   * Este método implementa a lógica de negócio para calcular preços de produtos
+   * Segue a fórmula: Preço Final = Base + Impostos + Fretes + Custo Fixo
+   */
   async calculateProductPrice(calculatePriceDto: CalculatePriceDto) {
     try {
-      const { rawMaterials, fixedCostId } = calculatePriceDto;
+      const { rawMaterials, fixedCostId, freightIds } = calculatePriceDto;
 
+      // 1. Buscar dados das matérias-primas
       const rawMaterialsData = await this.prisma.rawMaterial.findMany({
         where: {
           id: { in: rawMaterials.map((rm) => rm.rawMaterialId) },
@@ -456,7 +545,6 @@ export class ProductsService {
         include: {
           rawMaterialTaxes: true,
           freights: {
-            // PLURAL
             include: {
               freightTaxes: true,
             },
@@ -470,6 +558,7 @@ export class ProductsService {
         );
       }
 
+      // 2. Buscar custo fixo
       let fixedCost: any = null;
       if (fixedCostId) {
         fixedCost = await this.prisma.fixedCost.findUnique({
@@ -481,11 +570,26 @@ export class ProductsService {
         }
       }
 
+      // 3. Buscar fretes do produto
+      let productFreights: any[] = [];
+      if (freightIds && freightIds.length > 0) {
+        productFreights = await this.prisma.freight.findMany({
+          where: { id: { in: freightIds } },
+          include: {
+            freightTaxes: true,
+          },
+        });
+
+        if (productFreights.length !== freightIds.length) {
+          throw new BadRequestException('Um ou mais fretes não encontrados');
+        }
+      }
+
+      // 4. Calcular valores das matérias-primas
       const rawMaterialsBreakdown: any[] = [];
       let totalRawMaterials = 0;
       let totalTaxes = 0;
-      let totalFreight = 0;
-      let totalAdditionalCosts = 0;
+      let totalRawMaterialFreight = 0;
 
       for (const rmInput of rawMaterials) {
         const rmData = rawMaterialsData.find(
@@ -499,7 +603,7 @@ export class ProductsService {
         );
         const subtotal = unitPrice * quantity;
 
-        // --- CÁLCULO IMPOSTOS DA MATÉRIA-PRIMA ---
+        // Impostos da matéria-prima (não recuperáveis)
         const taxes: Record<string, number> = {};
         let taxesTotal = 0;
 
@@ -513,24 +617,20 @@ export class ProductsService {
           }
         }
 
-        // --- CÁLCULO DO FRETE (LÓGICA NOVA: SOMA DE MÚLTIPLOS FRETES) ---
+        // Fretes da matéria-prima
         let freightSubtotal = 0;
         let freightTaxesTotal = 0;
         const freightTaxes: Record<string, number> = {};
 
-        // Se existirem fretes associados
         if (rmData.freights && rmData.freights.length > 0) {
           for (const freight of rmData.freights) {
-            // Custo base do frete
             const currentFreightCost =
               Number(freight.unitPrice || 0) * quantity;
             freightSubtotal += currentFreightCost;
 
-            // Impostos do frete
             if (freight.freightTaxes) {
               for (const fTax of freight.freightTaxes) {
                 const taxValue = (currentFreightCost * Number(fTax.rate)) / 100;
-                // Agrega valores se houver nomes repetidos, ou cria nova chave
                 const key = fTax.name;
                 freightTaxes[key] =
                   (freightTaxes[key] || 0) + Number(taxValue.toFixed(2));
@@ -541,12 +641,10 @@ export class ProductsService {
         }
 
         const freightTotal = freightSubtotal + freightTaxesTotal;
-        const additionalCost = Number(rmData.additionalCost || 0) * quantity;
 
         totalRawMaterials += subtotal;
-        totalTaxes += taxesTotal;
-        totalFreight += freightTotal;
-        totalAdditionalCosts += additionalCost;
+        totalTaxes += taxesTotal + freightTaxesTotal;
+        totalRawMaterialFreight += freightTotal;
 
         rawMaterialsBreakdown.push({
           rawMaterialCode: rmData.code,
@@ -558,12 +656,11 @@ export class ProductsService {
             ...taxes,
             total: Number(taxesTotal.toFixed(2)),
           },
-          // Objeto de frete agora é um agregado dos múltiplos fretes
           freight: {
             unitPrice:
               quantity > 0
                 ? Number((freightSubtotal / quantity).toFixed(2))
-                : 0, // Preço médio unitário de frete
+                : 0,
             quantity,
             subtotal: Number(freightSubtotal.toFixed(2)),
             taxes: {
@@ -572,19 +669,38 @@ export class ProductsService {
             },
             total: Number(freightTotal.toFixed(2)),
           },
-          additionalCost: Number(additionalCost.toFixed(2)),
           totalWithoutTaxesAndFreight: Number(subtotal.toFixed(2)),
           totalWithTaxesAndFreight: Number(
-            (subtotal + taxesTotal + freightTotal + additionalCost).toFixed(2),
+            (subtotal + taxesTotal + freightTotal).toFixed(2),
           ),
         });
       }
 
-      const priceWithoutTaxesAndFreight =
-        totalRawMaterials + totalAdditionalCosts;
+      // 5. Calcular fretes do produto
+      let productFreightCost = 0;
+      let productFreightTaxes = 0;
+
+      for (const freight of productFreights) {
+        const freightCost = Number(freight.unitPrice || 0);
+        productFreightCost += freightCost;
+
+        if (freight.freightTaxes) {
+          for (const fTax of freight.freightTaxes) {
+            const taxValue = (freightCost * Number(fTax.rate)) / 100;
+            productFreightTaxes += taxValue;
+          }
+        }
+      }
+
+      totalTaxes += productFreightTaxes;
+      const totalFreight =
+        totalRawMaterialFreight + productFreightCost + productFreightTaxes;
+
+      // 6. Cálculos finais
+      const priceWithoutTaxesAndFreight = totalRawMaterials;
 
       const priceWithTaxesAndFreight =
-        priceWithoutTaxesAndFreight + totalTaxes + totalFreight;
+        totalRawMaterials + totalTaxes + totalFreight;
 
       const fixedCostOverhead = fixedCost
         ? Number(fixedCost.overheadPerUnit)
@@ -598,7 +714,8 @@ export class ProductsService {
           rawMaterialsSubtotal: Number(totalRawMaterials.toFixed(2)),
           taxesTotal: Number(totalTaxes.toFixed(2)),
           freightTotal: Number(totalFreight.toFixed(2)),
-          additionalCostsTotal: Number(totalAdditionalCosts.toFixed(2)),
+          productFreightCost: Number(productFreightCost.toFixed(2)),
+          productFreightTaxes: Number(productFreightTaxes.toFixed(2)),
           priceWithoutTaxesAndFreight: Number(
             priceWithoutTaxesAndFreight.toFixed(2),
           ),
@@ -622,8 +739,20 @@ export class ProductsService {
 
   async exportProducts(exportDto: ExportProductsDto) {
     try {
-      const sortBy = exportDto.sortBy || 'code';
+      const rawSortBy = exportDto.sortBy || 'code';
       const sortOrder = exportDto.sortOrder || 'asc';
+
+      let orderBy: any = {};
+
+      if (rawSortBy === 'productGroup') {
+        orderBy = { productGroup: { name: sortOrder } };
+      } else if (rawSortBy === 'fixedCost') {
+        orderBy = { fixedCost: { description: sortOrder } };
+      } else if (rawSortBy === 'creator') {
+        orderBy = { creator: { name: sortOrder } };
+      } else {
+        orderBy = { [rawSortBy]: sortOrder };
+      }
 
       const where: any = {};
 
@@ -650,7 +779,7 @@ export class ProductsService {
 
       const products = await this.prisma.product.findMany({
         take: exportDto.limit,
-        orderBy: { [sortBy]: sortOrder },
+        orderBy,
         where,
         include: {
           creator: {
@@ -661,6 +790,7 @@ export class ProductsService {
           fixedCost: {
             select: {
               description: true,
+              overheadPerUnit: true,
             },
           },
           productGroup: {
@@ -686,10 +816,11 @@ export class ProductsService {
         'Nome',
         'Descrição',
         'Grupo',
-        'Preço sem Impostos',
-        'Preço com Impostos',
-        'Criador',
+        'Preço Base',
+        'Preço sem Fixo',
         'Custo Fixo',
+        'Preço Final',
+        'Criador',
         'Matérias-Primas',
         'Data Criação',
       ];
@@ -702,15 +833,21 @@ export class ProductsService {
           )
           .join('; ');
 
+        const priceBase = Number(product.priceWithoutTaxesAndFreight) || 0;
+        const priceWithTaxes = Number(product.priceWithTaxesAndFreight) || 0;
+        const overhead = Number(product.fixedCost?.overheadPerUnit) || 0;
+        const finalPrice = priceWithTaxes + overhead;
+
         return [
           product.code,
           product.name,
           product.description || '',
           product.productGroup?.name || '',
-          product.priceWithoutTaxesAndFreight?.toFixed(2) || '0.00',
-          product.priceWithTaxesAndFreight?.toFixed(2) || '0.00',
+          priceBase.toFixed(2),
+          priceWithTaxes.toFixed(2),
+          overhead.toFixed(2),
+          finalPrice.toFixed(2),
           product.creator?.name || '',
-          product.fixedCost?.description || '',
           rawMaterialsStr,
           new Date(product.createdAt).toISOString().split('T')[0],
         ];

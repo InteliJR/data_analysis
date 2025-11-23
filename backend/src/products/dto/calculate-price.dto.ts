@@ -26,6 +26,14 @@ export class CalculatePriceDto {
   @Type(() => RawMaterialCalculationDto)
   rawMaterials: RawMaterialCalculationDto[];
 
+  @IsArray({ message: 'freightIds deve ser um array' })
+  @IsUUID('4', {
+    each: true,
+    message: 'Cada ID de frete deve ser um UUID válido',
+  })
+  @IsOptional()
+  freightIds?: string[];
+
   @IsUUID('4', { message: 'ID do custo fixo deve ser um UUID válido' })
   @IsOptional()
   fixedCostId?: string;

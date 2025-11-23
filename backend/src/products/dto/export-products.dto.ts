@@ -32,9 +32,21 @@ export class ExportProductsDto {
   @Type(() => Number)
   limit?: number = 100;
 
-  @IsIn(['code', 'name', 'createdAt', 'updatedAt'], {
-    message: 'Campo de ordenação inválido',
-  })
+  @IsIn(
+    [
+      'code',
+      'name',
+      'createdAt',
+      'updatedAt',
+      'productGroup', // Relação
+      'priceWithoutTaxesAndFreight', // Campo
+      'priceWithTaxesAndFreight', // Campo
+      'fixedCost', // Relação
+    ],
+    {
+      message: 'Campo de ordenação inválido',
+    },
+  )
   @IsOptional()
   sortBy?: string = 'code';
 

@@ -26,118 +26,121 @@ async function main() {
   console.log('🌱 Iniciando seed do banco de dados...');
 
   // ============================================
-  // 1. USUÁRIOS (todas as roles)
+  // 1. LIMPEZA DO BANCO (Opcional - Descomente se necessário)
+  // ============================================
+  // console.log('\n🧹 Limpando banco de dados...');
+  // await prisma.productRawMaterial.deleteMany();
+  // await prisma.product.deleteMany();
+  // await prisma.productGroup.deleteMany();
+  // await prisma.fixedCost.deleteMany();
+  // await prisma.rawMaterialChangeLog.deleteMany();
+  // await prisma.rawMaterial.deleteMany();
+  // await prisma.rawMaterialTax.deleteMany();
+  // await prisma.freight.deleteMany();
+  // await prisma.freightTax.deleteMany();
+  // await prisma.revokedToken.deleteMany();
+  // await prisma.user.deleteMany();
+  // console.log('✅ Banco limpo');
+
+  // ============================================
+  // 2. USUÁRIOS
   // ============================================
   console.log('\n👥 Criando usuários...');
 
-  const users = await Promise.all([
-    prisma.user.upsert({
-      where: { email: process.env.ADMIN_EMAIL || 'admin@example.com' },
-      update: {},
-      create: {
-        email: process.env.ADMIN_EMAIL || 'admin@example.com',
-        name: process.env.ADMIN_NAME || 'Administrador',
-        password: await hashPassword(
-          process.env.ADMIN_PASSWORD || 'Admin@123456',
-        ),
-        role: UserRole.ADMIN,
-        isActive: true,
-      },
-    }),
-    prisma.user.upsert({
-      where: { email: 'comercial@example.com' },
-      update: {},
-      create: {
-        email: 'comercial@example.com',
-        name: 'Gerente Comercial',
-        password: await hashPassword('Comercial@123'),
-        role: UserRole.COMERCIAL,
-        isActive: true,
-      },
-    }),
-    prisma.user.upsert({
-      where: { email: 'logistica@example.com' },
-      update: {},
-      create: {
-        email: 'logistica@example.com',
-        name: 'Gerente de Logística',
-        password: await hashPassword('Logistica@123'),
-        role: UserRole.LOGISTICA,
-        isActive: true,
-      },
-    }),
-    prisma.user.upsert({
-      where: { email: 'imposto@example.com' },
-      update: {},
-      create: {
-        email: 'imposto@example.com',
-        name: 'Analista Fiscal',
-        password: await hashPassword('Imposto@123'),
-        role: UserRole.IMPOSTO,
-        isActive: true,
-      },
-    }),
-  ]);
+  const adminUser = await prisma.user.upsert({
+    where: { email: process.env.ADMIN_EMAIL || 'admin@example.com' },
+    update: {},
+    create: {
+      email: process.env.ADMIN_EMAIL || 'admin@example.com',
+      name: process.env.ADMIN_NAME || 'Administrador',
+      password: await hashPassword(
+        process.env.ADMIN_PASSWORD || 'Admin@123456',
+      ),
+      role: UserRole.ADMIN,
+      isActive: true,
+    },
+  });
 
-  console.log(`✅ ${users.length} usuários criados/atualizados`);
+  const comercialUser = await prisma.user.upsert({
+    where: { email: 'comercial@example.com' },
+    update: {},
+    create: {
+      email: 'comercial@example.com',
+      name: 'Gerente Comercial',
+      password: await hashPassword('Comercial@123'),
+      role: UserRole.COMERCIAL,
+      isActive: true,
+    },
+  });
+
+  const logisticaUser = await prisma.user.upsert({
+    where: { email: 'logistica@example.com' },
+    update: {},
+    create: {
+      email: 'logistica@example.com',
+      name: 'Gerente de Logística',
+      password: await hashPassword('Logistica@123'),
+      role: UserRole.LOGISTICA,
+      isActive: true,
+    },
+  });
+
+  const impostoUser = await prisma.user.upsert({
+    where: { email: 'imposto@example.com' },
+    update: {},
+    create: {
+      email: 'imposto@example.com',
+      name: 'Analista Fiscal',
+      password: await hashPassword('Imposto@123'),
+      role: UserRole.IMPOSTO,
+      isActive: true,
+    },
+  });
+
+  console.log('✅ 4 usuários criados/atualizados');
 
   // ============================================
-  // 2. IMPOSTOS DE FRETE (FreightTaxes)
+  // 3. IMPOSTOS DE FRETE
   // ============================================
   console.log('\n💰 Criando impostos de frete...');
 
-  const freightTax1 = await prisma.freightTax.upsert({
-    where: { id: 'ftax-1' },
-    update: {},
-    create: {
-      id: 'ftax-1',
+  const freightTaxICMS = await prisma.freightTax.create({
+    data: {
       name: 'ICMS',
       rate: 12.0,
     },
   });
 
-  const freightTax2 = await prisma.freightTax.upsert({
-    where: { id: 'ftax-2' },
-    update: {},
-    create: {
-      id: 'ftax-2',
+  const freightTaxPIS = await prisma.freightTax.create({
+    data: {
       name: 'PIS',
       rate: 1.65,
     },
   });
 
-  const freightTax3 = await prisma.freightTax.upsert({
-    where: { id: 'ftax-3' },
-    update: {},
-    create: {
-      id: 'ftax-3',
+  const freightTaxCOFINS = await prisma.freightTax.create({
+    data: {
       name: 'COFINS',
       rate: 7.6,
     },
   });
 
-  const freightTax4 = await prisma.freightTax.upsert({
-    where: { id: 'ftax-4' },
-    update: {},
-    create: {
-      id: 'ftax-4',
+  const freightTaxII = await prisma.freightTax.create({
+    data: {
       name: 'II (Imposto de Importação)',
       rate: 14.0,
     },
   });
 
-  console.log('✅ Impostos de frete criados');
+  console.log('✅ 4 impostos de frete criados');
 
   // ============================================
-  // 3. FRETES (Freights)
+  // 4. FRETES
   // ============================================
   console.log('\n🚚 Criando opções de frete...');
 
-  const freight1 = await prisma.freight.upsert({
-    where: { id: 'freight-1' },
-    update: {},
-    create: {
-      id: 'freight-1',
+  const freightNacional = await prisma.freight.create({
+    data: {
       name: 'Frete Rodoviário Nacional',
       description: 'Transporte rodoviário dentro do Brasil',
       unitPrice: 150.0,
@@ -150,19 +153,16 @@ async function main() {
       operationType: FreightOperationType.INTERNAL,
       freightTaxes: {
         connect: [
-          { id: freightTax1.id },
-          { id: freightTax2.id },
-          { id: freightTax3.id },
+          { id: freightTaxICMS.id },
+          { id: freightTaxPIS.id },
+          { id: freightTaxCOFINS.id },
         ],
       },
     },
   });
 
-  const freight2 = await prisma.freight.upsert({
-    where: { id: 'freight-2' },
-    update: {},
-    create: {
-      id: 'freight-2',
+  const freightInternacional = await prisma.freight.create({
+    data: {
       name: 'Frete Marítimo Internacional',
       description: 'Transporte marítimo para importação',
       unitPrice: 2500.0,
@@ -175,19 +175,16 @@ async function main() {
       operationType: FreightOperationType.EXTERNAL,
       freightTaxes: {
         connect: [
-          { id: freightTax4.id },
-          { id: freightTax2.id },
-          { id: freightTax3.id },
+          { id: freightTaxII.id },
+          { id: freightTaxPIS.id },
+          { id: freightTaxCOFINS.id },
         ],
       },
     },
   });
 
-  const freight3 = await prisma.freight.upsert({
-    where: { id: 'freight-3' },
-    update: {},
-    create: {
-      id: 'freight-3',
+  const freightExpresso = await prisma.freight.create({
+    data: {
       name: 'Frete Expresso',
       description: 'Entrega rápida para regiões metropolitanas',
       unitPrice: 280.0,
@@ -200,154 +197,118 @@ async function main() {
       operationType: FreightOperationType.INTERNAL,
       freightTaxes: {
         connect: [
-          { id: freightTax1.id },
-          { id: freightTax2.id },
-          { id: freightTax3.id },
+          { id: freightTaxICMS.id },
+          { id: freightTaxPIS.id },
+          { id: freightTaxCOFINS.id },
         ],
       },
     },
   });
 
-  console.log('✅ Fretes criados com sucesso');
+  console.log('✅ 3 fretes criados');
 
   // ============================================
-  // 4. IMPOSTOS DE MATÉRIA-PRIMA (RawMaterialTaxes)
+  // 5. IMPOSTOS DE MATÉRIA-PRIMA
   // ============================================
   console.log('\n💰 Criando impostos de matéria-prima...');
 
-  const rmTax1 = await prisma.rawMaterialTax.upsert({
-    where: { id: 'rmtax-1' },
-    update: {},
-    create: {
-      id: 'rmtax-1',
+  const rmTaxPISRecuperavel = await prisma.rawMaterialTax.create({
+    data: {
       name: 'PIS',
       rate: 1.65,
       recoverable: true,
     },
   });
 
-  const rmTax2 = await prisma.rawMaterialTax.upsert({
-    where: { id: 'rmtax-2' },
-    update: {},
-    create: {
-      id: 'rmtax-2',
+  const rmTaxCOFINSRecuperavel = await prisma.rawMaterialTax.create({
+    data: {
       name: 'COFINS',
       rate: 7.6,
       recoverable: true,
     },
   });
 
-  const rmTax3 = await prisma.rawMaterialTax.upsert({
-    where: { id: 'rmtax-3' },
-    update: {},
-    create: {
-      id: 'rmtax-3',
+  const rmTaxICMS = await prisma.rawMaterialTax.create({
+    data: {
       name: 'ICMS',
       rate: 18.0,
       recoverable: true,
     },
   });
 
-  const rmTax4 = await prisma.rawMaterialTax.upsert({
-    where: { id: 'rmtax-4' },
-    update: {},
-    create: {
-      id: 'rmtax-4',
+  const rmTaxIPI5 = await prisma.rawMaterialTax.create({
+    data: {
       name: 'IPI',
       rate: 5.0,
       recoverable: false,
     },
   });
 
-  const rmTax5 = await prisma.rawMaterialTax.upsert({
-    where: { id: 'rmtax-5' },
-    update: {},
-    create: {
-      id: 'rmtax-5',
+  const rmTaxIPI10 = await prisma.rawMaterialTax.create({
+    data: {
       name: 'IPI',
       rate: 10.0,
       recoverable: false,
     },
   });
 
-  const rmTax6 = await prisma.rawMaterialTax.upsert({
-    where: { id: 'rmtax-6' },
-    update: {},
-    create: {
-      id: 'rmtax-6',
+  const rmTaxII = await prisma.rawMaterialTax.create({
+    data: {
       name: 'II (Imposto Importação)',
       rate: 14.0,
       recoverable: false,
     },
   });
 
-  const rmTax7 = await prisma.rawMaterialTax.upsert({
-    where: { id: 'rmtax-7' },
-    update: {},
-    create: {
-      id: 'rmtax-7',
+  const rmTaxPISNaoRecuperavel = await prisma.rawMaterialTax.create({
+    data: {
       name: 'PIS',
       rate: 2.1,
       recoverable: false,
     },
   });
 
-  const rmTax8 = await prisma.rawMaterialTax.upsert({
-    where: { id: 'rmtax-8' },
-    update: {},
-    create: {
-      id: 'rmtax-8',
+  const rmTaxCOFINSNaoRecuperavel = await prisma.rawMaterialTax.create({
+    data: {
       name: 'COFINS',
       rate: 9.65,
       recoverable: false,
     },
   });
 
-  const rmTax9 = await prisma.rawMaterialTax.upsert({
-    where: { id: 'rmtax-9' },
-    update: {},
-    create: {
-      id: 'rmtax-9',
+  const rmTaxSIMPLES = await prisma.rawMaterialTax.create({
+    data: {
       name: 'SIMPLES',
       rate: 8.0,
       recoverable: false,
     },
   });
 
-  const rmTax10 = await prisma.rawMaterialTax.upsert({
-    where: { id: 'rmtax-10' },
-    update: {},
-    create: {
-      id: 'rmtax-10',
+  const rmTaxPISPresumido = await prisma.rawMaterialTax.create({
+    data: {
       name: 'PIS',
       rate: 0.65,
       recoverable: false,
     },
   });
 
-  const rmTax11 = await prisma.rawMaterialTax.upsert({
-    where: { id: 'rmtax-11' },
-    update: {},
-    create: {
-      id: 'rmtax-11',
+  const rmTaxCOFINSPresumido = await prisma.rawMaterialTax.create({
+    data: {
       name: 'COFINS',
       rate: 3.0,
       recoverable: false,
     },
   });
 
-  console.log('✅ Impostos de matéria-prima criados');
+  console.log('✅ 11 impostos de matéria-prima criados');
 
   // ============================================
-  // 5. MATÉRIAS-PRIMAS (com relações N:N)
+  // 6. MATÉRIAS-PRIMAS
   // ============================================
   console.log('\n📦 Criando matérias-primas...');
 
-  // MP001 - Aço Carbono (Regime Lucro Real)
-  const mp001 = await prisma.rawMaterial.upsert({
-    where: { code: 'MP001' },
-    update: {},
-    create: {
+  const mpAcoCarbono = await prisma.rawMaterial.create({
+    data: {
       code: 'MP001',
       name: 'Aço Carbono 1020',
       description: 'Aço carbono laminado a quente',
@@ -359,24 +320,21 @@ async function main() {
       priceConvertedBrl: 8.5,
       additionalCost: 0.5,
       freights: {
-        connect: [{ id: freight1.id }],
+        connect: [{ id: freightNacional.id }],
       },
       rawMaterialTaxes: {
         connect: [
-          { id: rmTax1.id },
-          { id: rmTax2.id },
-          { id: rmTax3.id },
-          { id: rmTax4.id },
+          { id: rmTaxPISRecuperavel.id },
+          { id: rmTaxCOFINSRecuperavel.id },
+          { id: rmTaxICMS.id },
+          { id: rmTaxIPI5.id },
         ],
       },
     },
   });
 
-  // MP002 - Polietileno (Regime Lucro Real)
-  const mp002 = await prisma.rawMaterial.upsert({
-    where: { code: 'MP002' },
-    update: {},
-    create: {
+  const mpPolietileno = await prisma.rawMaterial.create({
+    data: {
       code: 'MP002',
       name: 'Polietileno de Alta Densidade',
       description: 'PEAD virgem para embalagens',
@@ -388,24 +346,21 @@ async function main() {
       priceConvertedBrl: 12.0,
       additionalCost: 0.8,
       freights: {
-        connect: [{ id: freight1.id }],
+        connect: [{ id: freightNacional.id }],
       },
       rawMaterialTaxes: {
         connect: [
-          { id: rmTax1.id },
-          { id: rmTax2.id },
-          { id: rmTax3.id },
-          { id: rmTax5.id },
+          { id: rmTaxPISRecuperavel.id },
+          { id: rmTaxCOFINSRecuperavel.id },
+          { id: rmTaxICMS.id },
+          { id: rmTaxIPI10.id },
         ],
       },
     },
   });
 
-  // MP003 - Resina Epóxi (Importado - Regime Lucro Real)
-  const mp003 = await prisma.rawMaterial.upsert({
-    where: { code: 'MP003' },
-    update: {},
-    create: {
+  const mpResinaEpoxi = await prisma.rawMaterial.create({
+    data: {
       code: 'MP003',
       name: 'Resina Epóxi',
       description: 'Resina epóxi bi-componente importada',
@@ -417,24 +372,21 @@ async function main() {
       priceConvertedBrl: 225.0,
       additionalCost: 15.0,
       freights: {
-        connect: [{ id: freight2.id }],
+        connect: [{ id: freightInternacional.id }],
       },
       rawMaterialTaxes: {
         connect: [
-          { id: rmTax6.id },
-          { id: rmTax7.id },
-          { id: rmTax8.id },
-          { id: rmTax3.id },
+          { id: rmTaxII.id },
+          { id: rmTaxPISNaoRecuperavel.id },
+          { id: rmTaxCOFINSNaoRecuperavel.id },
+          { id: rmTaxICMS.id },
         ],
       },
     },
   });
 
-  // MP004 - Parafuso (Simples Nacional)
-  const mp004 = await prisma.rawMaterial.upsert({
-    where: { code: 'MP004' },
-    update: {},
-    create: {
+  const mpParafuso = await prisma.rawMaterial.create({
+    data: {
       code: 'MP004',
       name: 'Parafuso Sextavado M8',
       description: 'Parafuso sextavado inox M8x30mm',
@@ -446,19 +398,16 @@ async function main() {
       priceConvertedBrl: 0.85,
       additionalCost: 0.05,
       freights: {
-        connect: [{ id: freight3.id }],
+        connect: [{ id: freightExpresso.id }],
       },
       rawMaterialTaxes: {
-        connect: [{ id: rmTax9.id }],
+        connect: [{ id: rmTaxSIMPLES.id }],
       },
     },
   });
 
-  // MP005 - Tinta (Lucro Presumido)
-  const mp005 = await prisma.rawMaterial.upsert({
-    where: { code: 'MP005' },
-    update: {},
-    create: {
+  const mpTinta = await prisma.rawMaterial.create({
+    data: {
       code: 'MP005',
       name: 'Tinta Automotiva Base Água',
       description: 'Tinta automotiva ecológica',
@@ -470,23 +419,20 @@ async function main() {
       priceConvertedBrl: 89.0,
       additionalCost: 5.0,
       freights: {
-        connect: [{ id: freight1.id }],
+        connect: [{ id: freightNacional.id }],
       },
       rawMaterialTaxes: {
         connect: [
-          { id: rmTax10.id },
-          { id: rmTax11.id },
-          { id: rmTax3.id },
+          { id: rmTaxPISPresumido.id },
+          { id: rmTaxCOFINSPresumido.id },
+          { id: rmTaxICMS.id },
         ],
       },
     },
   });
 
-  // MP006 - Embalagem (Simples Nacional)
-  const mp006 = await prisma.rawMaterial.upsert({
-    where: { code: 'MP006' },
-    update: {},
-    create: {
+  const mpEmbalagem = await prisma.rawMaterial.create({
+    data: {
       code: 'MP006',
       name: 'Caixa de Papelão 40x30x20',
       description: 'Embalagem papelão ondulado',
@@ -498,26 +444,23 @@ async function main() {
       priceConvertedBrl: 2.5,
       additionalCost: 0.15,
       freights: {
-        connect: [{ id: freight1.id }],
+        connect: [{ id: freightNacional.id }],
       },
       rawMaterialTaxes: {
-        connect: [{ id: rmTax9.id }],
+        connect: [{ id: rmTaxSIMPLES.id }],
       },
     },
   });
 
-  const rawMaterials = [mp001, mp002, mp003, mp004, mp005, mp006];
-  console.log(`✅ ${rawMaterials.length} matérias-primas criadas`);
+  console.log('✅ 6 matérias-primas criadas');
 
   // ============================================
-  // 6. CUSTOS FIXOS (Overhead)
+  // 7. CUSTOS FIXOS
   // ============================================
   console.log('\n💼 Criando custos fixos...');
 
-  const fixedCost1 = await prisma.fixedCost.upsert({
-    where: { code: 'CF001' },
-    update: {},
-    create: {
+  const fixedCostJan = await prisma.fixedCost.create({
+    data: {
       code: 'CF001',
       description: 'Custos Fixos Mensais - Janeiro 2025',
       personnelExpenses: 45000.0,
@@ -532,10 +475,8 @@ async function main() {
     },
   });
 
-  const fixedCost2 = await prisma.fixedCost.upsert({
-    where: { code: 'CF002' },
-    update: {},
-    create: {
+  const fixedCostFev = await prisma.fixedCost.create({
+    data: {
       code: 'CF002',
       description: 'Custos Fixos Mensais - Fevereiro 2025',
       personnelExpenses: 47000.0,
@@ -550,232 +491,229 @@ async function main() {
     },
   });
 
-  console.log('✅ Custos fixos criados');
+  console.log('✅ 2 custos fixos criados');
 
   // ============================================
-  // 7. GRUPOS DE PRODUTOS
+  // 8. GRUPOS DE PRODUTOS
   // ============================================
   console.log('\n📂 Criando grupos de produtos...');
 
-  const productGroup1 = await prisma.productGroup.upsert({
-    where: { name: 'Componentes Estruturais' },
-    update: {},
-    create: {
+  const groupEstruturais = await prisma.productGroup.create({
+    data: {
       name: 'Componentes Estruturais',
       description: 'Produtos para aplicações estruturais e suporte',
     },
   });
 
-  const productGroup2 = await prisma.productGroup.upsert({
-    where: { name: 'Containers e Embalagens' },
-    update: {},
-    create: {
+  const groupEmbalagens = await prisma.productGroup.create({
+    data: {
       name: 'Containers e Embalagens',
       description: 'Soluções de armazenamento e embalagem',
     },
   });
 
-  const productGroup3 = await prisma.productGroup.upsert({
-    where: { name: 'Kits e Conjuntos' },
-    update: {},
-    create: {
+  const groupKits = await prisma.productGroup.create({
+    data: {
       name: 'Kits e Conjuntos',
       description: 'Kits completos para diversas aplicações',
     },
   });
 
-  console.log('✅ Grupos de produtos criados');
+  console.log('✅ 3 grupos de produtos criados');
 
   // ============================================
-  // 8. PRODUTOS
+  // 9. PRODUTOS
   // ============================================
   console.log('\n📦 Criando produtos...');
 
-  // Produto 1
-  const product1 = await prisma.product.upsert({
-    where: { code: '10001' },
-    update: {},
-    create: {
+  const productSuporteMetalico = await prisma.product.create({
+    data: {
       code: '10001',
       name: 'Suporte Metálico Modelo A',
       description: 'Suporte estrutural em aço carbono com acabamento pintado',
-      creatorId: users[0].id,
-      fixedCostId: fixedCost1.id,
-      productGroupId: productGroup1.id,
+      creatorId: adminUser.id,
+      fixedCostId: fixedCostJan.id,
+      productGroupId: groupEstruturais.id,
       priceWithoutTaxesAndFreight: 125.5,
       priceWithTaxesAndFreight: 185.75,
       productRawMaterials: {
         create: [
-          { rawMaterialId: mp001.id, quantity: 5.0 },
-          { rawMaterialId: mp004.id, quantity: 8.0 },
-          { rawMaterialId: mp005.id, quantity: 0.5 },
-          { rawMaterialId: mp006.id, quantity: 1.0 },
+          { rawMaterialId: mpAcoCarbono.id, quantity: 5.0 },
+          { rawMaterialId: mpParafuso.id, quantity: 8.0 },
+          { rawMaterialId: mpTinta.id, quantity: 0.5 },
+          { rawMaterialId: mpEmbalagem.id, quantity: 1.0 },
         ],
       },
       freights: {
-        connect: [{ id: freight1.id }],
+        connect: [{ id: freightNacional.id }],
       },
     },
   });
 
-  // Produto 2
-  const product2 = await prisma.product.upsert({
-    where: { code: '10002' },
-    update: {},
-    create: {
+  const productContainer = await prisma.product.create({
+    data: {
       code: '10002',
       name: 'Container Plástico Premium',
       description: 'Container de armazenamento em PEAD alta resistência',
-      creatorId: users[1].id,
-      fixedCostId: fixedCost1.id,
-      productGroupId: productGroup2.id,
+      creatorId: comercialUser.id,
+      fixedCostId: fixedCostJan.id,
+      productGroupId: groupEmbalagens.id,
       priceWithoutTaxesAndFreight: 78.0,
       priceWithTaxesAndFreight: 112.5,
       productRawMaterials: {
         create: [
-          { rawMaterialId: mp002.id, quantity: 2.5 },
-          { rawMaterialId: mp006.id, quantity: 1.0 },
+          { rawMaterialId: mpPolietileno.id, quantity: 2.5 },
+          { rawMaterialId: mpEmbalagem.id, quantity: 1.0 },
         ],
       },
       freights: {
-        connect: [{ id: freight1.id }, { id: freight3.id }],
+        connect: [{ id: freightNacional.id }, { id: freightExpresso.id }],
       },
     },
   });
 
-  // Produto 3
-  const product3 = await prisma.product.upsert({
-    where: { code: '10003' },
-    update: {},
-    create: {
+  const productPecaComposta = await prisma.product.create({
+    data: {
       code: '10003',
       name: 'Peça Composta Industrial',
       description: 'Peça industrial com revestimento epóxi',
-      creatorId: users[0].id,
-      fixedCostId: fixedCost2.id,
-      productGroupId: productGroup1.id,
+      creatorId: adminUser.id,
+      fixedCostId: fixedCostFev.id,
+      productGroupId: groupEstruturais.id,
       priceWithoutTaxesAndFreight: 385.0,
       priceWithTaxesAndFreight: 520.0,
       productRawMaterials: {
         create: [
-          { rawMaterialId: mp001.id, quantity: 12.0 },
-          { rawMaterialId: mp003.id, quantity: 1.5 },
-          { rawMaterialId: mp004.id, quantity: 24.0 },
-          { rawMaterialId: mp006.id, quantity: 2.0 },
+          { rawMaterialId: mpAcoCarbono.id, quantity: 12.0 },
+          { rawMaterialId: mpResinaEpoxi.id, quantity: 1.5 },
+          { rawMaterialId: mpParafuso.id, quantity: 24.0 },
+          { rawMaterialId: mpEmbalagem.id, quantity: 2.0 },
         ],
       },
       freights: {
-        connect: [{ id: freight2.id }],
+        connect: [{ id: freightInternacional.id }],
       },
     },
   });
 
-  // Produto 4
-  const product4 = await prisma.product.upsert({
-    where: { code: '10004' },
-    update: {},
-    create: {
+  const productKitFixacao = await prisma.product.create({
+    data: {
       code: '10004',
       name: 'Kit Fixação Completo',
       description: 'Kit com componentes de fixação diversos',
-      creatorId: users[1].id,
-      productGroupId: productGroup3.id,
+      creatorId: comercialUser.id,
+      productGroupId: groupKits.id,
       priceWithoutTaxesAndFreight: 45.0,
       priceWithTaxesAndFreight: 58.5,
       productRawMaterials: {
         create: [
-          { rawMaterialId: mp004.id, quantity: 50.0 },
-          { rawMaterialId: mp006.id, quantity: 1.0 },
+          { rawMaterialId: mpParafuso.id, quantity: 50.0 },
+          { rawMaterialId: mpEmbalagem.id, quantity: 1.0 },
         ],
       },
       freights: {
-        connect: [{ id: freight3.id }],
+        connect: [{ id: freightExpresso.id }],
       },
     },
   });
 
-  // Produto 5 - Sem grupo
-  const product5 = await prisma.product.upsert({
-    where: { code: '10005' },
-    update: {},
-    create: {
+  const productSemGrupo = await prisma.product.create({
+    data: {
       code: '10005',
       name: 'Produto Sem Grupo',
       description: 'Produto avulso sem categoria definida',
-      creatorId: users[0].id,
-      fixedCostId: fixedCost1.id,
+      creatorId: adminUser.id,
+      fixedCostId: fixedCostJan.id,
       priceWithoutTaxesAndFreight: 35.0,
       priceWithTaxesAndFreight: 48.0,
       productRawMaterials: {
-        create: [{ rawMaterialId: mp006.id, quantity: 1.0 }],
+        create: [{ rawMaterialId: mpEmbalagem.id, quantity: 1.0 }],
       },
       freights: {
-        connect: [{ id: freight1.id }],
+        connect: [{ id: freightNacional.id }],
       },
     },
   });
 
-  console.log('✅ Produtos criados com sucesso');
+  console.log('✅ 5 produtos criados');
 
   // ============================================
-  // 9. LOGS DE ALTERAÇÃO (Exemplo)
+  // 10. LOGS DE ALTERAÇÃO
   // ============================================
   console.log('\n📝 Criando logs de exemplo...');
 
-  const existingLog = await prisma.rawMaterialChangeLog.findFirst({
-    where: {
-      rawMaterialId: mp001.id,
+  await prisma.rawMaterialChangeLog.create({
+    data: {
+      rawMaterialId: mpAcoCarbono.id,
       field: 'acquisitionPrice',
+      oldValue: '8.00',
+      newValue: '8.50',
+      userId: impostoUser.id,
+      changedAt: new Date('2025-01-15'),
     },
   });
 
-  if (!existingLog) {
-    await prisma.rawMaterialChangeLog.create({
-      data: {
-        rawMaterialId: mp001.id,
-        field: 'acquisitionPrice',
-        oldValue: '8.00',
-        newValue: '8.50',
-        userId: users[3].id,
-        changedAt: new Date(),
-      },
-    });
-  }
+  await prisma.rawMaterialChangeLog.create({
+    data: {
+      rawMaterialId: mpPolietileno.id,
+      field: 'additionalCost',
+      oldValue: '0.60',
+      newValue: '0.80',
+      userId: logisticaUser.id,
+      changedAt: new Date('2025-01-20'),
+    },
+  });
 
-  console.log('✅ Logs criados');
+  console.log('✅ 2 logs de alteração criados');
 
   // ============================================
   // RESUMO FINAL
   // ============================================
-  console.log('\n' + '='.repeat(50));
+  console.log('\n' + '='.repeat(60));
   console.log('✅ SEED CONCLUÍDO COM SUCESSO!');
-  console.log('='.repeat(50));
+  console.log('='.repeat(60));
   console.log('\n📊 Resumo dos dados criados:');
-  console.log(`   👥 Usuários: ${users.length}`);
-  console.log(`   🚚 Opções de frete: 3`);
-  console.log(`   📦 Matérias-primas: ${rawMaterials.length}`);
-  console.log(`      - MP001: Aço Carbono (Lucro Real)`);
-  console.log(`      - MP002: Polietileno (Lucro Real)`);
-  console.log(`      - MP003: Resina Epóxi (Importado)`);
-  console.log(`      - MP004: Parafuso (Simples Nacional)`);
-  console.log(`      - MP005: Tinta (Lucro Presumido)`);
-  console.log(`      - MP006: Embalagem (Simples Nacional)`);
-  console.log(`   💼 Custos fixos: 2`);
-  console.log(`   📂 Grupos de produtos: 3`);
-  console.log(`   📦 Produtos: 5`);
-  console.log(`      - 3 em "Componentes Estruturais"`);
-  console.log(`      - 1 em "Containers e Embalagens"`);
-  console.log(`      - 1 em "Kits e Conjuntos"`);
-  console.log(`      - 1 sem grupo`);
+  console.log('   👥 Usuários: 4');
+  console.log('      • Admin, Comercial, Logística, Imposto');
+  console.log('   💰 Impostos de Frete: 4');
+  console.log('      • ICMS, PIS, COFINS, II');
+  console.log('   🚚 Fretes: 3');
+  console.log('      • Nacional, Internacional, Expresso');
+  console.log('   💰 Impostos de Matéria-Prima: 11');
+  console.log('      • PIS, COFINS, ICMS, IPI, II, SIMPLES (várias alíquotas)');
+  console.log('   📦 Matérias-Primas: 6');
+  console.log('      • MP001: Aço Carbono (Lucro Real)');
+  console.log('      • MP002: Polietileno (Lucro Real)');
+  console.log('      • MP003: Resina Epóxi (Importado)');
+  console.log('      • MP004: Parafuso (Simples Nacional)');
+  console.log('      • MP005: Tinta (Lucro Presumido)');
+  console.log('      • MP006: Embalagem (Simples Nacional)');
+  console.log('   💼 Custos Fixos: 2');
+  console.log('      • Janeiro 2025 (R$ 80.000,00)');
+  console.log('      • Fevereiro 2025 (R$ 83.500,00)');
+  console.log('   📂 Grupos de Produtos: 3');
+  console.log('      • Componentes Estruturais');
+  console.log('      • Containers e Embalagens');
+  console.log('      • Kits e Conjuntos');
+  console.log('   📦 Produtos: 5');
+  console.log('      • 10001: Suporte Metálico');
+  console.log('      • 10002: Container Plástico');
+  console.log('      • 10003: Peça Composta');
+  console.log('      • 10004: Kit Fixação');
+  console.log('      • 10005: Produto Sem Grupo');
+  console.log('   📝 Logs de Alteração: 2');
   console.log('\n🔑 Credenciais de acesso:');
-  console.log('   ADMIN:      admin@example.com / Admin@123456');
-  console.log('   COMERCIAL:  comercial@example.com / Comercial@123');
-  console.log('   LOGISTICA:  logistica@example.com / Logistica@123');
-  console.log('   IMPOSTO:    imposto@example.com / Imposto@123');
+  console.log('   ┌─────────────────────────────────────────────────────┐');
+  console.log('   │ ADMIN:      admin@example.com / Admin@123456       │');
+  console.log('   │ COMERCIAL:  comercial@example.com / Comercial@123  │');
+  console.log('   │ LOGISTICA:  logistica@example.com / Logistica@123  │');
+  console.log('   │ IMPOSTO:    imposto@example.com / Imposto@123      │');
+  console.log('   └─────────────────────────────────────────────────────┘');
   console.log(
     '\n⚠️  IMPORTANTE: Altere as senhas padrão após o primeiro login!',
   );
-  console.log('='.repeat(50) + '\n');
+  console.log('📌 Todos os IDs foram gerados como UUIDs válidos.');
+  console.log('='.repeat(60) + '\n');
 }
 
 main()

@@ -64,7 +64,9 @@ export function Autocomplete({
   // Scroll automático para o item focado
   useEffect(() => {
     if (focusedIndex >= 0 && listRef.current) {
-      const focusedElement = listRef.current.children[focusedIndex] as HTMLElement;
+      const focusedElement = listRef.current.children[
+        focusedIndex
+      ] as HTMLElement;
       if (focusedElement) {
         focusedElement.scrollIntoView({
           block: "nearest",
@@ -82,7 +84,13 @@ export function Autocomplete({
   const handleSelectOption = (optionValue: string) => {
     onChange(optionValue);
     const selectedOption = options.find((opt) => opt.value === optionValue);
-    onSearchChange(selectedOption?.label || "");
+    // CORREÇÃO: Apenas limpa se for uma seleção real (não quando usado para adicionar à lista)
+    if (value) {
+      onSearchChange(selectedOption?.label || "");
+    } else {
+      // Para casos de adicionar à lista (value vazio), limpa o input
+      onSearchChange("");
+    }
     setIsOpen(false);
     setFocusedIndex(-1);
   };
@@ -120,8 +128,7 @@ export function Autocomplete({
     }
   };
 
-  const selectedOption = options.find((opt) => opt.value === value);
-  const displayValue = selectedOption ? selectedOption.label : searchValue;
+  const displayValue = searchValue;
 
   return (
     <div ref={containerRef} className="relative">
@@ -164,8 +171,17 @@ export function Autocomplete({
                     value === option.value && "bg-blue-100 font-semibold"
                   )}
                 >
-                  {renderOption ? renderOption(option) : (
-                    <Text variant="caption">{option.label}</Text>
+                  {renderOption ? (
+                    renderOption(option)
+                  ) : (
+                    <div>
+                      <Text variant="caption">{option.label}</Text>
+                      {option.description && (
+                        <Text className="text-xs text-gray-500">
+                          {option.description}
+                        </Text>
+                      )}
+                    </div>
                   )}
                 </li>
               ))}
