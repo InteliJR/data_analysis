@@ -43,6 +43,14 @@ export function RawMaterialTableRow({
   const truncateWide =
     "max-w-[200px] truncate overflow-hidden text-ellipsis whitespace-nowrap";
 
+  // Calcular total de fretes
+  const totalFreightCost = (rawMaterial.freights || []).reduce(
+    (sum, freight) => sum + Number(freight.unitPrice || 0),
+    0
+  );
+
+  const freightCount = rawMaterial.freights?.length || 0;
+
   return (
     <tr className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
       {/* Código */}
@@ -83,9 +91,7 @@ export function RawMaterialTableRow({
       {/* Grupo de Insumo */}
       <td className="px-4 py-3" title={rawMaterial.inputGroup || "-"}>
         <span className={truncateClass}>
-          {rawMaterial.inputGroup || (
-            <span className="text-gray-400">-</span>
-          )}
+          {rawMaterial.inputGroup || <span className="text-gray-400">-</span>}
         </span>
       </td>
 
@@ -113,13 +119,27 @@ export function RawMaterialTableRow({
         </div>
       </td>
 
-      {/* Frete */}
+      {/* Frete(s) - CORRIGIDO */}
       <td className="px-4 py-3">
-        {rawMaterial.freight ? (
-          <div className={truncateClass} title={rawMaterial.freight.name}>
-            <Text variant="caption" className="text-gray-700">
-              {rawMaterial.freight.name.slice(0, 15)}
-              {rawMaterial.freight.name.length > 15 && "..."}
+        {freightCount > 0 ? (
+          <div
+            className="max-w-[140px]"
+            title={rawMaterial.freights
+              ?.map(
+                (f) =>
+                  `${f.name}: ${getCurrencySymbol(f.currency)} ${formatCurrency(
+                    Number(f.unitPrice || 0)
+                  )
+                    .replace("R$", "")
+                    .trim()}`
+              )
+              .join(" | ")}
+          >
+            <Text variant="caption" className="text-gray-700 font-medium">
+              {freightCount} {freightCount === 1 ? "frete" : "fretes"}
+            </Text>
+            <Text variant="small" className="text-gray-500">
+              Total: {formatCurrency(totalFreightCost)}
             </Text>
           </div>
         ) : (

@@ -6,6 +6,7 @@ import { Text } from "@/components/common/Text";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { FiUser } from "react-icons/fi";
 
 interface ChangeLogHistoryProps {
   rawMaterialId: string;
@@ -58,7 +59,8 @@ export function ChangeLogHistory({ rawMaterialId }: ChangeLogHistoryProps) {
       currency: "Moeda",
       priceConvertedBrl: "Preço em BRL",
       additionalCost: "Custo Adicional",
-      freightId: "Frete",
+      freights: "Fretes",
+      created: "Criação do Registro",
     };
     return labels[field] || field;
   };
@@ -107,7 +109,10 @@ export function ChangeLogHistory({ rawMaterialId }: ChangeLogHistoryProps) {
       <div className="max-h-[400px] overflow-y-auto border border-gray-200 rounded-lg">
         <div className="divide-y divide-gray-200">
           {allLogs.map((log) => (
-            <div key={log.id} className="p-4 hover:bg-gray-50 transition-colors">
+            <div
+              key={log.id}
+              className="p-4 hover:bg-gray-50 transition-colors"
+            >
               <div className="flex justify-between items-start mb-2">
                 <Text variant="caption" className="font-semibold text-gray-900">
                   {getFieldLabel(log.field)}
@@ -122,7 +127,10 @@ export function ChangeLogHistory({ rawMaterialId }: ChangeLogHistoryProps) {
               <div className="space-y-1">
                 {log.oldValue && (
                   <div className="flex items-start gap-2">
-                    <Text variant="small" className="text-gray-600 flex-shrink-0">
+                    <Text
+                      variant="small"
+                      className="text-gray-600 flex-shrink-0"
+                    >
                       De:
                     </Text>
                     <Text
@@ -133,13 +141,19 @@ export function ChangeLogHistory({ rawMaterialId }: ChangeLogHistoryProps) {
                     </Text>
                   </div>
                 )}
-                
+
                 {log.newValue && (
                   <div className="flex items-start gap-2">
-                    <Text variant="small" className="text-gray-600 flex-shrink-0">
+                    <Text
+                      variant="small"
+                      className="text-gray-600 flex-shrink-0"
+                    >
                       Para:
                     </Text>
-                    <Text variant="small" className="text-green-600 font-medium flex-1 break-words">
+                    <Text
+                      variant="small"
+                      className="text-green-600 font-medium flex-1 break-words"
+                    >
                       {log.newValue}
                     </Text>
                   </div>
@@ -152,9 +166,23 @@ export function ChangeLogHistory({ rawMaterialId }: ChangeLogHistoryProps) {
                 )}
               </div>
 
-              <Text variant="small" className="text-gray-400 mt-2">
-                Por: {log.changedBy}
-              </Text>
+              {/* SEÇÃO DE AUTOR COM ÍCONE */}
+              <div className="mt-3 pt-2 border-t border-gray-200">
+                <div className="flex items-center gap-2">
+                  <FiUser className="text-gray-400 h-4 w-4 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <Text
+                      variant="small"
+                      className="text-gray-700 font-medium truncate"
+                    >
+                      {log.user?.name || "Usuário desconhecido"}
+                    </Text>
+                    <Text variant="small" className="text-gray-400 truncate">
+                      {log.user?.email || "Email não disponível"}
+                    </Text>
+                  </div>
+                </div>
+              </div>
             </div>
           ))}
         </div>

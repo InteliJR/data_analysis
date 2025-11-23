@@ -345,9 +345,9 @@ export class RawMaterialsService {
   // LOGS E HISTÓRICO
   // ==========================================
 
-  // 1. Histórico específico de uma Matéria-Prima
+  // 1. Histórico específico de uma Matéria-Prima (CORRIGIDO)
   async getChangeLogs(id: string, page: number = 1, limit: number = 20) {
-    await this.findOne(id); // Garante existência
+    await this.findOne(id);
 
     const skip = (page - 1) * limit;
     const [data, total] = await Promise.all([
@@ -356,13 +356,11 @@ export class RawMaterialsService {
         skip,
         take: limit,
         orderBy: { changedAt: 'desc' },
-        // AQUI ESTÁ A MÁGICA: Incluímos os dados do usuário
         include: {
           user: {
             select: {
               name: true,
               email: true,
-              // id: true // Se precisar do ID também, descomente
             },
           },
         },
@@ -375,8 +373,16 @@ export class RawMaterialsService {
     const totalPages = Math.ceil(total / limit);
     const hasMore = page < totalPages;
 
+    // Formatar resposta para incluir changedBy como string legível
+    const formattedData = data.map((log) => ({
+      ...log,
+      changedBy: log.user
+        ? `${log.user.name} (${log.user.email})`
+        : 'Usuário desconhecido',
+    }));
+
     return {
-      data,
+      data: formattedData,
       meta: {
         total,
         page,
@@ -387,20 +393,18 @@ export class RawMaterialsService {
     };
   }
 
-  // 2. Lista geral das últimas alterações (Dashboard)
+  // 2. Lista geral das últimas alterações (CORRIGIDO)
   async getRecentChanges(limit: number = 10) {
-    return this.prisma.rawMaterialChangeLog.findMany({
+    const logs = await this.prisma.rawMaterialChangeLog.findMany({
       take: limit,
       orderBy: { changedAt: 'desc' },
       include: {
-        // Trazemos o nome da matéria-prima para saber O QUE foi alterado
         rawMaterial: {
           select: {
             name: true,
             code: true,
           },
         },
-        // Trazemos o usuário para saber QUEM alterou
         user: {
           select: {
             name: true,
@@ -409,7 +413,19 @@ export class RawMaterialsService {
         },
       },
     });
+
+    // Formatar resposta para incluir changedBy como string legível
+    return logs.map((log) => ({
+      ...log,
+      changedBy: log.user
+        ? `${log.user.name} (${log.user.email})`
+        : 'Usuário desconhecido',
+    }));
   }
+
+  // ==========================================
+  // MÉTODOS PRIVADOS DE LOG (Adicione isso à sua classe)
+  // ==========================================
 
   private async createChangeLog(
     rawMaterialId: string,
@@ -418,23 +434,28 @@ export class RawMaterialsService {
     newValue: string | null,
     userId: string,
   ) {
-    await this.prisma.rawMaterialChangeLog.create({
-      data: {
-        rawMaterialId,
-        field,
-        oldValue: oldValue ? String(oldValue) : null,
-        newValue: newValue ? String(newValue) : null,
-        userId, // Corrigido: o campo no schema é 'userId', mapeado na relação
-      },
-    });
+    try {
+      await this.prisma.rawMaterialChangeLog.create({
+        data: {
+          rawMaterialId,
+          field,
+          oldValue: oldValue ? String(oldValue) : null,
+          newValue: newValue ? String(newValue) : null,
+          userId,
+        },
+      });
+    } catch (error) {
+      console.error('Erro ao criar log de mudança:', error);
+      // Não queremos que o log falhe a transação principal, então apenas logamos o erro
+    }
   }
 
   private async logChanges(
-    existing: any,
-    updates: UpdateRawMaterialDto,
+    oldData: any,
+    newData: UpdateRawMaterialDto,
     userId: string,
   ) {
-    const simpleFields = [
+    const fieldsToTrack = [
       'code',
       'name',
       'description',
@@ -447,34 +468,30 @@ export class RawMaterialsService {
       'additionalCost',
     ];
 
-    // 1. Campos Simples
-    for (const field of simpleFields) {
-      if (updates[field] !== undefined && updates[field] !== existing[field]) {
-        await this.createChangeLog(
-          existing.id,
-          field,
-          existing[field],
-          updates[field],
-          userId,
-        );
+    for (const field of fieldsToTrack) {
+      const newValue = newData[field];
+      const oldValue = oldData[field];
+
+      // Se o valor não foi enviado no DTO, ignora
+      if (newValue === undefined) continue;
+
+      // Tratamento especial para Decimal vs Number
+      let areDifferent = newValue !== oldValue;
+
+      if (
+        oldValue &&
+        typeof oldValue === 'object' &&
+        'toFixed' in oldValue // Verifica se é um Decimal do Prisma
+      ) {
+        areDifferent = Number(oldValue) !== Number(newValue);
       }
-    }
 
-    // 2. Campo Complexo: Fretes (Lista)
-    if (updates.freightIds !== undefined) {
-      // Ordena para garantir comparação consistente
-      const oldIds = existing.freights
-        .map((f: any) => f.id)
-        .sort()
-        .join(',');
-      const newIds = updates.freightIds.sort().join(',');
-
-      if (oldIds !== newIds) {
+      if (areDifferent) {
         await this.createChangeLog(
-          existing.id,
-          'freights',
-          `[${existing.freights.length} fretes]`,
-          `[${updates.freightIds.length} fretes]`,
+          oldData.id,
+          field,
+          oldValue !== null && oldValue !== undefined ? String(oldValue) : '',
+          String(newValue),
           userId,
         );
       }

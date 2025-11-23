@@ -1,3 +1,5 @@
+// src/raw-materials/dto/create-raw-material.dto.ts
+
 import {
   IsString,
   IsNotEmpty,
@@ -14,6 +16,7 @@ import {
   IsUUID,
   IsBoolean,
 } from 'class-validator';
+// CORREÇÃO: Importar Type
 import { Type } from 'class-transformer';
 import { Currency, MeasurementUnit } from '@prisma/client';
 
@@ -30,6 +33,7 @@ export class RawMaterialTaxDto {
   name: string;
 
   @IsNumber()
+  @Type(() => Number) // CORREÇÃO: Converte string para number
   @IsPositive({ message: 'Taxa deve ser maior que zero' })
   @Min(0.01, { message: 'Taxa deve ser no mínimo 0.01%' })
   @Max(100, { message: 'Taxa deve ser no máximo 100%' })
@@ -68,11 +72,13 @@ export class CreateRawMaterialDto {
   inputGroup?: string;
 
   @IsNumber()
+  @Type(() => Number) // CORREÇÃO: Converte string para number
   @Min(0, { message: 'Prazo de pagamento deve ser no mínimo 0' })
   @Max(365, { message: 'Prazo de pagamento deve ser no máximo 365 dias' })
   paymentTerm: number;
 
   @IsNumber()
+  @Type(() => Number) // CORREÇÃO: Converte string para number
   @IsPositive({ message: 'Preço de aquisição deve ser maior que zero' })
   acquisitionPrice: number;
 
@@ -80,14 +86,15 @@ export class CreateRawMaterialDto {
   currency: Currency;
 
   @IsNumber()
+  @Type(() => Number) // CORREÇÃO: Converte string para number
   @Min(0, { message: 'Preço convertido não pode ser negativo' })
   priceConvertedBrl: number;
 
   @IsNumber()
+  @Type(() => Number) // CORREÇÃO: Converte string para number
   @Min(0, { message: 'Custo adicional não pode ser negativo' })
   additionalCost: number;
 
-  // MUDANÇA AQUI: Array de IDs em vez de ID único
   @IsArray({ message: 'Deve fornecer uma lista de fretes (pode ser vazia)' })
   @IsUUID('4', { each: true, message: 'ID de frete inválido' })
   freightIds: string[];

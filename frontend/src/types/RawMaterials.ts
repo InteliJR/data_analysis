@@ -1,21 +1,26 @@
-// src/types/rawMaterial.ts
+// src/types/rawMaterial.ts (ou src/types/RawMaterials.ts)
 
-export type Currency = 'BRL' | 'USD' | 'EUR';
-
-export type MeasurementUnit = 
-  | 'KG' 
-  | 'G' 
-  | 'L' 
-  | 'ML' 
-  | 'M' 
-  | 'CM' 
-  | 'UN' 
-  | 'CX' 
-  | 'PC';
+export interface RawMaterialChangeLog {
+  id: string;
+  rawMaterialId: string;
+  field: string;
+  oldValue?: string | null;
+  newValue?: string | null;
+  userId: string;
+  changedBy: string; // String formatada: "Nome (email)"
+  changedAt: string;
+  user?: {
+    name: string;
+    email: string;
+  };
+  rawMaterial?: {
+    name: string;
+    code: string;
+  };
+}
 
 export interface RawMaterialTax {
   id?: string;
-  rawMaterialId?: string;
   name: string;
   rate: number;
   recoverable: boolean;
@@ -23,25 +28,22 @@ export interface RawMaterialTax {
   updatedAt?: string;
 }
 
-export interface RawMaterialFreightInfo {
+export interface Freight {
   id: string;
-  unitPrice: number; // Usado no cálculo: rawMat.freight.unitPrice
-}
-
-export interface RawMaterialTaxInfo {
-  id: string;
-  rate: number; // Usado no cálculo: tax.rate
-  recoverable: boolean;
-}
-
-export interface RawMaterialChangeLog {
-  id: string;
-  rawMaterialId: string;
-  field: string;
-  oldValue: string | null;
-  newValue: string | null;
-  changedBy: string;
-  changedAt: string;
+  name: string;
+  unitPrice: number;
+  currency: "BRL" | "USD" | "EUR";
+  originCity: string;
+  originUf: string;
+  destinationCity: string;
+  destinationUf: string;
+  cargoType: string;
+  operationType: "INTERNAL" | "EXTERNAL";
+  freightTaxes?: Array<{
+    id: string;
+    name: string;
+    rate: number;
+  }>;
 }
 
 export interface RawMaterial {
@@ -49,44 +51,18 @@ export interface RawMaterial {
   code: string;
   name: string;
   description?: string;
-  measurementUnit: MeasurementUnit;
+  measurementUnit: string;
   inputGroup?: string;
   paymentTerm: number;
   acquisitionPrice: number;
-  currency: Currency;
+  currency: "BRL" | "USD" | "EUR";
   priceConvertedBrl: number;
   additionalCost: number;
-  freightId: string;
   createdAt: string;
   updatedAt: string;
-  
-  // Relações
-  freight?: {
-    id: string;
-    name: string;
-    unitPrice: number;
-    currency: Currency;
-  };
-  rawMaterialTaxes: RawMaterialTax[];
-  changeLogs?: RawMaterialChangeLog[];
-}
 
-export interface RawMaterialFormData {
-  code: string;
-  name: string;
-  description?: string;
-  measurementUnit: MeasurementUnit;
-  inputGroup?: string;
-  paymentTerm: number;
-  acquisitionPrice: number;
-  currency: Currency;
-  priceConvertedBrl: number;
-  additionalCost: number;
-  freightId: string;
-  rawMaterialTaxes: {
-    id?: string;
-    name: string;
-    rate: number;
-    recoverable: boolean;
-  }[];
+  // Relações
+  freights?: Freight[]; // PLURAL - Array de fretes
+  rawMaterialTaxes?: RawMaterialTax[];
+  changeLogs?: RawMaterialChangeLog[];
 }

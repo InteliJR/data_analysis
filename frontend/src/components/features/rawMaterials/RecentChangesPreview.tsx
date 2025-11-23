@@ -5,7 +5,7 @@ import { Text } from "@/components/common/Text";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { FiClock } from "react-icons/fi";
+import { FiClock, FiUser, FiPackage } from "react-icons/fi";
 
 export function RecentChangesPreview() {
   const { data: recentChanges, isLoading, isError } = useRecentChangesQuery();
@@ -22,7 +22,8 @@ export function RecentChangesPreview() {
       currency: "Moeda",
       priceConvertedBrl: "Preço em BRL",
       additionalCost: "Custo Adicional",
-      freightId: "Frete",
+      freights: "Fretes",
+      created: "Criação do Registro",
     };
     return labels[field] || field;
   };
@@ -42,7 +43,7 @@ export function RecentChangesPreview() {
   }
 
   if (isError) {
-    return null; // Não mostrar nada em caso de erro
+    return null;
   }
 
   if (!recentChanges || recentChanges.length === 0) {
@@ -71,7 +72,8 @@ export function RecentChangesPreview() {
           Últimas Alterações
         </h3>
         <span className="ml-auto text-sm text-gray-500">
-          {recentChanges.length} {recentChanges.length === 1 ? "registro" : "registros"}
+          {recentChanges.length}{" "}
+          {recentChanges.length === 1 ? "registro" : "registros"}
         </span>
       </div>
 
@@ -81,11 +83,18 @@ export function RecentChangesPreview() {
             key={log.id}
             className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            {/* Indicador visual */}
             <div className="h-2 w-2 rounded-full bg-blue-500 mt-2 flex-shrink-0" />
 
-            {/* Conteúdo */}
             <div className="flex-1 min-w-0">
+              {/* Matéria-Prima afetada */}
+              <div className="flex items-center gap-2 mb-2">
+                <FiPackage className="text-gray-400 h-3 w-3 flex-shrink-0" />
+                <Text variant="small" className="text-gray-600 truncate">
+                  {log.rawMaterial?.code} - {log.rawMaterial?.name}
+                </Text>
+              </div>
+
+              {/* Campo alterado */}
               <div className="flex items-start justify-between gap-2 mb-1">
                 <Text variant="caption" className="font-semibold text-gray-900">
                   {getFieldLabel(log.field)}
@@ -97,7 +106,8 @@ export function RecentChangesPreview() {
                 </Text>
               </div>
 
-              <div className="flex items-center gap-2 text-xs">
+              {/* Mudança */}
+              <div className="flex items-center gap-2 text-xs mb-2">
                 {log.oldValue && (
                   <>
                     <span className="text-red-600 line-through truncate max-w-[200px]">
@@ -116,9 +126,21 @@ export function RecentChangesPreview() {
                 )}
               </div>
 
-              <Text variant="small" className="text-gray-400 mt-1">
-                Por: {log.changedBy}
-              </Text>
+              {/* Autor */}
+              <div className="flex items-center gap-2 pt-1 border-t border-gray-200">
+                <FiUser className="text-gray-400 h-3 w-3 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <Text
+                    variant="small"
+                    className="text-gray-600 font-medium truncate"
+                  >
+                    {log.user?.name || "Usuário desconhecido"}
+                  </Text>
+                  <Text variant="small" className="text-gray-400 truncate">
+                    {log.user?.email || "Email não disponível"}
+                  </Text>
+                </div>
+              </div>
             </div>
           </div>
         ))}
