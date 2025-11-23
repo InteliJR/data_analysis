@@ -1,6 +1,6 @@
 // src/components/features/products/ProductForm.tsx
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import type { Product } from "@/types/products";
 
@@ -9,14 +9,14 @@ import { Label } from "@/components/common/Label";
 import { Textarea } from "@/components/common/Textarea";
 import { SecondaryButton } from "@/components/common/SecondaryButton";
 import { Text } from "@/components/common/Text";
+import { Select } from "@/components/common/Select";
 import { Autocomplete } from "@/components/common/Autocomplete";
-import type { RawMaterial, Freight } from "@/types/api";
 
 import { FiTrash2, FiUser, FiCalendar, FiClock } from "react-icons/fi";
 import { formatCurrency } from "@/lib/utils";
 
 import { useRawMaterialsQuery } from "@/api/rawMaterials";
-import { useFixedCostsQuery } from "@/api/fixedCosts";
+import { useFixedCostsQuery, useFixedCostByIdQuery } from "@/api/fixedCosts";
 import { useProductGroupsQuery } from "@/api/productgroups";
 import { useFreightsQuery } from "@/api/freights";
 
@@ -36,8 +36,6 @@ export function ProductForm({
   isLoading,
 }: ProductFormProps) {
   const [rawMaterialSearch, setRawMaterialSearch] = useState("");
-  const [fixedCostSearch, setFixedCostSearch] = useState("");
-  const [productGroupSearch, setProductGroupSearch] = useState("");
   const [freightSearch, setFreightSearch] = useState("");
 
   const {
@@ -77,7 +75,7 @@ export function ProductForm({
     name: "rawMaterials",
   });
 
-  // Queries
+  // --- QUERIES ---
   const { data: rawMaterialsData, isLoading: isLoadingRM } =
     useRawMaterialsQuery({
       page: 1,
@@ -85,16 +83,17 @@ export function ProductForm({
       search: rawMaterialSearch,
     });
 
-  const { data: fixedCostsData } = useFixedCostsQuery({
+  // Lista para o Select (Paginada)
+  const { data: fixedCostsList } = useFixedCostsQuery({
     page: 1,
     limit: 50,
-    search: fixedCostSearch,
+    search: "",
   });
 
   const { data: productGroupsData } = useProductGroupsQuery({
     page: 1,
     limit: 50,
-    search: productGroupSearch,
+    search: "",
   });
 
   const { data: freightsData } = useFreightsQuery({
@@ -103,34 +102,55 @@ export function ProductForm({
     search: freightSearch,
   });
 
+  // --- WATCHERS ---
   const rawMaterials = watch("rawMaterials") || [];
   const selectedFixedCostId = watch("fixedCostId");
+  const selectedProductGroupId = watch("productGroupId");
   const selectedFreightIds = watch("freightIds") || [];
 
-  // CÁLCULO CONSOLIDADO - Seguindo a lógica do backend
+  // --- CORREÇÃO PRINCIPAL AQUI ---
+  // Buscamos o custo fixo específico selecionado para garantir o cálculo correto
+  // mesmo que ele não esteja na primeira página da lista do Select.
+  const { data: selectedFixedCostData } = useFixedCostByIdQuery(
+    selectedFixedCostId || null
+  );
+
+  // --- CÁLCULO CONSOLIDADO ---
   const calculatePrices = () => {
-    let totalRawMaterialsCost = 0;
+    let totalRawMaterials = 0;
     let totalTaxes = 0;
-    let totalRawMaterialFreight = 0;
+    let totalRawMaterialFreightService = 0;
 
     // 1. Calcular custos das matérias-primas
     rawMaterials.forEach((rm: any) => {
-      const rawMat = rawMaterialsData?.data?.find(
+      let rawMat = rawMaterialsData?.data?.find(
         (r) => r.id === rm.rawMaterialId
       );
+
+      if (!rawMat && product) {
+        const originalRm = product.productRawMaterials?.find(
+          (prm) => prm.rawMaterialId === rm.rawMaterialId
+        );
+        if (originalRm) {
+          rawMat = originalRm.rawMaterial;
+        }
+      }
+
       if (!rawMat) return;
 
       const quantity = Number(rm.quantity) || 0;
-      const unitPrice = Number(rawMat.priceConvertedBrl) || 0;
+      const unitPrice =
+        Number(rawMat.priceConvertedBrl || rawMat.acquisitionPrice) || 0;
       const materialCost = unitPrice * quantity;
 
-      totalRawMaterialsCost += materialCost;
+      totalRawMaterials += materialCost;
 
       // Impostos da matéria-prima (não recuperáveis)
       const taxes = rawMat.rawMaterialTaxes || [];
       taxes.forEach((tax: any) => {
         if (!tax.recoverable) {
-          totalTaxes += (materialCost * Number(tax.rate)) / 100;
+          const taxValue = (materialCost * Number(tax.rate)) / 100;
+          totalTaxes += taxValue;
         }
       });
 
@@ -138,58 +158,67 @@ export function ProductForm({
       const freights = rawMat.freights || [];
       freights.forEach((freight: any) => {
         const freightCost = Number(freight.unitPrice) || 0;
-        totalRawMaterialFreight += freightCost * quantity;
+        const freightServiceCost = freightCost * quantity;
+        totalRawMaterialFreightService += freightServiceCost;
 
-        // Impostos do frete
+        // IMPOSTOS DO FRETE DA MATÉRIA-PRIMA
         const freightTaxes = freight.freightTaxes || [];
         freightTaxes.forEach((fTax: any) => {
-          totalTaxes += (freightCost * quantity * Number(fTax.rate)) / 100;
+          const taxValue = (freightServiceCost * Number(fTax.rate)) / 100;
+          totalTaxes += taxValue;
         });
       });
     });
 
     // 2. Fretes do produto
-    let productFreightCost = 0;
-    if (selectedFreightIds.length > 0 && freightsData?.data) {
-      selectedFreightIds.forEach((freightId: string) => {
-        const freight = freightsData.data.find((f) => f.id === freightId);
-        if (freight) {
-          const freightCost = Number(freight.unitPrice) || 0;
-          productFreightCost += freightCost;
+    let productFreightServiceCost = 0;
+    let productFreightTaxesTotal = 0; // NOVA VARIÁVEL PARA DEBUG
 
-          // Impostos do frete do produto
-          const freightTaxes = freight.freightTaxes || [];
-          freightTaxes.forEach((fTax: any) => {
-            totalTaxes += (freightCost * Number(fTax.rate)) / 100;
-          });
-        }
-      });
-    }
+    selectedFreightIds.forEach((freightId: string) => {
+      let freight = freightsData?.data?.find((f) => f.id === freightId);
 
-    const totalFreight = totalRawMaterialFreight + productFreightCost;
+      if (!freight && product) {
+        freight = product.freights?.find((f) => f.id === freightId);
+      }
 
-    // 3. Preço base (matérias-primas apenas)
-    const priceBase = totalRawMaterialsCost;
+      if (freight) {
+        const freightCost = Number(freight.unitPrice) || 0;
+        productFreightServiceCost += freightCost;
 
-    // 4. Preço com impostos e frete (sem custo fixo)
-    const priceWithTaxesAndFreight = priceBase + totalTaxes + totalFreight;
+        // CRÍTICO: IMPOSTOS DO FRETE DO PRODUTO
+        const freightTaxes = freight.freightTaxes || [];
+        freightTaxes.forEach((fTax: any) => {
+          const taxValue = (freightCost * Number(fTax.rate)) / 100;
+          totalTaxes += taxValue;
+          productFreightTaxesTotal += taxValue; // Para debug
+        });
+      }
+    });
 
-    // 5. Custo fixo
-    const fixedCostOverhead =
-      selectedFixedCostId && fixedCostsData?.data
-        ? Number(
-            fixedCostsData.data.find((fc) => fc.id === selectedFixedCostId)
-              ?.overheadPerUnit || 0
-          )
-        : 0;
+    const totalFreightService =
+      totalRawMaterialFreightService + productFreightServiceCost;
 
-    // 6. Preço final com custo fixo
+    // 3. Cálculos finais
+    const priceBase = totalRawMaterials;
+    const priceWithTaxesAndFreight =
+      priceBase + totalTaxes + totalFreightService;
+
+    // 4. Custo fixo
+    const fixedCostOverhead = selectedFixedCostData
+      ? Number(selectedFixedCostData.overheadPerUnit)
+      : product &&
+        product.fixedCostId === selectedFixedCostId &&
+        product.fixedCost
+      ? Number(product.fixedCost.overheadPerUnit)
+      : 0;
+
+    // 5. Preço final
     const finalPrice = priceWithTaxesAndFreight + fixedCostOverhead;
 
     return {
       priceBase,
       totalTaxes,
-      totalFreight,
+      totalFreight: totalFreightService,
       priceWithTaxesAndFreight,
       fixedCostOverhead,
       finalPrice,
@@ -205,7 +234,6 @@ export function ProductForm({
     if (!exists) {
       append({ rawMaterialId, quantity: 1 });
     }
-    // Limpar o search após adicionar
     setRawMaterialSearch("");
   };
 
@@ -219,7 +247,6 @@ export function ProductForm({
     } else {
       setValue("freightIds", [...current, freightId]);
     }
-    // Limpar o search após adicionar
     setFreightSearch("");
   };
 
@@ -372,44 +399,59 @@ export function ProductForm({
             </Text>
           </div>
 
+          {/* CORREÇÃO: Usar Select em vez de Autocomplete */}
           <div className="sm:col-span-2">
-            <Label htmlFor="productGroupId">Grupo de Produto (Opcional)</Label>
-            <Autocomplete
-              options={
-                productGroupsData?.data?.map((pg) => ({
-                  value: pg.id,
-                  label: pg.name,
-                  description: pg.description,
-                })) || []
-              }
-              value={watch("productGroupId")}
-              searchValue={productGroupSearch}
-              onChange={(value) => setValue("productGroupId", value)}
-              onSearchChange={setProductGroupSearch}
-              placeholder="Buscar grupo de produto..."
-              emptyMessage="Nenhum grupo encontrado"
-            />
+            <Select
+              id="productGroupId"
+              label="Grupo de Produto (Opcional)"
+              value={selectedProductGroupId}
+              onChange={(e) => setValue("productGroupId", e.target.value)}
+            >
+              <option value="">Selecione um grupo</option>
+              {productGroupsData?.data?.map((pg) => (
+                <option key={pg.id} value={pg.id}>
+                  {pg.name}
+                </option>
+              ))}
+            </Select>
           </div>
 
+          {/* Custo Fixo com tratamento para item selecionado fora da lista */}
           <div className="sm:col-span-2">
-            <Label htmlFor="fixedCostId">Custo Fixo (Opcional)</Label>
-            <Autocomplete
-              options={
-                fixedCostsData?.data?.map((fc) => ({
-                  value: fc.id,
-                  label: fc.description,
-                  description: `${fc.code || "S/C"} - ${formatCurrency(
-                    Number(fc.overheadPerUnit) || 0
-                  )}/un`,
-                })) || []
-              }
+            <Select
+              id="fixedCostId"
+              label="Custo Fixo (Opcional)"
               value={selectedFixedCostId}
-              searchValue={fixedCostSearch}
-              onChange={(value) => setValue("fixedCostId", value)}
-              onSearchChange={setFixedCostSearch}
-              placeholder="Buscar custo fixo..."
-              emptyMessage="Nenhum custo fixo encontrado"
-            />
+              onChange={(e) => setValue("fixedCostId", e.target.value)}
+            >
+              <option value="">Selecione um custo fixo</option>
+
+              {/* Renderiza a lista padrão */}
+              {fixedCostsList?.data?.map((fc) => (
+                <option key={fc.id} value={fc.id}>
+                  {fc.description} - {fc.code || "S/C"} -{" "}
+                  {formatCurrency(Number(fc.overheadPerUnit) || 0)}/un
+                </option>
+              ))}
+
+              {/* Renderiza o item selecionado SE ele não estiver na lista acima (para evitar duplicata visual ou campo vazio) */}
+              {selectedFixedCostData &&
+                !fixedCostsList?.data?.find(
+                  (f) => f.id === selectedFixedCostData.id
+                ) && (
+                  <option
+                    key={selectedFixedCostData.id}
+                    value={selectedFixedCostData.id}
+                  >
+                    {selectedFixedCostData.description} -{" "}
+                    {selectedFixedCostData.code || "S/C"} -{" "}
+                    {formatCurrency(
+                      Number(selectedFixedCostData.overheadPerUnit) || 0
+                    )}
+                    /un
+                  </option>
+                )}
+            </Select>
           </div>
         </div>
       </div>
@@ -645,7 +687,7 @@ export function ProductForm({
           </div>
 
           <div className="flex justify-between">
-            <Text className="text-gray-700">Impostos:</Text>
+            <Text className="text-gray-700">Impostos (Total):</Text>
             <Text className="font-semibold text-gray-900">
               {formatCurrency(prices.totalTaxes)}
             </Text>
@@ -658,6 +700,15 @@ export function ProductForm({
             </Text>
           </div>
 
+          <div className="flex justify-between pt-2 border-t border-blue-300">
+            <Text className="text-gray-700 font-medium">
+              Preço sem Custo Fixo:
+            </Text>
+            <Text className="font-semibold text-blue-700">
+              {formatCurrency(prices.priceWithTaxesAndFreight)}
+            </Text>
+          </div>
+
           {prices.fixedCostOverhead > 0 && (
             <div className="flex justify-between">
               <Text className="text-gray-700">Custo Fixo (Overhead):</Text>
@@ -667,8 +718,10 @@ export function ProductForm({
             </div>
           )}
 
-          <div className="flex justify-between pt-2 border-t border-blue-300">
-            <Text className="text-gray-700 font-medium">Preço Final:</Text>
+          <div className="flex justify-between pt-2 border-t-2 border-blue-400">
+            <Text className="text-gray-900 font-bold text-base">
+              Preço Final:
+            </Text>
             <Text className="font-bold text-lg text-green-700">
               {formatCurrency(prices.finalPrice)}
             </Text>
@@ -694,7 +747,11 @@ export function ProductForm({
               Impostos: soma dos impostos não recuperáveis das matérias e fretes
             </li>
             <li>Fretes: soma dos fretes das matérias + fretes do produto</li>
-            <li>Preço Final: Base + Impostos + Fretes + Custo Fixo</li>
+            <li>
+              <strong>
+                Preço Final: Base + Impostos + Fretes + Custo Fixo
+              </strong>
+            </li>
           </ul>
         </div>
       </div>

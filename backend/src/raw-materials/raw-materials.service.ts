@@ -138,15 +138,28 @@ export class RawMaterialsService {
         orderBy,
         include: {
           freights: {
-            // PLURAL
             select: {
               id: true,
               name: true,
               unitPrice: true,
               currency: true,
+              freightTaxes: {
+                select: {
+                  id: true,
+                  name: true,
+                  rate: true,
+                },
+              },
             },
           },
-          rawMaterialTaxes: true,
+          rawMaterialTaxes: {
+            select: {
+              id: true,
+              name: true,
+              rate: true,
+              recoverable: true,
+            },
+          },
         },
       }),
       this.prisma.rawMaterial.count({ where }),
@@ -168,15 +181,29 @@ export class RawMaterialsService {
       where: { id },
       include: {
         freights: {
-          // PLURAL
           select: {
             id: true,
             name: true,
             unitPrice: true,
             currency: true,
+            // CRÍTICO: Incluir os impostos dos fretes
+            freightTaxes: {
+              select: {
+                id: true,
+                name: true,
+                rate: true,
+              },
+            },
           },
         },
-        rawMaterialTaxes: true,
+        rawMaterialTaxes: {
+          select: {
+            id: true,
+            name: true,
+            rate: true,
+            recoverable: true,
+          },
+        },
       },
     });
 

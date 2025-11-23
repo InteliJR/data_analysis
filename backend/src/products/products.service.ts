@@ -76,14 +76,14 @@ export class ProductsService {
         }
       }
 
-      // Calcular preços
+      // CRÍTICO: Calcular preços ANTES de criar
       const calculations = await this.calculateProductPrice({
         rawMaterials: createProductDto.rawMaterials,
         fixedCostId: createProductDto.fixedCostId,
         freightIds: createProductDto.freightIds,
       });
 
-      // Criar produto
+      // Criar produto com valores calculados
       const product = await this.prisma.product.create({
         data: {
           code: createProductDto.code,
@@ -92,6 +92,7 @@ export class ProductsService {
           creatorId: userId,
           fixedCostId: createProductDto.fixedCostId,
           productGroupId: createProductDto.productGroupId,
+          // VALORES CALCULADOS - NÃO RECALCULAR
           priceWithoutTaxesAndFreight:
             calculations.calculations.priceWithoutTaxesAndFreight,
           priceWithTaxesAndFreight:
@@ -396,6 +397,7 @@ export class ProductsService {
       }
 
       let newPrices = {};
+      // Recalcular preços se houver mudança relevante
       if (
         updateProductDto.rawMaterials ||
         updateProductDto.fixedCostId !== undefined ||
@@ -530,8 +532,8 @@ export class ProductsService {
 
   /**
    * CÁLCULO CONSOLIDADO DE PREÇOS
-   * Este método implementa a lógica de negócio para calcular preços de produtos
-   * Segue a fórmula: Preço Final = Base + Impostos + Fretes + Custo Fixo
+   * Fórmula CORRIGIDA:
+   * Preço Final = (Soma MP) + (Total Impostos) + (Total Serviço de Frete) + Custo Fixo
    */
   async calculateProductPrice(calculatePriceDto: CalculatePriceDto) {
     try {
@@ -589,7 +591,7 @@ export class ProductsService {
       const rawMaterialsBreakdown: any[] = [];
       let totalRawMaterials = 0;
       let totalTaxes = 0;
-      let totalRawMaterialFreight = 0;
+      let totalRawMaterialFreightService = 0;
 
       for (const rmInput of rawMaterials) {
         const rmData = rawMaterialsData.find(
@@ -618,7 +620,7 @@ export class ProductsService {
         }
 
         // Fretes da matéria-prima
-        let freightSubtotal = 0;
+        let freightServiceSubtotal = 0;
         let freightTaxesTotal = 0;
         const freightTaxes: Record<string, number> = {};
 
@@ -626,7 +628,7 @@ export class ProductsService {
           for (const freight of rmData.freights) {
             const currentFreightCost =
               Number(freight.unitPrice || 0) * quantity;
-            freightSubtotal += currentFreightCost;
+            freightServiceSubtotal += currentFreightCost;
 
             if (freight.freightTaxes) {
               for (const fTax of freight.freightTaxes) {
@@ -640,11 +642,12 @@ export class ProductsService {
           }
         }
 
-        const freightTotal = freightSubtotal + freightTaxesTotal;
+        const freightTotalIncludingTaxes =
+          freightServiceSubtotal + freightTaxesTotal;
 
         totalRawMaterials += subtotal;
         totalTaxes += taxesTotal + freightTaxesTotal;
-        totalRawMaterialFreight += freightTotal;
+        totalRawMaterialFreightService += freightServiceSubtotal;
 
         rawMaterialsBreakdown.push({
           rawMaterialCode: rmData.code,
@@ -659,30 +662,30 @@ export class ProductsService {
           freight: {
             unitPrice:
               quantity > 0
-                ? Number((freightSubtotal / quantity).toFixed(2))
+                ? Number((freightServiceSubtotal / quantity).toFixed(2))
                 : 0,
             quantity,
-            subtotal: Number(freightSubtotal.toFixed(2)),
+            subtotal: Number(freightServiceSubtotal.toFixed(2)),
             taxes: {
               ...freightTaxes,
               total: Number(freightTaxesTotal.toFixed(2)),
             },
-            total: Number(freightTotal.toFixed(2)),
+            total: Number(freightTotalIncludingTaxes.toFixed(2)),
           },
           totalWithoutTaxesAndFreight: Number(subtotal.toFixed(2)),
           totalWithTaxesAndFreight: Number(
-            (subtotal + taxesTotal + freightTotal).toFixed(2),
+            (subtotal + taxesTotal + freightTotalIncludingTaxes).toFixed(2),
           ),
         });
       }
 
       // 5. Calcular fretes do produto
-      let productFreightCost = 0;
+      let productFreightServiceCost = 0;
       let productFreightTaxes = 0;
 
       for (const freight of productFreights) {
         const freightCost = Number(freight.unitPrice || 0);
-        productFreightCost += freightCost;
+        productFreightServiceCost += freightCost;
 
         if (freight.freightTaxes) {
           for (const fTax of freight.freightTaxes) {
@@ -693,14 +696,16 @@ export class ProductsService {
       }
 
       totalTaxes += productFreightTaxes;
-      const totalFreight =
-        totalRawMaterialFreight + productFreightCost + productFreightTaxes;
 
-      // 6. Cálculos finais
+      const totalFreightService =
+        totalRawMaterialFreightService + productFreightServiceCost;
+
+      // 6. Cálculos finais - ESTE É O VALOR QUE SERÁ SALVO
       const priceWithoutTaxesAndFreight = totalRawMaterials;
 
+      // CRÍTICO: Este é o valor que vai para o banco
       const priceWithTaxesAndFreight =
-        totalRawMaterials + totalTaxes + totalFreight;
+        totalRawMaterials + totalTaxes + totalFreightService;
 
       const fixedCostOverhead = fixedCost
         ? Number(fixedCost.overheadPerUnit)
@@ -713,8 +718,8 @@ export class ProductsService {
         calculations: {
           rawMaterialsSubtotal: Number(totalRawMaterials.toFixed(2)),
           taxesTotal: Number(totalTaxes.toFixed(2)),
-          freightTotal: Number(totalFreight.toFixed(2)),
-          productFreightCost: Number(productFreightCost.toFixed(2)),
+          freightTotal: Number(totalFreightService.toFixed(2)),
+          productFreightCost: Number(productFreightServiceCost.toFixed(2)),
           productFreightTaxes: Number(productFreightTaxes.toFixed(2)),
           priceWithoutTaxesAndFreight: Number(
             priceWithoutTaxesAndFreight.toFixed(2),
