@@ -1,6 +1,4 @@
-// =============================================
 // src/freights/dto/update-freight-tax.dto.ts
-// =============================================
 
 import {
   IsString,
@@ -33,4 +31,3 @@ export class UpdateFreightTaxDto {
   @Type(() => Number)
   rate: number;
 }
-
