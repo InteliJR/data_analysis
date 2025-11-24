@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
-import { Search, Plus, Download } from 'lucide-react';
-import { Input } from '@/components/common/Input';
-import { Select } from '@/components/common/Select';
-import { Button } from '@/components/common/Button';
-import { useDebounce } from '@/hooks/useDebounce';
-import type { UserRole } from '@/types/user';
+import React, { useState } from "react";
+import { Search, Plus, Download } from "lucide-react";
+import { Select } from "@/components/common/Select";
+import { SecondaryButton } from "@/components/common/SecondaryButton";
+import { useDebounce } from "@/hooks/useDebounce";
+import type { UserRole } from "@/types/user";
 
 interface UsersActionBarProps {
   onNewUserClick: () => void;
@@ -23,7 +22,7 @@ export function UsersActionBar({
   onExport,
   isExporting = false,
 }: UsersActionBarProps) {
-  const [searchValue, setSearchValue] = useState('');
+  const [searchValue, setSearchValue] = useState("");
   const debouncedSearch = useDebounce((value: string) => {
     onSearchChange(value);
   }, 500);
@@ -46,29 +45,29 @@ export function UsersActionBar({
               placeholder="Buscar por nome ou email"
               value={searchValue}
               onChange={handleSearchChange}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-[448px] h-10 bg-white text-sm pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             />
           </div>
         </div>
 
         <div className="flex gap-2 w-full sm:w-auto">
-          <Button
+          <SecondaryButton
             variant="secondary"
             leftIcon={Download}
             onClick={onExport}
-            isLoading={isExporting}
-            className="flex-1 sm:flex-none"
+            className="cursor-pointer"
           >
             Exportar CSV
-          </Button>
-          <Button
+          </SecondaryButton>
+
+          <SecondaryButton
             variant="primary"
             leftIcon={Plus}
             onClick={onNewUserClick}
-            className="flex-1 sm:flex-none"
+            className="cursor-pointer"
           >
-            Novo usuário
-          </Button>
+            Novo Usuário
+          </SecondaryButton>
         </div>
       </div>
 
@@ -78,7 +77,9 @@ export function UsersActionBar({
           <Select
             onChange={(e) => {
               const value = e.target.value;
-              onRoleFilterChange(value === '' ? undefined : (value as UserRole));
+              onRoleFilterChange(
+                value === "" ? undefined : (value as UserRole)
+              );
             }}
           >
             <option value="">Todas as funções</option>
@@ -93,9 +94,7 @@ export function UsersActionBar({
           <Select
             onChange={(e) => {
               const value = e.target.value;
-              onStatusFilterChange(
-                value === '' ? undefined : value === 'true'
-              );
+              onStatusFilterChange(value === "" ? undefined : value === "true");
             }}
           >
             <option value="">Todos os status</option>

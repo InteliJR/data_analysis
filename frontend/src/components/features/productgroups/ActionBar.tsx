@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { Plus, Download, Search } from 'lucide-react';
-import { Button } from '@/components/common/Button';
-import { ExportModal } from './ExportModal';
-import { useDebounce } from '@/hooks/useDebounce';
-import type { FindAllProductGroupsQuery } from '@/api/productgroups';
+import { useState } from "react";
+import { Plus, Download, Search } from "lucide-react";
+import { SecondaryButton } from "@/components/common/SecondaryButton";
+import { ExportModal } from "./ExportModal";
+import { useDebounce } from "@/hooks/useDebounce";
+import type { FindAllProductGroupsQuery } from "@/api/productgroups";
 
 interface ActionBarProps {
   onNewGroup: () => void;
@@ -19,7 +19,7 @@ export function ActionBar({
   currentFilters,
 }: ActionBarProps) {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [searchValue, setSearchValue] = useState(currentFilters.search || '');
+  const [searchValue, setSearchValue] = useState(currentFilters.search || "");
 
   // Lógica de Debounce para a busca
   const debouncedSearch = useDebounce((value: string) => {
@@ -46,31 +46,30 @@ export function ActionBar({
                 placeholder="Buscar por nome do grupo..."
                 value={searchValue}
                 onChange={handleSearchChange}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-[448px] pl-10 h-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white focus:border-blue-500 transition-color stext-sm"
               />
             </div>
           </div>
 
           {/* Botões de Ação (Exportar e Novo) */}
           <div className="flex gap-2 w-full sm:w-auto">
-            <Button
+            <SecondaryButton
               variant="secondary"
               leftIcon={Download}
               onClick={() => setIsExportModalOpen(true)}
-              size="md"
-              className="flex-1 sm:flex-none"
+              className="cursor-pointer"
             >
-              Exportar
-            </Button>
-            <Button
+              Exportar CSV
+            </SecondaryButton>
+
+            <SecondaryButton
               variant="primary"
               leftIcon={Plus}
               onClick={onNewGroup}
-              size="md"
-              className="flex-1 sm:flex-none"
+              className="cursor-pointer"
             >
               Novo grupo de produto
-            </Button>
+            </SecondaryButton>
           </div>
         </div>
       </div>

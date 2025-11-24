@@ -177,7 +177,7 @@ export default function ProductGroups() {
   }
 
   return (
-    <div className="p-6">
+    <div >
       <div className="mb-6">
         <Heading as="h1">Grupos de Produtos</Heading>
       </div>
