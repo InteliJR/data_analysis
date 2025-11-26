@@ -105,7 +105,7 @@ export function ProductGroupForm({
           error={errors.porcentage?.message}
           {...register('porcentage', { valueAsNumber: true })}
         />
-        {porcentageValue !== undefined && porcentageValue !== null && (
+        {Number.isFinite(porcentageValue) && (
           <p className="mt-1 text-xs text-gray-500">{porcentageValue}%</p>
         )}
       </div>
@@ -119,7 +119,7 @@ export function ProductGroupForm({
           error={errors.volumevendasconsiderar?.message}
           {...register('volumevendasconsiderar', { valueAsNumber: true })}
         />
-        {typeof volumeConsiderValue === 'number' && (
+        {Number.isFinite(volumeConsiderValue) && (
           <p className="mt-1 text-xs text-gray-500">{volumeConsiderValue}</p>
         )}
       </div>

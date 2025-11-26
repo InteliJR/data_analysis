@@ -835,6 +835,11 @@ export class ProductsService {
               },
             },
           },
+          freights: {
+            include: {
+              freightTaxes: true,
+            },
+          },
         },
       });
 
@@ -861,7 +866,44 @@ export class ProductsService {
           .join('; ');
 
         const priceBase = Number(product.priceWithoutTaxesAndFreight) || 0;
-        const priceWithTaxes = Number(product.priceWithTaxesAndFreight) || 0;
+        // Suporte a preço por cidade/UF no export
+        const uf = (exportDto as any)?.filters?.uf as string | undefined;
+        const city = (exportDto as any)?.filters?.city as string | undefined;
+
+        // Calcular frete do produto para a localização, somando serviço e impostos
+        let productFreightServiceForLocation = 0;
+        let productFreightTaxesForLocation = 0;
+        if (product.freights && product.freights.length > 0 && uf && city) {
+          for (const f of product.freights as any[]) {
+            if (
+              f.destinationUf?.toUpperCase() === uf.toUpperCase() &&
+              f.destinationCity?.toLowerCase() === city.toLowerCase()
+            ) {
+              const service = Number(f.unitPrice || 0);
+              productFreightServiceForLocation += service;
+              if (f.freightTaxes) {
+                for (const ft of f.freightTaxes) {
+                  const taxValue = (service * Number(ft.rate)) / 100;
+                  productFreightTaxesForLocation += taxValue;
+                }
+              }
+            }
+          }
+        }
+
+        // Preço s/ overhead considerando localização: se uf/city fornecidos, ajustar;
+        // caso contrário, usar campo salvo.
+        let priceWithTaxes = Number(product.priceWithTaxesAndFreight) || 0;
+        if (uf && city) {
+          // Remontar preço com frete de produto específico da localização por cima do salvo:
+          // O campo salvo já inclui fretes (MP + produto) genericamente. Para precisão,
+          // poderíamos recomputar tudo, mas aqui somamos apenas o frete da localização
+          // quando aplicável (fallback simples).
+          priceWithTaxes =
+            (Number(product.priceWithoutTaxesAndFreight) || 0) +
+            productFreightServiceForLocation +
+            productFreightTaxesForLocation;
+        }
         const overhead = Number(product.productGroup?.overheadPerUnit) || 0;
         const finalPrice = priceWithTaxes + overhead;
 

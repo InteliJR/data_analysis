@@ -4,6 +4,7 @@ export interface ProductGroup {
   id: string;
   name: string;
   description?: string;
+  overheadPerUnit?: number;
 }
 
 export interface FixedCost {
