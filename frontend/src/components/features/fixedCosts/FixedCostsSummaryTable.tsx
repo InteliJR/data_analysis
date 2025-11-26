@@ -26,12 +26,21 @@ export function FixedCostsSummaryTable({
   
   const calculateTotals = (costs: FixedCost[]) => {
     return costs.reduce((acc, cost) => {
-      acc.personnelExpenses += cost.personnelExpenses;
-      acc.generalExpenses += cost.generalExpenses;
-      acc.proLabore += cost.proLabore;
-      acc.depreciation += cost.depreciation;
-      acc.totalCost += cost.totalCost;
-      acc.overhead += cost.totalCost * (cost.considerationPercentage / 100);
+      const c: any = cost;
+      const personnelExpenses = Number(c.personnelExpenses) || 0;
+      const generalExpenses = Number(c.generalExpenses) || 0;
+      const proLabore = Number(c.proLabore) || 0;
+      const depreciation = Number(c.depreciation) || 0;
+      const totalCost = Number(c.totalCost) || 0;
+      const overheadPerUnit = Number(c.overheadPerUnit) || 0;
+
+      acc.personnelExpenses += personnelExpenses;
+      acc.generalExpenses += generalExpenses;
+      acc.proLabore += proLabore;
+      acc.depreciation += depreciation;
+      acc.totalCost += totalCost;
+      // Overhead column represents overheadPerUnit directly
+      acc.overhead += overheadPerUnit;
       return acc;
     }, {
       personnelExpenses: 0,
@@ -108,7 +117,8 @@ export function FixedCostsSummaryTable({
 
         <tbody>
           {costs.map((cost) => {
-            const overhead = cost.totalCost * (cost.considerationPercentage / 100);
+            const c: any = cost;
+            const overhead = Number(c.overheadPerUnit) || 0;
 
             return (
               <tr
@@ -124,24 +134,24 @@ export function FixedCostsSummaryTable({
                   <Text variant="caption">{cost.code || '-'}</Text>
                 </td>
                 <td className="px-4 py-3">
-                  <Text variant="caption">{formatCurrency(cost.personnelExpenses)}</Text>
+                  <Text variant="caption">{formatCurrency(Number((cost as any).personnelExpenses) || 0)}</Text>
                 </td>
                 <td className="px-4 py-3">
-                  <Text variant="caption">{formatCurrency(cost.generalExpenses)}</Text>
+                  <Text variant="caption">{formatCurrency(Number((cost as any).generalExpenses) || 0)}</Text>
                 </td>
                 <td className="px-4 py-3">
-                  <Text variant="caption">{formatCurrency(cost.proLabore)}</Text>
+                  <Text variant="caption">{formatCurrency(Number((cost as any).proLabore) || 0)}</Text>
                 </td>
                 <td className="px-4 py-3">
-                  <Text variant="caption">{formatCurrency(cost.depreciation)}</Text>
+                  <Text variant="caption">{formatCurrency(Number((cost as any).depreciation) || 0)}</Text>
                 </td>
                 <td className="px-4 py-3">
                   <Text variant="caption" className="font-semibold">
-                    {formatCurrency(cost.totalCost)}
+                    {formatCurrency(Number((cost as any).totalCost) || 0)}
                   </Text>
                 </td>
                 <td className="px-4 py-3">
-                  <Text variant="caption">{cost.considerationPercentage}%</Text>
+                  <Text variant="caption">{Number((cost as any).considerationPercentage) || 0}%</Text>
                 </td>
                 <td className="px-4 py-3">
                   <Text variant="caption" className="font-semibold">

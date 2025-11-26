@@ -54,6 +54,12 @@ export function ProductGroupTableRow({
         {formatCurrency(group.totalValue)}
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+        {group.porcentage !== undefined && group.porcentage !== null ? `${group.porcentage}%` : '-'}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+        {group.volumevendasconsiderar ?? '-'}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
         <div className="flex items-center gap-2">
           <IconButton
             icon={Pencil}

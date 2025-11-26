@@ -219,6 +219,8 @@ export class ProductGroupsService {
       id: group.id,
       name: group.name,
       description: group.description,
+      porcentage: group.porcentage ?? null,
+      volumevendasconsiderar: group.volumevendasconsiderar ?? null,
       productsCount: productsCount,
       
       // ADICIONE ESTA LINHA PARA CORRIGIR O ERRO:
@@ -258,6 +260,8 @@ export class ProductGroupsService {
       id: group.id,
       name: group.name,
       description: group.description,
+      porcentage: group.porcentage ?? null,
+      volumevendasconsiderar: group.volumevendasconsiderar ?? null,
       productsCount,
       totalValue: Number(groupValue.toFixed(2)),
       volumePercentageByQuantity: Number(volumePercentageByQuantity.toFixed(2)),

@@ -4,6 +4,8 @@ export interface ProductGroup {
   id: string;
   name: string;
   description?: string;
+  porcentage?: number;
+  volumevendasconsiderar?: number;
   productsCount: number;
   volumePercentageByQuantity: number;
   volumePercentageByValue: number;
@@ -16,9 +18,13 @@ export interface ProductGroup {
 export interface CreateProductGroupDTO {
   name: string;
   description?: string;
+  porcentage?: number;
+  volumevendasconsiderar?: number;
 }
 
 export interface UpdateProductGroupDTO {
   name?: string;
   description?: string;
+  porcentage?: number;
+  volumevendasconsiderar?: number;
 }

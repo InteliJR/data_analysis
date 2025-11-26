@@ -502,6 +502,8 @@ async function main() {
     data: {
       name: 'Componentes Estruturais',
       description: 'Produtos para aplicações estruturais e suporte',
+      porcentage: 25,
+      volumevendasconsiderar: 5000,
     },
   });
 
@@ -509,6 +511,8 @@ async function main() {
     data: {
       name: 'Containers e Embalagens',
       description: 'Soluções de armazenamento e embalagem',
+      porcentage: 40,
+      volumevendasconsiderar: 8000,
     },
   });
 
@@ -516,6 +520,8 @@ async function main() {
     data: {
       name: 'Kits e Conjuntos',
       description: 'Kits completos para diversas aplicações',
+      porcentage: 35,
+      volumevendasconsiderar: 6000,
     },
   });
 

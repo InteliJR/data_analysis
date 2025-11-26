@@ -79,13 +79,15 @@ export function FreightsTable({
       return unitPrice;
     }
 
-    const totalTaxes = freight.freightTaxes.reduce((sum, tax) => {
-      const rate =
-        typeof tax.rate === "string" ? parseFloat(tax.rate) : tax.rate;
-      return sum + unitPrice * (rate / 100);
+    // Sum tax percentage rates
+    const totalRatePercent = freight.freightTaxes.reduce((sum: number, tax: any) => {
+      const rate = typeof tax.rate === "string" ? parseFloat(tax.rate) : tax.rate;
+      return sum + (rate || 0);
     }, 0);
 
-    return unitPrice + totalTaxes;
+    // Final price is base minus tax percentage
+    const final = unitPrice * (1 - totalRatePercent / 100);
+    return final < 0 ? 0 : final;
   };
 
   // 📌 Classe utilitária para truncamento
@@ -237,12 +239,12 @@ export function FreightsTable({
                     <div
                       className="max-w-[170px] truncate"
                       title={freight.freightTaxes
-                        ?.map((t) => `${t.name} (${t.rate}%)`)
+                        ?.map((t: any) => `${t.name} (${t.rate}%)`)
                         .join(", ")}
                     >
                       {freight.freightTaxes?.length ? (
                         <div className="flex gap-1 flex-nowrap overflow-hidden">
-                          {freight.freightTaxes.map((tax, index) => (
+                          {freight.freightTaxes.map((tax: any, index: number) => (
                             <span
                               key={tax.id || index}
                               className="inline-flex px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 whitespace-nowrap"
@@ -273,10 +275,9 @@ export function FreightsTable({
                           variant="caption"
                           className="text-xs text-gray-500"
                         >
-                          (+
+                          (
                           {(
-                            ((finalPrice - unitPrice) / unitPrice) *
-                            100
+                            ((finalPrice - unitPrice) / unitPrice) * 100
                           ).toFixed(2)}
                           %)
                         </Text>

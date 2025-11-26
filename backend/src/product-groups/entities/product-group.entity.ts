@@ -4,6 +4,8 @@ export class ProductGroupEntity {
   id: string;
   name: string;
   description?: string;
+  porcentage?: number;
+  volumevendasconsiderar?: number;
   productsCount: number;
   volumePercentageByQuantity: number;
   volumePercentageByValue: number;
