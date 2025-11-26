@@ -1,6 +1,6 @@
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { ProductGroupTableRow } from "./ProductGroupTableRow";
-import type { ProductGroup } from "@/types";
+import type { ProductGroup } from "@/types/productGroup";
 import type { FindAllProductGroupsQuery } from "@/api/productgroups";
 
 interface ProductGroupTableProps {
@@ -59,15 +59,7 @@ export function ProductGroupTable({
                 {getSortIcon("volumePercentageByQuantity")}
               </div>
             </th>
-            <th
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-              onClick={() => handleSort("volumePercentageByValue")}
-            >
-              <div className="flex items-center gap-2">
-                % Volume (Valor)
-                {getSortIcon("volumePercentageByValue")}
-              </div>
-            </th>
+            
             <th
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
               onClick={() => handleSort("averagePrice")}
@@ -79,11 +71,11 @@ export function ProductGroupTable({
             </th>
             <th
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-              onClick={() => handleSort("totalValue")}
+              onClick={() => handleSort("overheadPerUnit")}
             >
               <div className="flex items-center gap-2">
-                Overhead
-                {getSortIcon("totalValue")}
+                Overhead/Unidade
+                {getSortIcon("overheadPerUnit")}
               </div>
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">

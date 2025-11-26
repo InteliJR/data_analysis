@@ -24,8 +24,9 @@ const EXPORT_COLUMNS = [
   { key: "description", label: "Descrição" },
   { key: "productGroup", label: "Grupo de Produto" },
   { key: "priceWithoutTaxesAndFreight", label: "Preço sem Impostos/Frete" },
-  { key: "priceWithTaxesAndFreight", label: "Preço com Impostos/Frete" },
-  { key: "fixedCost", label: "Custo Fixo" },
+  { key: "priceWithTaxesAndFreight", label: "Preço s/ Overhead" },
+  { key: "overhead", label: "Overhead (Grupo)" },
+  { key: "finalPrice", label: "Preço Final" },
   { key: "rawMaterialsCount", label: "Qtd. Matérias-Primas" },
 ];
 

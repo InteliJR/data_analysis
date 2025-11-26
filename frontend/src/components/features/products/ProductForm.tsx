@@ -118,8 +118,11 @@ export function ProductForm({
   // --- CÁLCULO CONSOLIDADO ---
   const calculatePrices = () => {
     let totalRawMaterials = 0;
-    let totalTaxes = 0;
-    let totalRawMaterialFreightService = 0;
+    // Separar impostos para evitar dupla contagem e permitir subtração de recuperáveis
+    let nonRecoverableMpTaxes = 0; // impostos não recuperáveis das matérias-primas
+    let recoverableCreditsTotal = 0; // impostos recuperáveis das matérias-primas (créditos)
+    let freightTaxesTotal = 0; // impostos dos fretes (MP + produto)
+    let totalRawMaterialFreightService = 0; // serviço de frete das MPs (sem impostos)
 
     // 1. Calcular custos das matérias-primas
     rawMaterials.forEach((rm: any) => {
@@ -145,12 +148,14 @@ export function ProductForm({
 
       totalRawMaterials += materialCost;
 
-      // Impostos da matéria-prima (não recuperáveis)
+      // Impostos da matéria-prima
       const taxes = rawMat.rawMaterialTaxes || [];
       taxes.forEach((tax: any) => {
-        if (!tax.recoverable) {
-          const taxValue = (materialCost * Number(tax.rate)) / 100;
-          totalTaxes += taxValue;
+        const taxValue = (materialCost * Number(tax.rate)) / 100;
+        if (tax.recoverable) {
+          recoverableCreditsTotal += taxValue;
+        } else {
+          nonRecoverableMpTaxes += taxValue;
         }
       });
 
@@ -165,14 +170,14 @@ export function ProductForm({
         const freightTaxes = freight.freightTaxes || [];
         freightTaxes.forEach((fTax: any) => {
           const taxValue = (freightServiceCost * Number(fTax.rate)) / 100;
-          totalTaxes += taxValue;
+          freightTaxesTotal += taxValue;
         });
       });
     });
 
     // 2. Fretes do produto
     let productFreightServiceCost = 0;
-    let productFreightTaxesTotal = 0; // NOVA VARIÁVEL PARA DEBUG
+    let productFreightTaxesTotal = 0; // impostos dos fretes do produto
 
     selectedFreightIds.forEach((freightId: string) => {
       let freight = freightsData?.data?.find((f) => f.id === freightId);
@@ -189,7 +194,7 @@ export function ProductForm({
         const freightTaxes = freight.freightTaxes || [];
         freightTaxes.forEach((fTax: any) => {
           const taxValue = (freightCost * Number(fTax.rate)) / 100;
-          totalTaxes += taxValue;
+          freightTaxesTotal += taxValue;
           productFreightTaxesTotal += taxValue; // Para debug
         });
       }
@@ -200,25 +205,35 @@ export function ProductForm({
 
     // 3. Cálculos finais
     const priceBase = totalRawMaterials;
+    // Alinhar com backend: Base + impostos não recuperáveis (MP) + frete (serviço + impostos) - créditos recuperáveis
+    // NOVA REGRA: NÃO somar impostos não recuperáveis de MP ao preço final
+    // Fórmula: Base + Frete (serviço + impostos) - Créditos Recuperáveis
     const priceWithTaxesAndFreight =
-      priceBase + totalTaxes + totalFreightService;
+      priceBase + totalFreightService + freightTaxesTotal - recoverableCreditsTotal;
 
-    // 4. Custo fixo
-    const fixedCostOverhead = selectedFixedCostData
-      ? Number(selectedFixedCostData.overheadPerUnit)
-      : product &&
-        product.fixedCostId === selectedFixedCostId &&
-        product.fixedCost
-      ? Number(product.fixedCost.overheadPerUnit)
-      : 0;
+    // Overhead do grupo (se selecionado)
+    let groupOverhead = 0;
+    if (selectedProductGroupId) {
+      const pg = productGroupsData?.data?.find((p: any) => p.id === selectedProductGroupId);
+      if (pg?.overheadPerUnit) {
+        groupOverhead = Number(pg.overheadPerUnit) || 0;
+      }
+    } else if (product?.productGroup?.overheadPerUnit) {
+      groupOverhead = Number(product.productGroup.overheadPerUnit) || 0;
+    }
+
+    // 4. Custo fixo (overhead agora é por Grupo; não somar aqui)
+    const fixedCostOverhead = 0; // Mantido 0; overhead agora vem do grupo
 
     // 5. Preço final
-    const finalPrice = priceWithTaxesAndFreight + fixedCostOverhead;
+    const finalPrice = priceWithTaxesAndFreight + groupOverhead;
 
     return {
       priceBase,
-      totalTaxes,
-      totalFreight: totalFreightService,
+      nonRecoverableMpTaxes,
+      recoverableCreditsTotal,
+      totalFreight: totalFreightService + freightTaxesTotal,
+      groupOverhead,
       priceWithTaxesAndFreight,
       fixedCostOverhead,
       finalPrice,
@@ -429,8 +444,7 @@ export function ProductForm({
               {/* Renderiza a lista padrão */}
               {fixedCostsList?.data?.map((fc) => (
                 <option key={fc.id} value={fc.id}>
-                  {fc.description} - {fc.code || "S/C"} -{" "}
-                  {formatCurrency(Number(fc.overheadPerUnit) || 0)}/un
+                  {fc.description} - {fc.code || "S/C"}
                 </option>
               ))}
 
@@ -443,12 +457,8 @@ export function ProductForm({
                     key={selectedFixedCostData.id}
                     value={selectedFixedCostData.id}
                   >
-                    {selectedFixedCostData.description} -{" "}
-                    {selectedFixedCostData.code || "S/C"} -{" "}
-                    {formatCurrency(
-                      Number(selectedFixedCostData.overheadPerUnit) || 0
-                    )}
-                    /un
+                    {selectedFixedCostData.description} - {" "}
+                    {selectedFixedCostData.code || "S/C"}
                   </option>
                 )}
             </Select>
@@ -687,9 +697,9 @@ export function ProductForm({
           </div>
 
           <div className="flex justify-between">
-            <Text className="text-gray-700">Impostos (Total):</Text>
+            <Text className="text-gray-700">Impostos Não Recuperáveis (MP):</Text>
             <Text className="font-semibold text-gray-900">
-              {formatCurrency(prices.totalTaxes)}
+              {formatCurrency(prices.nonRecoverableMpTaxes)}
             </Text>
           </div>
 
@@ -718,6 +728,19 @@ export function ProductForm({
             </div>
           )}
 
+          <div className="flex justify-between">
+            <Text className="text-gray-700">Impostos Recuperáveis (MP):</Text>
+            <Text className="font-semibold text-gray-900">
+              {formatCurrency(prices.recoverableCreditsTotal)}
+            </Text>
+          </div>
+          <div className="flex justify-between">
+            <Text className="text-gray-700">Overhead do Grupo:</Text>
+            <Text className="font-semibold text-gray-900">
+              {formatCurrency(prices.groupOverhead || 0)}
+            </Text>
+          </div>
+
           <div className="flex justify-between pt-2 border-t-2 border-blue-400">
             <Text className="text-gray-900 font-bold text-base">
               Preço Final:
@@ -742,16 +765,11 @@ export function ProductForm({
         <div className="bg-white rounded p-3 mt-3 text-xs text-gray-600">
           <p className="font-medium mb-1">ℹ️ Como o preço é calculado:</p>
           <ul className="list-disc list-inside space-y-1 text-gray-600">
-            <li>Preço Base: soma de (matéria-prima × quantidade)</li>
-            <li>
-              Impostos: soma dos impostos não recuperáveis das matérias e fretes
-            </li>
-            <li>Fretes: soma dos fretes das matérias + fretes do produto</li>
-            <li>
-              <strong>
-                Preço Final: Base + Impostos + Fretes + Custo Fixo
-              </strong>
-            </li>
+            <li>Preço Base: soma (matéria-prima × quantidade)</li>
+            <li>Fretes: soma fretes das matérias + fretes do produto (+ impostos de frete)</li>
+            <li>Impostos Recuperáveis: subtraídos do preço final</li>
+            <li>Impostos Não Recuperáveis (MP): exibidos, porém não adicionados</li>
+            <li><strong>Preço Final: Base + Frete (serviço + impostos) − Impostos Recuperáveis + Overhead do Grupo</strong></li>
           </ul>
         </div>
       </div>

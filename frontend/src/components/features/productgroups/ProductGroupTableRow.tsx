@@ -1,6 +1,6 @@
 import { Pencil, Trash2 } from "lucide-react";
 import { IconButton } from "@/components/common/IconButton";
-import type { ProductGroup } from "@/types";
+import type { ProductGroup } from "@/types/productGroup";
 
 interface ProductGroupTableRowProps {
   group: ProductGroup;
@@ -44,14 +44,12 @@ export function ProductGroupTableRow({
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
         {formatPercentage(group.volumePercentageByQuantity)}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-        {formatPercentage(group.volumePercentageByValue)}
-      </td>
+      
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
         {formatCurrency(group.averagePrice)}
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
-        {formatCurrency(group.totalValue)}
+        {formatCurrency(group.overheadPerUnit ?? 0)}
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
         {group.porcentage !== undefined && group.porcentage !== null ? `${group.porcentage}%` : '-'}

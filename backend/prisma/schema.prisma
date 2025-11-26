@@ -190,6 +190,7 @@ model ProductGroup {
   description String?  @db.Text
   porcentage Int? @db.Integer
   volumevendasconsiderar Int? @db.Integer
+  overheadPerUnit       Decimal? @db.Decimal(12, 2)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -254,8 +255,6 @@ model FixedCost {
   depreciation            Decimal  @default(0) @db.Decimal(12, 2)
   totalCost               Decimal  @db.Decimal(12, 2)
   considerationPercentage Decimal  @default(100) @db.Decimal(5, 2)
-  salesVolume             Decimal  @db.Decimal(12, 2)
-  overheadPerUnit         Decimal  @db.Decimal(12, 2)
   calculationDate         DateTime @default(now())
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt

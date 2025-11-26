@@ -11,6 +11,8 @@ import {
   type FindAllProductGroupsQuery,
   type ExportProductGroupsPayload,
 } from "@/api/productgroups";
+import { useFixedCostsQuery } from "@/api/fixedCosts";
+import type { FindAllFixedCostsQuery } from "@/types/fixed_costs";
 
 import { Heading } from "@/components/common/Heading";
 import { ActionBar } from "@/components/features/productgroups/ActionBar";
@@ -43,6 +45,10 @@ export default function ProductGroups() {
   const updateMutation = useUpdateProductGroupMutation();
   const deleteMutation = useDeleteProductGroupMutation();
   const exportMutation = useExportProductGroupsMutation();
+
+  // Fetch fixed costs to compute considered total for overhead calculation
+  const fixedCostsQueryParams: FindAllFixedCostsQuery = { page: 1, limit: 1000 };
+  const { data: fixedCostsData } = useFixedCostsQuery(fixedCostsQueryParams);
 
   // Handlers
   const handleFilterChange = (
@@ -83,9 +89,22 @@ export default function ProductGroups() {
   const handleSubmit = (
     data: CreateProductGroupDTO | UpdateProductGroupDTO
   ) => {
+    // Compute overheadPerUnit on the client using current fixed costs snapshot
+    const totalConsidered = (fixedCostsData?.data || []).reduce((sum, fc) => {
+      const t = Number(fc.totalCost || 0);
+      const pct = Number(fc.considerationPercentage || 0);
+      return sum + t * (pct / 100);
+    }, 0);
+
+    const pctGroup = (data.porcentage ?? 0) / 100;
+    const volume = data.volumevendasconsiderar ?? 0;
+    const overheadPerUnit = volume > 0 ? Math.round(((totalConsidered * pctGroup) / volume) * 100) / 100 : 0;
+
+    const payloadWithOverhead = { ...data, overheadPerUnit } as typeof data & { overheadPerUnit: number };
+
     if (selectedGroup) {
       updateMutation.mutate(
-        { id: selectedGroup.id, payload: data },
+        { id: selectedGroup.id, payload: payloadWithOverhead },
         {
           onSuccess: () => {
             toast.success("Grupo atualizado com sucesso!");
@@ -99,7 +118,7 @@ export default function ProductGroups() {
         }
       );
     } else {
-      createMutation.mutate(data as CreateProductGroupDTO, {
+      createMutation.mutate(payloadWithOverhead as CreateProductGroupDTO, {
         onSuccess: () => {
           toast.success("Grupo criado com sucesso!");
           setIsModalOpen(false);

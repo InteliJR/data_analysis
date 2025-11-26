@@ -149,8 +149,9 @@ export function RawMaterialForm({
     return sum;
   }, 0);
 
-  // CORREÇÃO: Incluir frete no cálculo final
-  const totalCost = totalBeforeTaxes + totalFreightCost + nonRecoverableTaxes;
+  // Regra: NÃO somar impostos não recuperáveis ao custo final
+  // Fórmula: Base + Frete - Impostos Recuperáveis
+  const totalCost = totalBeforeTaxes + totalFreightCost - recoverableTaxes;
 
   // Verificar se um imposto já foi adicionado
   const isTaxAlreadyAdded = (taxId: string, taxName: string): boolean => {

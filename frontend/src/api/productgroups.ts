@@ -27,7 +27,8 @@ export interface FindAllProductGroupsQuery {
     | "volumePercentageByQuantity"
     | "volumePercentageByValue"
     | "averagePrice"
-    | "totalValue";
+    | "totalValue"
+    | "overheadPerUnit";
   sortOrder?: "asc" | "desc";
 }
 

@@ -32,15 +32,12 @@ export function FixedCostsSummaryTable({
       const proLabore = Number(c.proLabore) || 0;
       const depreciation = Number(c.depreciation) || 0;
       const totalCost = Number(c.totalCost) || 0;
-      const overheadPerUnit = Number(c.overheadPerUnit) || 0;
 
       acc.personnelExpenses += personnelExpenses;
       acc.generalExpenses += generalExpenses;
       acc.proLabore += proLabore;
       acc.depreciation += depreciation;
       acc.totalCost += totalCost;
-      // Overhead column represents overheadPerUnit directly
-      acc.overhead += overheadPerUnit;
       return acc;
     }, {
       personnelExpenses: 0,
@@ -48,7 +45,6 @@ export function FixedCostsSummaryTable({
       proLabore: 0,
       depreciation: 0,
       totalCost: 0,
-      overhead: 0,
     });
   };
 
@@ -107,8 +103,6 @@ export function FixedCostsSummaryTable({
               % Gastos
             </th>
 
-            <SortableHeader column="overheadPerUnit" label="Overhead" />
-
             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">
               Ações
             </th>
@@ -118,7 +112,6 @@ export function FixedCostsSummaryTable({
         <tbody>
           {costs.map((cost) => {
             const c: any = cost;
-            const overhead = Number(c.overheadPerUnit) || 0;
 
             return (
               <tr
@@ -152,11 +145,6 @@ export function FixedCostsSummaryTable({
                 </td>
                 <td className="px-4 py-3">
                   <Text variant="caption">{Number((cost as any).considerationPercentage) || 0}%</Text>
-                </td>
-                <td className="px-4 py-3">
-                  <Text variant="caption" className="font-semibold">
-                    {formatCurrency(overhead)}
-                  </Text>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
@@ -212,11 +200,6 @@ export function FixedCostsSummaryTable({
               </Text>
             </th>
             <th />
-            <th className="px-4 py-3 text-left">
-              <Text variant="caption" className="font-bold">
-                {formatCurrency(totals.overhead)}
-              </Text>
-            </th>
             <th />
           </tr>
         </tfoot>

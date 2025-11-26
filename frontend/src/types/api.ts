@@ -301,8 +301,6 @@ export interface FixedCost {
   depreciation: number;
   totalCost: number;
   considerationPercentage: number;
-  salesVolume: number;
-  overheadPerUnit: number;
   calculationDate: string;
   createdAt: string;
   updatedAt: string;
@@ -321,7 +319,6 @@ export interface CreateFixedCostRequest {
   proLabore: number;
   depreciation: number;
   considerationPercentage: number;
-  salesVolume: number;
 }
 
 export interface UpdateFixedCostRequest {
@@ -332,7 +329,6 @@ export interface UpdateFixedCostRequest {
   proLabore?: number;
   depreciation?: number;
   considerationPercentage?: number;
-  salesVolume?: number;
 }
 
 // Para funcionalidade "Gerar Overhead"
@@ -346,7 +342,9 @@ export interface OverheadCalculationResult {
     id: string;
     description: string;
     totalCost: number;
-    overheadPerUnit: number;
+    considerationPercentage: number;
+    overheadTotal: number;
+    perProductOverhead: number;
   };
   affectedProducts: Array<{
     id: string;

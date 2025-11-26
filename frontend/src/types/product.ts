@@ -10,7 +10,6 @@ export interface FixedCost {
   id: string;
   description: string;
   code?: string;
-  overheadPerUnit: number;
 }
 
 export interface FreightTax {

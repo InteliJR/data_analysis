@@ -27,8 +27,6 @@ const EXPORT_COLUMNS = [
   { key: "depreciation", label: "Depreciação" },
   { key: "totalCost", label: "Total" },
   { key: "considerationPercentage", label: "% Considerar" },
-  { key: "salesVolume", label: "Volume Vendas" },
-  { key: "overheadPerUnit", label: "Overhead/Unidade" },
 ];
 
 export default function FixedCosts() {

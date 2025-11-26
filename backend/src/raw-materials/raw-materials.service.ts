@@ -719,11 +719,12 @@ export class RawMaterialsService {
         0,
       );
 
-      const nonRecoverableTaxes = item.rawMaterialTaxes
-        .filter((t) => !t.recoverable)
+      const recoverableTaxes = item.rawMaterialTaxes
+        .filter((t) => t.recoverable)
         .reduce((sum, t) => sum + basePrice * (Number(t.rate) / 100), 0);
 
-      const finalPrice = basePrice + freightTotal + nonRecoverableTaxes;
+      // Regra: NÃO somar impostos não recuperáveis ao preço final do export
+      const finalPrice = basePrice + freightTotal - recoverableTaxes;
 
       return {
         Código: item.code,

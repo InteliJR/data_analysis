@@ -220,7 +220,6 @@ export class ProductsService {
                 id: true,
                 description: true,
                 code: true,
-                overheadPerUnit: true,
               },
             },
             productGroup: {
@@ -228,6 +227,7 @@ export class ProductsService {
                 id: true,
                 name: true,
                 description: true,
+                overheadPerUnit: true,
               },
             },
             productRawMaterials: {
@@ -590,8 +590,11 @@ export class ProductsService {
       // 4. Calcular valores das matérias-primas
       const rawMaterialsBreakdown: any[] = [];
       let totalRawMaterials = 0;
-      let totalTaxes = 0;
-      let totalRawMaterialFreightService = 0;
+      // Manter os impostos separados para evitar dupla contagem no preview
+      let totalNonRecoverableMpTaxes = 0; // impostos não recuperáveis de MP
+      let totalFreightTaxes = 0; // impostos dos fretes (MP + produto)
+      let totalRecoverableCredits = 0; // créditos recuperáveis a subtrair
+      let totalRawMaterialFreightService = 0; // serviço de frete de MP (sem impostos)
 
       for (const rmInput of rawMaterials) {
         const rmData = rawMaterialsData.find(
@@ -605,14 +608,19 @@ export class ProductsService {
         );
         const subtotal = unitPrice * quantity;
 
-        // Impostos da matéria-prima (não recuperáveis)
+        // Impostos da matéria-prima
         const taxes: Record<string, number> = {};
-        let taxesTotal = 0;
+        const recoverableCredits: Record<string, number> = {};
+        let taxesTotal = 0; // somente não recuperáveis (MP)
+        let creditsTotal = 0; // créditos recuperáveis (MP)
 
         if (rmData.rawMaterialTaxes) {
           for (const taxItem of rmData.rawMaterialTaxes) {
-            if (!taxItem.recoverable) {
-              const taxValue = (subtotal * Number(taxItem.rate)) / 100;
+            const taxValue = (subtotal * Number(taxItem.rate)) / 100;
+            if (taxItem.recoverable) {
+              recoverableCredits[taxItem.name] = Number(taxValue.toFixed(2));
+              creditsTotal += taxValue;
+            } else {
               taxes[taxItem.name] = Number(taxValue.toFixed(2));
               taxesTotal += taxValue;
             }
@@ -620,8 +628,8 @@ export class ProductsService {
         }
 
         // Fretes da matéria-prima
-        let freightServiceSubtotal = 0;
-        let freightTaxesTotal = 0;
+        let freightServiceSubtotal = 0; // serviço de frete (MP)
+        let freightTaxesTotal = 0; // impostos de frete (MP)
         const freightTaxes: Record<string, number> = {};
 
         if (rmData.freights && rmData.freights.length > 0) {
@@ -646,7 +654,9 @@ export class ProductsService {
           freightServiceSubtotal + freightTaxesTotal;
 
         totalRawMaterials += subtotal;
-        totalTaxes += taxesTotal + freightTaxesTotal;
+        totalNonRecoverableMpTaxes += taxesTotal;
+        totalFreightTaxes += freightTaxesTotal;
+        totalRecoverableCredits += creditsTotal;
         totalRawMaterialFreightService += freightServiceSubtotal;
 
         rawMaterialsBreakdown.push({
@@ -657,7 +667,11 @@ export class ProductsService {
           subtotal: Number(subtotal.toFixed(2)),
           taxes: {
             ...taxes,
-            total: Number(taxesTotal.toFixed(2)),
+            totalNonRecoverable: Number(taxesTotal.toFixed(2)),
+            recoverableCredits: {
+              ...recoverableCredits,
+              total: Number(creditsTotal.toFixed(2)),
+            },
           },
           freight: {
             unitPrice:
@@ -680,8 +694,8 @@ export class ProductsService {
       }
 
       // 5. Calcular fretes do produto
-      let productFreightServiceCost = 0;
-      let productFreightTaxes = 0;
+      let productFreightServiceCost = 0; // serviço de frete do produto (sem impostos)
+      let productFreightTaxes = 0; // impostos dos fretes do produto
 
       for (const freight of productFreights) {
         const freightCost = Number(freight.unitPrice || 0);
@@ -695,7 +709,8 @@ export class ProductsService {
         }
       }
 
-      totalTaxes += productFreightTaxes;
+      // Acumular impostos de frete do produto separadamente
+      totalFreightTaxes += productFreightTaxes;
 
       const totalFreightService =
         totalRawMaterialFreightService + productFreightServiceCost;
@@ -704,21 +719,28 @@ export class ProductsService {
       const priceWithoutTaxesAndFreight = totalRawMaterials;
 
       // CRÍTICO: Este é o valor que vai para o banco
+      // NOVA REGRA: NÃO somar impostos não recuperáveis de MP ao preço salvo.
+      // Fórmula: Base + Frete (serviço + impostos) - Créditos Recuperáveis
       const priceWithTaxesAndFreight =
-        totalRawMaterials + totalTaxes + totalFreightService;
+        totalRawMaterials +
+        totalFreightService +
+        totalFreightTaxes -
+        totalRecoverableCredits;
 
-      const fixedCostOverhead = fixedCost
-        ? Number(fixedCost.overheadPerUnit)
-        : 0;
+      // Overhead per unit is now stored on ProductGroup and applied at view/export,
+      // not in price calculation. Keep 0 here to avoid double counting.
+      const fixedCostOverhead = 0;
 
-      const finalPriceWithOverhead =
-        priceWithTaxesAndFreight + fixedCostOverhead;
+      const finalPriceWithOverhead = priceWithTaxesAndFreight + fixedCostOverhead;
 
       return {
         calculations: {
           rawMaterialsSubtotal: Number(totalRawMaterials.toFixed(2)),
-          taxesTotal: Number(totalTaxes.toFixed(2)),
-          freightTotal: Number(totalFreightService.toFixed(2)),
+          // Mostrar somente impostos não recuperáveis de MP para evitar dupla contagem
+          taxesTotal: Number(totalNonRecoverableMpTaxes.toFixed(2)),
+          recoverableCreditsTotal: Number(totalRecoverableCredits.toFixed(2)),
+          // Total de fretes incluindo impostos para alinhar com o preview
+          freightTotal: Number((totalFreightService + totalFreightTaxes).toFixed(2)),
           productFreightCost: Number(productFreightServiceCost.toFixed(2)),
           productFreightTaxes: Number(productFreightTaxes.toFixed(2)),
           priceWithoutTaxesAndFreight: Number(
@@ -795,12 +817,12 @@ export class ProductsService {
           fixedCost: {
             select: {
               description: true,
-              overheadPerUnit: true,
             },
           },
           productGroup: {
             select: {
               name: true,
+              overheadPerUnit: true,
             },
           },
           productRawMaterials: {
@@ -840,7 +862,7 @@ export class ProductsService {
 
         const priceBase = Number(product.priceWithoutTaxesAndFreight) || 0;
         const priceWithTaxes = Number(product.priceWithTaxesAndFreight) || 0;
-        const overhead = Number(product.fixedCost?.overheadPerUnit) || 0;
+        const overhead = Number(product.productGroup?.overheadPerUnit) || 0;
         const finalPrice = priceWithTaxes + overhead;
 
         return [

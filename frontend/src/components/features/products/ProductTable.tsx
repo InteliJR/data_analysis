@@ -67,11 +67,11 @@ export function ProductsTable({
   const truncateWide =
     "max-w-[200px] truncate overflow-hidden text-ellipsis whitespace-nowrap";
 
-  // Função para calcular o preço final real (com custo fixo)
+  // Preço final = preço com impostos/frete + overhead (do grupo)
   const calculateFinalPrice = (product: Product) => {
-    const basePrice = Number(product.priceWithTaxesAndFreight) || 0;
-    const overhead = Number(product.fixedCost?.overheadPerUnit) || 0;
-    return basePrice + overhead;
+    const priceWithTaxesAndFreight = Number(product.priceWithTaxesAndFreight) || 0;
+    const overhead = Number(product.productGroup?.overheadPerUnit ?? 0);
+    return priceWithTaxesAndFreight + overhead;
   };
 
   return (
@@ -97,12 +97,11 @@ export function ProductsTable({
               />
               <SortableHeader
                 column="priceWithTaxesAndFreight"
-                label="Preço Final"
-                width="140px"
+                label="Preço s/ Overhead"
+                width="160px"
               />
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[160px]">
-                Custo Fixo
-              </th>
+              <SortableHeader column="overhead" label="Overhead" width="120px" />
+              <SortableHeader column="finalPrice" label="Preço Final" width="140px" />
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[100px]">
                 Ações
               </th>
@@ -113,6 +112,7 @@ export function ProductsTable({
             {products.map((product) => {
               const priceBase =
                 Number(product.priceWithoutTaxesAndFreight) || 0;
+              const overhead = Number(product.productGroup?.overheadPerUnit ?? 0);
               const priceFinal = calculateFinalPrice(product);
 
               return (
@@ -212,7 +212,47 @@ export function ProductsTable({
                     )}
                   </td>
 
-                  {/* Preço Final (CORRIGIDO) */}
+                  {/* Preço s/ Overhead */}
+                  <td className="px-4 py-3">
+                    {Number(product.priceWithTaxesAndFreight) > 0 ? (
+                      <div>
+                        <Text
+                          variant="caption"
+                          className="font-semibold text-gray-900"
+                        >
+                          {formatCurrency(Number(product.priceWithTaxesAndFreight) || 0)}
+                        </Text>
+                        {priceBase > 0 && Number(product.priceWithTaxesAndFreight) > priceBase && (
+                          <Text
+                            variant="caption"
+                            className="text-xs text-gray-500"
+                          >
+                            (+
+                            {(
+                              ((Number(product.priceWithTaxesAndFreight) - priceBase) / priceBase) *
+                              100
+                            ).toFixed(1)}
+                            %)
+                          </Text>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400 text-sm">-</span>
+                    )}
+                  </td>
+
+                  {/* Overhead (Grupo) */}
+                  <td className="px-4 py-3">
+                    {overhead > 0 ? (
+                      <Text variant="caption" className="font-semibold text-gray-900">
+                        {formatCurrency(overhead)}
+                      </Text>
+                    ) : (
+                      <span className="text-gray-400 text-sm">-</span>
+                    )}
+                  </td>
+
+                  {/* Preço Final (com Overhead) */}
                   <td className="px-4 py-3">
                     {priceFinal > 0 ? (
                       <div>
@@ -229,37 +269,11 @@ export function ProductsTable({
                           >
                             (+
                             {(
-                              ((priceFinal - priceBase) / priceBase) *
-                              100
+                              ((priceFinal - priceBase) / priceBase) * 100
                             ).toFixed(1)}
                             %)
                           </Text>
                         )}
-                      </div>
-                    ) : (
-                      <span className="text-gray-400 text-sm">-</span>
-                    )}
-                  </td>
-
-                  {/* Custo Fixo */}
-                  <td
-                    className="px-4 py-3"
-                    title={product.fixedCost?.description}
-                  >
-                    {product.fixedCost ? (
-                      <div>
-                        <span
-                          className={`text-xs text-gray-700 ${truncateClass}`}
-                        >
-                          {product.fixedCost.description.slice(0, 18)}
-                          {product.fixedCost.description.length > 18 && "..."}
-                        </span>
-                        <div className="text-xs text-gray-500">
-                          {formatCurrency(
-                            Number(product.fixedCost.overheadPerUnit) || 0
-                          )}
-                          /un
-                        </div>
                       </div>
                     ) : (
                       <span className="text-gray-400 text-sm">-</span>

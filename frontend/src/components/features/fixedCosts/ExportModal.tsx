@@ -33,7 +33,6 @@ const SORT_OPTIONS = [
   { value: 'proLabore', label: 'Pró-Labore' },
   { value: 'depreciation', label: 'Depreciação' },
   { value: 'totalCost', label: 'Total' },
-  { value: 'overheadPerUnit', label: 'Overhead/Unidade' },
   { value: 'calculationDate', label: 'Data de Cálculo' },
   { value: 'createdAt', label: 'Data de Criação' },
 ];

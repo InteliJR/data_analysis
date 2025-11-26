@@ -50,11 +50,16 @@ export function RawMaterialTableRow({
     Number(rawMaterial.acquisitionPrice) +
     Number(rawMaterial.additionalCost || 0);
 
-  const nonRecoverableTaxes = (rawMaterial.rawMaterialTaxes || [])
-    .filter((tax) => !tax.recoverable)
-    .reduce((sum, tax) => sum + basePrice * (Number(tax.rate) / 100), 0);
+    const nonRecoverableTaxes = (rawMaterial.rawMaterialTaxes || [])
+      .filter((tax) => !tax.recoverable)
+      .reduce((sum, tax) => sum + basePrice * (Number(tax.rate) / 100), 0);
 
-  const finalPrice = basePrice + totalFreightCost + nonRecoverableTaxes;
+    const recoverableTaxes = (rawMaterial.rawMaterialTaxes || [])
+      .filter((tax) => tax.recoverable)
+      .reduce((sum, tax) => sum + basePrice * (Number(tax.rate) / 100), 0);
+
+    // Regra: NÃO somar impostos não recuperáveis ao custo final
+    const finalPrice = basePrice + totalFreightCost - recoverableTaxes;
 
   return (
     <tr className="border-b border-gray-200 hover:bg-gray-50 transition-colors align-top">

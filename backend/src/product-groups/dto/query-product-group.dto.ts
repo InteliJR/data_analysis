@@ -21,7 +21,7 @@ export class QueryProductGroupDto {
   search?: string;
 
   @IsOptional()
-  @IsIn(['name', 'volumePercentageByQuantity', 'volumePercentageByValue', 'averagePrice', 'totalValue'])
+  @IsIn(['name', 'volumePercentageByQuantity', 'volumePercentageByValue', 'averagePrice', 'totalValue', 'overheadPerUnit'])
   sortBy?: string = 'name';
 
   @IsOptional()
