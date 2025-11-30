@@ -22,7 +22,7 @@ export function PageHeader({
   return (
     <div className="mb-6">
       <Heading as="h1" variant="title" className="mb-4">
-        Matérias-Primas
+        Produto
       </Heading>
 
       <div className="flex items-center justify-between gap-3">
@@ -55,7 +55,7 @@ export function PageHeader({
             onClick={onNewRawMaterialClick}
             className="cursor-pointer"
           >
-            Nova matéria-prima
+            Novo Produto
           </SecondaryButton>
         </div>
       </div>

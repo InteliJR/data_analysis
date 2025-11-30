@@ -148,7 +148,7 @@ export function RecentChangesPreview() {
 
       <div className="mt-4 pt-4 border-t border-gray-200">
         <Text variant="small" className="text-gray-500 text-center">
-          Mostrando as 10 alterações mais recentes em todas as matérias-primas
+          Mostrando as 10 alterações mais recentes em todos os produtos.
         </Text>
       </div>
     </div>

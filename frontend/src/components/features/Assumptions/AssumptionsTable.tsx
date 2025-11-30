@@ -21,8 +21,8 @@ export function AssumptionsTable({ items }: AssumptionsTableProps) {
         <thead className="bg-gray-50 border-b border-gray-200">
           <tr>
             <TableHeaderCell>Itens</TableHeaderCell>
-            <TableHeaderCell sortable>Grupo de Produtos 1</TableHeaderCell>
-            <TableHeaderCell sortable>Grupo de Produtos 2</TableHeaderCell>
+            <TableHeaderCell sortable>Grupo de Estruturas 1</TableHeaderCell>
+            <TableHeaderCell sortable>Grupo de Estruturas 2</TableHeaderCell>
           </tr>
         </thead>
         <tbody>

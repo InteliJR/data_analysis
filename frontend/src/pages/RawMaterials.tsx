@@ -98,16 +98,16 @@ export default function RawMaterials() {
 
     try {
       await deleteMutation.mutateAsync(deletingRawMaterialId);
-      toast.success("Matéria-prima excluída com sucesso");
+      toast.success("Produto excluído com sucesso");
       setDeletingRawMaterialId(null);
     } catch (error: any) {
       const message = error?.response?.data?.message;
       if (error?.response?.status === 409) {
         toast.error(
-          "Esta matéria-prima está associada a produtos e não pode ser excluída"
+          "Este produto está associado a estruturas e não pode ser excluído"
         );
       } else {
-        toast.error(message || "Erro ao excluir matéria-prima");
+        toast.error(message || "Erro ao excluir produto");
       }
     }
   };
@@ -171,7 +171,7 @@ export default function RawMaterials() {
           searchValue={searchInput}
         />
         <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-          <p className="text-red-600 font-semibold">Erro ao carregar matérias-primas</p>
+          <p className="text-red-600 font-semibold">Erro ao carregar produtos</p>
           <p className="text-sm text-gray-500 mt-2">
             Tente recarregar a página ou entre em contato com o suporte
           </p>
@@ -193,9 +193,9 @@ export default function RawMaterials() {
 
       {!hasRawMaterials && !search ? (
         <div className="bg-white rounded-lg shadow-sm p-12 text-center mb-8">
-          <p className="text-gray-500">Nenhuma matéria-prima cadastrada</p>
+          <p className="text-gray-500">Nenhum produto cadastrado</p>
           <p className="text-sm text-gray-400 mt-2">
-            Clique em "Nova matéria-prima" para começar
+            Clique em "Novo produto" para começar
           </p>
         </div>
       ) : !hasRawMaterials && search ? (
@@ -247,8 +247,8 @@ export default function RawMaterials() {
         isOpen={!!deletingRawMaterialId}
         onClose={() => setDeletingRawMaterialId(null)}
         onConfirm={handleDelete}
-        title="Excluir Matéria-Prima"
-        message="Tem certeza que deseja excluir esta matéria-prima? Esta ação não pode ser desfeita."
+        title="Excluir Produto"
+        message="Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita."
         confirmText="Excluir"
       />
 

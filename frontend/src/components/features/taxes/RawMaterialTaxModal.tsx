@@ -27,8 +27,8 @@ export function RawMaterialTaxModal({
 
   const isEditing = !!tax;
   const title = isEditing
-    ? "Editar Imposto de Matéria-Prima"
-    : "Adicionar Imposto de Matéria-Prima";
+    ? "Editar Imposto de Produto"
+    : "Adicionar Imposto de Produto";
 
   const handleSubmit = async (data: CreateRawMaterialTaxDTO) => {
     try {
@@ -37,16 +37,16 @@ export function RawMaterialTaxModal({
           id: tax.id,
           payload: data,
         });
-        toast.success("Imposto de matéria-prima atualizado com sucesso");
+        toast.success("Imposto de produto atualizado com sucesso");
       } else {
         await createMutation.mutateAsync(data);
-        toast.success("Imposto de matéria-prima criado com sucesso");
+        toast.success("Imposto de produto criado com sucesso");
       }
       onClose();
     } catch (error: any) {
       const message =
         error?.response?.data?.message ||
-        "Erro ao salvar imposto de matéria-prima";
+        "Erro ao salvar imposto de produto";
       const status = error?.response?.status;
 
       if (status === 409) {

@@ -241,7 +241,7 @@ export default function FixedCosts() {
         onClose={() => setDeletingCostId(null)}
         onConfirm={handleDelete}
         title="Excluir Custo Fixo"
-        message="Tem certeza que deseja excluir este custo fixo? Os produtos associados terão o custo fixo removido."
+        message="Tem certeza que deseja excluir este custo fixo? As Estruturas associadas terão o custo fixo removido."
         confirmText="Excluir"
       />
 

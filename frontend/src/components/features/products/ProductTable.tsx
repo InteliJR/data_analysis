@@ -88,7 +88,7 @@ export function ProductsTable({
                 width="160px"
               />
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[140px]">
-                Matérias-Primas
+                Produtos
               </th>
               <SortableHeader
                 column="priceWithoutTaxesAndFreight"
@@ -167,7 +167,7 @@ export function ProductsTable({
                     )}
                   </td>
 
-                  {/* Matérias-Primas */}
+                  {/* Produtos */}
                   <td className="px-4 py-3">
                     <div>
                       <Text
@@ -285,13 +285,13 @@ export function ProductsTable({
                     <div className="flex gap-2">
                       <IconButton
                         icon={FiEdit2}
-                        aria-label="Editar produto"
+                        aria-label="Editar estrutura"
                         onClick={() => onEdit(product)}
                         className="text-blue-600 hover:bg-blue-50 cursor-pointer"
                       />
                       <IconButton
                         icon={FiTrash2}
-                        aria-label="Excluir produto"
+                        aria-label="Excluir estrutura"
                         onClick={() => onDelete(product.id)}
                         className="text-red-600 hover:bg-red-50 cursor-pointer"
                       />

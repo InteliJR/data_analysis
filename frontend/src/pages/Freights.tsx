@@ -104,7 +104,7 @@ export default function Freights() {
       const message = error?.response?.data?.message;
       if (error?.response?.status === 409) {
         toast.error(
-          "Este frete está associado a matérias-primas e não pode ser excluído"
+          "Este frete está associado a Produtos e não pode ser excluído"
         );
       } else {
         toast.error(message || "Erro ao excluir frete");

@@ -22,7 +22,7 @@ export function PageHeader({
   return (
     <div className="mb-6">
       <Heading as="h1" variant="title" className="mb-4">
-        Produtos
+        Estruturas
       </Heading>
 
       <div className="flex items-center justify-between gap-3">
@@ -55,7 +55,7 @@ export function PageHeader({
             onClick={onNewProductClick}
             className="cursor-pointer"
           >
-            Novo produto
+            Nova Estrutura
           </SecondaryButton>
         </div>
       </div>

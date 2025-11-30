@@ -200,13 +200,13 @@ export function RawMaterialTableRow({
         <div className="flex gap-2">
           <IconButton
             icon={FiEdit2}
-            aria-label="Editar matéria-prima"
+            aria-label="Editar Produto"
             onClick={() => onEdit(rawMaterial)}
             className="text-blue-600 hover:bg-blue-50 cursor-pointer"
           />
           <IconButton
             icon={FiTrash2}
-            aria-label="Excluir matéria-prima"
+            aria-label="Excluir Produto"
             onClick={() => onDelete(rawMaterial.id)}
             className="text-red-600 hover:bg-red-50 cursor-pointer"
           />

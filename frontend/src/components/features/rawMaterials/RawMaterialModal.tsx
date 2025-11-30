@@ -27,7 +27,7 @@ export function RawMaterialModal({
   const updateMutation = useUpdateRawMaterialMutation();
 
   const isEditing = !!rawMaterial;
-  const title = isEditing ? "Editar Matéria-Prima" : "Adicionar Matéria-Prima";
+  const title = isEditing ? "Editar Produto" : "Adicionar Produto";
 
   const handleSubmit = async (data: CreateRawMaterialDTO) => {
     try {
@@ -36,22 +36,22 @@ export function RawMaterialModal({
           id: rawMaterial.id,
           payload: data,
         });
-        toast.success("Matéria-prima atualizada com sucesso");
+        toast.success("Produto atualizado com sucesso");
       } else {
         await createMutation.mutateAsync(data);
-        toast.success("Matéria-prima criada com sucesso");
+        toast.success("Produto criado com sucesso");
       }
       onClose();
     } catch (error: any) {
       const message =
-        error?.response?.data?.message || "Erro ao salvar matéria-prima";
+        error?.response?.data?.message || "Erro ao salvar Produto";
       const status = error?.response?.status;
 
       // CORREÇÃO: Tratamento mais específico de erros
       if (status === 409) {
         // Conflict - pode ser código ou nome de imposto duplicado
         if (message.includes("código")) {
-          toast.error("Já existe uma matéria-prima com este código");
+          toast.error("Já existe uma P com este código");
         } else if (message.includes("imposto")) {
           toast.error(message); // Mensagem específica do backend
         } else {

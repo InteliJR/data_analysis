@@ -22,7 +22,7 @@ const EXPORT_COLUMNS = [
   { key: "code", label: "Código" },
   { key: "name", label: "Nome" },
   { key: "description", label: "Descrição" },
-  { key: "productGroup", label: "Grupo de Produto" },
+  { key: "productGroup", label: "Grupo de Estrutura" },
   { key: "priceWithoutTaxesAndFreight", label: "Preço sem Impostos/Frete" },
   { key: "priceWithTaxesAndFreight", label: "Preço s/ Overhead" },
   { key: "overhead", label: "Overhead (Grupo)" },
@@ -95,11 +95,11 @@ export default function Products() {
 
     try {
       await deleteMutation.mutateAsync(deletingProductId);
-      toast.success("Produto excluído com sucesso");
+      toast.success("Estrutura excluída com sucesso");
       setDeletingProductId(null);
     } catch (error: any) {
       const message = error?.response?.data?.message;
-      toast.error(message || "Erro ao excluir produto");
+      toast.error(message || "Erro ao excluir estrutura");
     }
   };
 
@@ -162,7 +162,7 @@ export default function Products() {
           searchValue={searchInput}
         />
         <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-          <p className="text-red-600 font-semibold">Erro ao carregar produtos</p>
+          <p className="text-red-600 font-semibold">Erro ao carregar estruturas</p>
           <p className="text-sm text-gray-500 mt-2">
             Tente recarregar a página ou entre em contato com o suporte
           </p>
@@ -184,9 +184,9 @@ export default function Products() {
 
       {!hasProducts && !search ? (
         <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-          <p className="text-gray-500">Nenhum produto cadastrado</p>
+          <p className="text-gray-500">Nenhuma estrutura cadastrada</p>
           <p className="text-sm text-gray-400 mt-2">
-            Clique em "Novo produto" para começar
+            Clique em "Nova estrutura" para começar
           </p>
         </div>
       ) : !hasProducts && search ? (
@@ -235,8 +235,8 @@ export default function Products() {
         isOpen={!!deletingProductId}
         onClose={() => setDeletingProductId(null)}
         onConfirm={handleDelete}
-        title="Excluir Produto"
-        message="Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita."
+        title="Excluir Estrutura"
+        message="Tem certeza que deseja excluir esta estrutura? Esta ação não pode ser desfeita."
         confirmText="Excluir"
       />
 

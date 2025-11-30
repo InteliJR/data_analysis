@@ -317,7 +317,7 @@ export function RawMaterialForm({
             <Label htmlFor="description">Descrição (Opcional)</Label>
             <Textarea
               id="description"
-              placeholder="Detalhes sobre a matéria-prima..."
+              placeholder="Detalhes sobre a produto..."
               rows={3}
               maxLength={500}
               className="min-h-[80px] max-h-[200px]"
@@ -517,7 +517,7 @@ export function RawMaterialForm({
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-gray-700">
-            Impostos da Matéria-Prima
+            Impostos do produto (Opcional)
           </h3>
           <SecondaryButton
             type="button"

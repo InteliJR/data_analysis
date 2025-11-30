@@ -27,7 +27,7 @@ export function ProductModal({
   const updateMutation = useUpdateProductMutation();
 
   const isEditing = !!product;
-  const title = isEditing ? 'Editar Produto' : 'Adicionar Produto';
+  const title = isEditing ? 'Editar Estrutura' : 'Adicionar Estrutura';
 
   const handleSubmit = async (data: CreateProductDTO) => {
     try {
@@ -36,14 +36,14 @@ export function ProductModal({
           id: product.id, 
           payload: data 
         });
-        toast.success('Produto atualizado com sucesso');
+        toast.success('Estrutura atualizada com sucesso');
       } else {
         await createMutation.mutateAsync(data);
-        toast.success('Produto criado com sucesso');
+        toast.success('Estrutura criada com sucesso');
       }
       onClose();
     } catch (error: any) {
-      const message = error?.response?.data?.message || 'Erro ao salvar produto';
+      const message = error?.response?.data?.message || 'Erro ao salvar estrutura';
       toast.error(message);
     }
   };

@@ -180,13 +180,13 @@ export function RawMaterialTaxForm({
           {...register("recoverable")}
         />
         <Text className="text-xs text-gray-500 mt-1">
-          Impostos recuperáveis não impactam o custo final da matéria-prima
+          Impostos recuperáveis não impactam o custo final do Produto.
         </Text>
       </div>
 
-      {/* Matérias-Primas Associadas */}
+      {/* Produtos Associados */}
       <div>
-        <Label>Matérias-Primas Associadas (Opcional)</Label>
+        <Label>Produtos Associados (Opcional)</Label>
         <div className="space-y-3">
           <Autocomplete
             options={availableRawMaterials.map((rm) => ({
@@ -205,8 +205,8 @@ export function RawMaterialTaxForm({
               setRawMaterialSearch(value);
               debouncedSetRawMaterialSearch(value);
             }}
-            placeholder="Buscar e adicionar matéria-prima..."
-            emptyMessage="Nenhuma matéria-prima disponível"
+            placeholder="Buscar e adicionar produto..."
+            emptyMessage="Nenhum produto disponível"
             isLoading={isLoadingRawMaterials}
           />
 
@@ -214,15 +214,15 @@ export function RawMaterialTaxForm({
             !isLoadingRawMaterials &&
             !rawMaterialSearch && (
               <Text className="text-sm text-gray-500">
-                Nenhuma matéria-prima disponível
+                Nenhum produto disponível
               </Text>
             )}
 
           {selectedRawMaterialIds.length > 0 && (
             <div className="space-y-2">
               <Text className="text-sm font-medium text-gray-700">
-                {selectedRawMaterialIds.length} matéria(s)-prima(s) nova(s)
-                selecionada(s)
+                {selectedRawMaterialIds.length} produto(s) novo(s)
+                selecionado(s)
               </Text>
               {selectedRawMaterialIds.map((rawMaterialId) => {
                 const rawMaterial = rawMaterialsData?.data?.find(
@@ -255,7 +255,7 @@ export function RawMaterialTaxForm({
                       leftIcon={FiTrash2}
                       onClick={() => removeRawMaterial(rawMaterialId)}
                       className="cursor-pointer text-red-600 hover:bg-red-50"
-                      aria-label="Remover matéria-prima"
+                      aria-label="Remover Produto"
                     />
                   </div>
                 );
@@ -282,7 +282,7 @@ export function RawMaterialTaxForm({
             </Text>
           </div>
           <div className="flex justify-between">
-            <Text className="text-gray-600">Matérias-primas selecionadas:</Text>
+            <Text className="text-gray-600">Produtos selecionados:</Text>
             <Text className="font-semibold">
               {selectedRawMaterialIds.length}
             </Text>

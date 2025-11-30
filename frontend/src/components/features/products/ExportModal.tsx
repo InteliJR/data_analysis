@@ -28,7 +28,7 @@ interface ExportModalProps {
 const SORT_OPTIONS = [
   { value: "code", label: "Código" },
   { value: "name", label: "Nome" },
-  { value: "productGroup", label: "Grupo de Produto" },
+  { value: "productGroup", label: "Grupo de Estruturas" },
   { value: "priceWithoutTaxesAndFreight", label: "Preço sem Impostos/Frete" },
   { value: "priceWithTaxesAndFreight", label: "Preço com Impostos/Frete" },
   { value: "createdAt", label: "Data de Criação" },

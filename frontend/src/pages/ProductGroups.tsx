@@ -188,12 +188,12 @@ export default function ProductGroups() {
     return (
       <div className="p-6">
         <div className="mb-6">
-          <Heading as="h1">Grupos de Produtos</Heading>
+          <Heading as="h1">Grupos de Estruturas</Heading>
         </div>
         <EmptyState
           icon={Package}
           title="Erro ao carregar grupos"
-          description="Ocorreu um erro ao carregar os grupos de produtos. Tente novamente."
+          description="Ocorreu um erro ao carregar os grupos de Estruturas. Tente novamente."
           action={{
             label: "Tentar novamente",
             onClick: () => window.location.reload(),
@@ -206,7 +206,7 @@ export default function ProductGroups() {
   return (
     <div >
       <div className="mb-6">
-        <Heading as="h1">Grupos de Produtos</Heading>
+        <Heading as="h1">Grupos de Estruturas</Heading>
       </div>
 
       <ActionBar

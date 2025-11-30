@@ -86,11 +86,11 @@ export function RawMaterialTaxesSection() {
 
     try {
       await deleteMutation.mutateAsync(deletingTaxId);
-      toast.success("Imposto de matéria-prima excluído com sucesso");
+      toast.success("Imposto do produto excluído com sucesso");
       setDeletingTaxId(null);
     } catch (error: any) {
       const message = error?.response?.data?.message;
-      toast.error(message || "Erro ao excluir imposto de matéria-prima");
+      toast.error(message || "Erro ao excluir imposto do produto");
     }
   };
 
@@ -134,7 +134,7 @@ export function RawMaterialTaxesSection() {
     return (
       <>
         <PageHeader
-          title="Impostos de Matéria-Prima"
+          title="Impostos do Produto"
           onNewClick={handleOpenCreateModal}
           onExportClick={() => setIsExportModalOpen(true)}
           onSearchChange={handleSearchChange}
@@ -149,7 +149,7 @@ export function RawMaterialTaxesSection() {
     return (
       <>
         <PageHeader
-          title="Impostos de Matéria-Prima"
+          title="Impostos do Produto"
           onNewClick={handleOpenCreateModal}
           onExportClick={() => setIsExportModalOpen(true)}
           onSearchChange={handleSearchChange}
@@ -172,7 +172,7 @@ export function RawMaterialTaxesSection() {
   return (
     <>
       <PageHeader
-        title="Impostos de Matéria-Prima"
+        title="Impostos do Produto"
         onNewClick={handleOpenCreateModal}
         onExportClick={() => setIsExportModalOpen(true)}
         onSearchChange={handleSearchChange}
@@ -182,7 +182,7 @@ export function RawMaterialTaxesSection() {
       {!hasTaxes && !search ? (
         <div className="bg-white rounded-lg shadow-sm p-12 text-center">
           <p className="text-gray-500">
-            Nenhum imposto de matéria-prima cadastrado
+            Nenhum imposto do produto cadastrado
           </p>
           <p className="text-sm text-gray-400 mt-2">
             Clique em "Novo Imposto" para começar
@@ -233,7 +233,7 @@ export function RawMaterialTaxesSection() {
         isOpen={!!deletingTaxId}
         onClose={() => setDeletingTaxId(null)}
         onConfirm={handleDelete}
-        title="Excluir Imposto de Matéria-Prima"
+        title="Excluir Imposto do Produto"
         message="Tem certeza que deseja excluir este imposto? Esta ação não pode ser desfeita."
         confirmText="Excluir"
       />

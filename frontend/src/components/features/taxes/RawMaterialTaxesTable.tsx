@@ -83,7 +83,7 @@ export function RawMaterialTaxesTable({
               />
               <SortableHeader
                 column="rawMaterialsCount"
-                label="Qtd. Matérias"
+                label="Qtd. Produtos"
                 width="160px"
               />
               <SortableHeader

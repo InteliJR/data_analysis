@@ -92,12 +92,12 @@ export default function Taxes() {
 
     try {
       await deleteRawMaterialTaxMutation.mutateAsync(deletingRawMaterialTaxId);
-      toast.success("Imposto de matéria-prima excluído com sucesso");
+      toast.success("Imposto de produto excluído com sucesso");
       setDeletingRawMaterialTaxId(null);
     } catch (error: any) {
       const message =
         error?.response?.data?.message ||
-        "Erro ao excluir imposto de matéria-prima";
+        "Erro ao excluir imposto de produto";
       toast.error(message);
     }
   };
@@ -134,7 +134,7 @@ export default function Taxes() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <Heading as="h2" variant="subtitle">
-            Impostos de Matéria-Prima
+            Impostos de Produto
           </Heading>
           <SecondaryButton
             variant="primary"
@@ -142,7 +142,7 @@ export default function Taxes() {
             onClick={handleOpenCreateRawMaterialModal}
             className="cursor-pointer"
           >
-            Novo Imposto de Matéria-Prima
+            Novo Imposto de Produto
           </SecondaryButton>
         </div>
 
@@ -178,7 +178,7 @@ export default function Taxes() {
         isOpen={!!deletingRawMaterialTaxId}
         onClose={() => setDeletingRawMaterialTaxId(null)}
         onConfirm={handleDeleteRawMaterialTax}
-        title="Excluir Imposto de Matéria-Prima"
+        title="Excluir Imposto de Produto"
         message="Tem certeza que deseja excluir este imposto? Esta ação não pode ser desfeita."
         confirmText="Excluir"
       />

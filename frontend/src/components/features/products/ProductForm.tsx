@@ -119,12 +119,12 @@ export function ProductForm({
   const calculatePrices = () => {
     let totalRawMaterials = 0;
     // Separar impostos para evitar dupla contagem e permitir subtração de recuperáveis
-    let nonRecoverableMpTaxes = 0; // impostos não recuperáveis das matérias-primas
-    let recoverableCreditsTotal = 0; // impostos recuperáveis das matérias-primas (créditos)
+    let nonRecoverableMpTaxes = 0; // impostos não recuperáveis das 
+    let recoverableCreditsTotal = 0; // impostos recuperáveis das  (créditos)
     let freightTaxesTotal = 0; // impostos dos fretes (MP + produto)
     let totalRawMaterialFreightService = 0; // serviço de frete das MPs (sem impostos)
 
-    // 1. Calcular custos das matérias-primas
+    // 1. Calcular custos das 
     rawMaterials.forEach((rm: any) => {
       let rawMat = rawMaterialsData?.data?.find(
         (r) => r.id === rm.rawMaterialId
@@ -368,11 +368,11 @@ export function ProductForm({
 
           <div>
             <Label htmlFor="name">
-              Nome do Produto <span className="text-red-500">*</span>
+              Nome da Estrutura <span className="text-red-500">*</span>
             </Label>
             <Input
               id="name"
-              placeholder="Ex: Produto A"
+              placeholder="Ex: Estrutura A"
               maxLength={100}
               {...register("name", {
                 required: "Nome é obrigatório",
@@ -398,7 +398,7 @@ export function ProductForm({
             <Label htmlFor="description">Descrição (Opcional)</Label>
             <Textarea
               id="description"
-              placeholder="Detalhes sobre o produto..."
+              placeholder="Detalhes sobre a Estrutura..."
               rows={4}
               maxLength={500}
               className="min-h-[100px] max-h-[240px]"
@@ -418,7 +418,7 @@ export function ProductForm({
           <div className="sm:col-span-2">
             <Select
               id="productGroupId"
-              label="Grupo de Produto (Opcional)"
+              label="Grupo de Estruturas (Opcional)"
               value={selectedProductGroupId}
               onChange={(e) => setValue("productGroupId", e.target.value)}
             >
@@ -470,7 +470,7 @@ export function ProductForm({
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-gray-700">
-            Matérias-Primas <span className="text-red-500">*</span>
+             <span className="text-red-500">*</span>
           </h3>
           <Text className="text-xs text-gray-500">Mínimo: 1 item</Text>
         </div>
@@ -495,8 +495,8 @@ export function ProductForm({
             searchValue={rawMaterialSearch}
             onChange={addRawMaterial}
             onSearchChange={setRawMaterialSearch}
-            placeholder="Buscar e adicionar matéria-prima..."
-            emptyMessage="Nenhuma matéria-prima encontrada"
+            placeholder="Buscar e adicionar Produtos..."
+            emptyMessage="Nenhuma Produtos encontrada"
             isLoading={isLoadingRM}
           />
         </div>
@@ -504,7 +504,7 @@ export function ProductForm({
         {fields.length === 0 ? (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
             <Text className="text-gray-500 text-sm">
-              Nenhuma matéria-prima adicionada. Busque e adicione pelo menos
+              Nenhuma Produtos adicionada. Busque e adicione pelo menos
               uma.
             </Text>
           </div>
@@ -601,7 +601,7 @@ export function ProductForm({
                     leftIcon={FiTrash2}
                     onClick={() => remove(index)}
                     className="cursor-pointer text-red-600 hover:bg-red-50"
-                    aria-label={`Remover matéria-prima ${index + 1}`}
+                    aria-label={`Remover Produto ${index + 1}`}
                   />
                 </div>
               );
@@ -611,7 +611,7 @@ export function ProductForm({
 
         {fields.length === 0 && (
           <Text className="text-xs text-red-600 mt-2">
-            Adicione pelo menos uma matéria-prima para criar o produto
+            Adicione pelo menos um Produto para criar a estrutura.
           </Text>
         )}
       </div>
@@ -619,7 +619,7 @@ export function ProductForm({
       {/* SEÇÃO 3: FRETES DO PRODUTO */}
       <div>
         <h3 className="text-sm font-semibold text-gray-700 mb-3">
-          Fretes do Produto (Opcional)
+          Fretes do Estrutura (Opcional)
         </h3>
 
         <div className="mb-4">
@@ -690,7 +690,7 @@ export function ProductForm({
 
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <Text className="text-gray-700">Custo de Matérias-Primas:</Text>
+            <Text className="text-gray-700">Custo de :</Text>
             <Text className="font-semibold text-gray-900">
               {formatCurrency(prices.priceBase)}
             </Text>
@@ -765,8 +765,8 @@ export function ProductForm({
         <div className="bg-white rounded p-3 mt-3 text-xs text-gray-600">
           <p className="font-medium mb-1">ℹ️ Como o preço é calculado:</p>
           <ul className="list-disc list-inside space-y-1 text-gray-600">
-            <li>Preço Base: soma (matéria-prima × quantidade)</li>
-            <li>Fretes: soma fretes das matérias + fretes do produto (+ impostos de frete)</li>
+            <li>Preço Base: soma (Produto × quantidade)</li>
+            <li>Fretes: soma fretes das produto + fretes da estrutura (+ impostos de frete)</li>
             <li>Impostos Recuperáveis: subtraídos do preço final</li>
             <li>Impostos Não Recuperáveis (MP): exibidos, porém não adicionados</li>
             <li><strong>Preço Final: Base + Frete (serviço + impostos) − Impostos Recuperáveis + Overhead do Grupo</strong></li>

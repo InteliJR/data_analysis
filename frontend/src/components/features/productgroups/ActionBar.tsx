@@ -68,7 +68,7 @@ export function ActionBar({
               onClick={onNewGroup}
               className="cursor-pointer"
             >
-              Novo grupo de produto
+              Novo grupo de estruturas
             </SecondaryButton>
           </div>
         </div>
