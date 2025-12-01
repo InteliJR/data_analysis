@@ -43,6 +43,73 @@ export class RawMaterialTaxDto {
   recoverable: boolean;
 }
 
+export class LocationTaxDto {
+  @IsOptional()
+  @IsUUID()
+  taxId?: string; // referencia catálogo
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  name?: string; // alternativa para criar novo imposto
+
+  @IsNumber()
+  @Type(() => Number)
+  @Min(0)
+  @Max(100)
+  rate: number;
+
+  @IsBoolean()
+  recoverable: boolean;
+}
+
+export class RawMaterialLocationDto {
+  @IsOptional()
+  @IsUUID()
+  id?: string;
+
+  @IsOptional()
+  @IsString()
+  country?: string = 'BR';
+
+  @IsString()
+  @MinLength(2)
+  @MaxLength(2)
+  stateUf: string;
+
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  city: string;
+
+  @IsNumber()
+  @Type(() => Number)
+  @Min(0)
+  acquisitionPrice: number;
+
+  @IsEnum(Currency)
+  currency: Currency;
+
+  @IsNumber()
+  @Type(() => Number)
+  @Min(0)
+  priceConvertedBrl: number;
+
+  @IsNumber()
+  @Type(() => Number)
+  @Min(0)
+  additionalCost: number;
+
+  @IsArray()
+  @IsUUID('4', { each: true })
+  freightIds: string[];
+
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => LocationTaxDto)
+  taxes: LocationTaxDto[];
+}
+
 export class CreateRawMaterialDto {
   @IsString()
   @IsNotEmpty({ message: 'Código é obrigatório' })
@@ -72,35 +139,14 @@ export class CreateRawMaterialDto {
   inputGroup?: string;
 
   @IsNumber()
-  @Type(() => Number) // CORREÇÃO: Converte string para number
+  @Type(() => Number)
   @Min(0, { message: 'Prazo de pagamento deve ser no mínimo 0' })
   @Max(365, { message: 'Prazo de pagamento deve ser no máximo 365 dias' })
   paymentTerm: number;
 
-  @IsNumber()
-  @Type(() => Number) // CORREÇÃO: Converte string para number
-  @IsPositive({ message: 'Preço de aquisição deve ser maior que zero' })
-  acquisitionPrice: number;
-
-  @IsEnum(Currency, { message: 'Moeda inválida' })
-  currency: Currency;
-
-  @IsNumber()
-  @Type(() => Number) // CORREÇÃO: Converte string para number
-  @Min(0, { message: 'Preço convertido não pode ser negativo' })
-  priceConvertedBrl: number;
-
-  @IsNumber()
-  @Type(() => Number) // CORREÇÃO: Converte string para number
-  @Min(0, { message: 'Custo adicional não pode ser negativo' })
-  additionalCost: number;
-
-  @IsArray({ message: 'Deve fornecer uma lista de fretes (pode ser vazia)' })
-  @IsUUID('4', { each: true, message: 'ID de frete inválido' })
-  freightIds: string[];
-
+  // Preços/impostos/fretes por localidade
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => RawMaterialTaxDto)
-  rawMaterialTaxes: RawMaterialTaxDto[];
+  @Type(() => RawMaterialLocationDto)
+  locations: RawMaterialLocationDto[];
 }

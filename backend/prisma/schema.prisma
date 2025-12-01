@@ -83,9 +83,12 @@ model Freight {
   updatedAt       DateTime             @updatedAt
 
   freightTaxes FreightTax[]
-  
+  // Mantido para compatibilidade, será substituído por relação via localidade
   rawMaterials RawMaterial[]
-  
+
+  // NOVO: relação de frete com localidades de matéria-prima
+  rawMaterialLocations RawMaterialLocation[]
+
   products     Product[]
 
   @@map("freights")
@@ -127,24 +130,78 @@ model RawMaterial {
   measurementUnit   MeasurementUnit
   inputGroup        String?
   paymentTerm       Int
-  acquisitionPrice  Decimal         @db.Decimal(12, 2)
-  currency          Currency        @default(BRL)
-  priceConvertedBrl Decimal         @db.Decimal(12, 2)
-  additionalCost    Decimal         @default(0) @db.Decimal(12, 2)
   
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 
   productRawMaterials ProductRawMaterial[]
   changeLogs          RawMaterialChangeLog[]
-  
-  rawMaterialTaxes    RawMaterialTax[]
-  
+
+  // NOVO: localidades com preços/impostos/fretes específicos
+  locations           RawMaterialLocation[]
+
+  // Compatibilidade: manter relação direta com fretes para não quebrar validações existentes
   freights            Freight[]
+
+  // Compatibilidade: manter relação direta com impostos (global) para não quebrar validações existentes
+  rawMaterialTaxes    RawMaterialTax[]
 
   @@index([code])
   @@index([name])
   @@map("raw_materials")
+}
+
+// ============================================
+// NOVO: LOCALIDADES DE MATÉRIAS-PRIMAS
+// Cada localidade possui preços, moeda, custo adicional,
+// e relações específicas com fretes e impostos
+// ============================================
+
+model RawMaterialLocation {
+  id                String     @id @default(uuid())
+  rawMaterialId     String
+  country           String?    @default("BR")
+  stateUf           String
+  city              String
+
+  acquisitionPrice  Decimal    @db.Decimal(12, 2)
+  currency          Currency   @default(BRL)
+  priceConvertedBrl Decimal    @db.Decimal(12, 2)
+  additionalCost    Decimal    @default(0) @db.Decimal(12, 2)
+
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  rawMaterial RawMaterial @relation(fields: [rawMaterialId], references: [id], onDelete: Cascade)
+
+  // Impostos específicos por localidade (com taxa/recuperável por localidade)
+  locationTaxes RawMaterialLocationTax[]
+
+  // Fretes aplicáveis à localidade
+  freights Freight[]
+
+  @@index([rawMaterialId])
+  @@index([stateUf, city])
+  @@map("raw_material_locations")
+}
+
+// Pivot com metadados por localidade e imposto (taxa/recuperável)
+model RawMaterialLocationTax {
+  id                    String   @id @default(uuid())
+  rawMaterialLocationId String
+  taxId                 String
+  rate                  Decimal  @db.Decimal(5, 2)
+  recoverable           Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  rawMaterialLocation RawMaterialLocation @relation(fields: [rawMaterialLocationId], references: [id], onDelete: Cascade)
+  tax                RawMaterialTax       @relation(fields: [taxId], references: [id], onDelete: Restrict)
+
+  @@unique([rawMaterialLocationId, taxId])
+  @@index([rawMaterialLocationId])
+  @@index([taxId])
+  @@map("raw_material_location_taxes")
 }
 
 model RawMaterialChangeLog {
@@ -175,7 +232,11 @@ model RawMaterialTax {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Compatibilidade com relação antiga
   rawMaterials RawMaterial[]
+
+  // NOVO: relação com impostos por localidade (pivot)
+  locationTaxes RawMaterialLocationTax[]
 
   @@map("raw_material_taxes")
 }

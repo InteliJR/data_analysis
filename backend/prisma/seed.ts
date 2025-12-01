@@ -289,19 +289,6 @@ async function main() {
       measurementUnit: MeasurementUnit.KG,
       inputGroup: 'Metais',
       paymentTerm: 30,
-      acquisitionPrice: 8.5,
-      currency: Currency.BRL,
-      priceConvertedBrl: 8.5,
-      additionalCost: 0.5,
-      freights: { set: [{ id: freightNacional.id }] },
-      rawMaterialTaxes: {
-        set: [
-          { id: rmTaxPISRecuperavel.id },
-          { id: rmTaxCOFINSRecuperavel.id },
-          { id: rmTaxICMS.id },
-          { id: rmTaxIPI5.id },
-        ],
-      },
     },
     create: {
       code: 'MP001',
@@ -310,19 +297,27 @@ async function main() {
       measurementUnit: MeasurementUnit.KG,
       inputGroup: 'Metais',
       paymentTerm: 30,
+    },
+  });
+
+  // Localidade padrão para MP001
+  await prisma.rawMaterialLocation.create({
+    data: {
+      rawMaterialId: mpAcoCarbono.id,
+      country: 'BR',
+      stateUf: 'SP',
+      city: 'São Paulo',
       acquisitionPrice: 8.5,
       currency: Currency.BRL,
       priceConvertedBrl: 8.5,
       additionalCost: 0.5,
-      freights: {
-        connect: [{ id: freightNacional.id }],
-      },
-      rawMaterialTaxes: {
-        connect: [
-          { id: rmTaxPISRecuperavel.id },
-          { id: rmTaxCOFINSRecuperavel.id },
-          { id: rmTaxICMS.id },
-          { id: rmTaxIPI5.id },
+      freights: { connect: [{ id: freightNacional.id }] },
+      locationTaxes: {
+        create: [
+          { taxId: rmTaxPISRecuperavel.id, rate: 1.65, recoverable: true },
+          { taxId: rmTaxCOFINSRecuperavel.id, rate: 7.6, recoverable: true },
+          { taxId: rmTaxICMS.id, rate: 18.0, recoverable: true },
+          { taxId: rmTaxIPI5.id, rate: 5.0, recoverable: false },
         ],
       },
     },
@@ -336,19 +331,6 @@ async function main() {
       measurementUnit: MeasurementUnit.KG,
       inputGroup: 'Plásticos',
       paymentTerm: 45,
-      acquisitionPrice: 12.0,
-      currency: Currency.BRL,
-      priceConvertedBrl: 12.0,
-      additionalCost: 0.8,
-      freights: { set: [{ id: freightNacional.id }] },
-      rawMaterialTaxes: {
-        set: [
-          { id: rmTaxPISRecuperavel.id },
-          { id: rmTaxCOFINSRecuperavel.id },
-          { id: rmTaxICMS.id },
-          { id: rmTaxIPI10.id },
-        ],
-      },
     },
     create: {
       code: 'MP002',
@@ -357,19 +339,26 @@ async function main() {
       measurementUnit: MeasurementUnit.KG,
       inputGroup: 'Plásticos',
       paymentTerm: 45,
+    },
+  });
+
+  await prisma.rawMaterialLocation.create({
+    data: {
+      rawMaterialId: mpPolietileno.id,
+      country: 'BR',
+      stateUf: 'SP',
+      city: 'Campinas',
       acquisitionPrice: 12.0,
       currency: Currency.BRL,
       priceConvertedBrl: 12.0,
       additionalCost: 0.8,
-      freights: {
-        connect: [{ id: freightNacional.id }],
-      },
-      rawMaterialTaxes: {
-        connect: [
-          { id: rmTaxPISRecuperavel.id },
-          { id: rmTaxCOFINSRecuperavel.id },
-          { id: rmTaxICMS.id },
-          { id: rmTaxIPI10.id },
+      freights: { connect: [{ id: freightNacional.id }] },
+      locationTaxes: {
+        create: [
+          { taxId: rmTaxPISRecuperavel.id, rate: 1.65, recoverable: true },
+          { taxId: rmTaxCOFINSRecuperavel.id, rate: 7.6, recoverable: true },
+          { taxId: rmTaxICMS.id, rate: 18.0, recoverable: true },
+          { taxId: rmTaxIPI10.id, rate: 10.0, recoverable: false },
         ],
       },
     },
@@ -383,19 +372,6 @@ async function main() {
       measurementUnit: MeasurementUnit.L,
       inputGroup: 'Químicos',
       paymentTerm: 60,
-      acquisitionPrice: 45.0,
-      currency: Currency.USD,
-      priceConvertedBrl: 225.0,
-      additionalCost: 15.0,
-      freights: { set: [{ id: freightInternacional.id }] },
-      rawMaterialTaxes: {
-        set: [
-          { id: rmTaxII.id },
-          { id: rmTaxPISNaoRecuperavel.id },
-          { id: rmTaxCOFINSNaoRecuperavel.id },
-          { id: rmTaxICMS.id },
-        ],
-      },
     },
     create: {
       code: 'MP003',
@@ -404,19 +380,26 @@ async function main() {
       measurementUnit: MeasurementUnit.L,
       inputGroup: 'Químicos',
       paymentTerm: 60,
+    },
+  });
+
+  await prisma.rawMaterialLocation.create({
+    data: {
+      rawMaterialId: mpResinaEpoxi.id,
+      country: 'CN',
+      stateUf: 'EX',
+      city: 'Shanghai',
       acquisitionPrice: 45.0,
       currency: Currency.USD,
       priceConvertedBrl: 225.0,
       additionalCost: 15.0,
-      freights: {
-        connect: [{ id: freightInternacional.id }],
-      },
-      rawMaterialTaxes: {
-        connect: [
-          { id: rmTaxII.id },
-          { id: rmTaxPISNaoRecuperavel.id },
-          { id: rmTaxCOFINSNaoRecuperavel.id },
-          { id: rmTaxICMS.id },
+      freights: { connect: [{ id: freightInternacional.id }] },
+      locationTaxes: {
+        create: [
+          { taxId: rmTaxII.id, rate: 14.0, recoverable: false },
+          { taxId: rmTaxPISNaoRecuperavel.id, rate: 2.1, recoverable: false },
+          { taxId: rmTaxCOFINSNaoRecuperavel.id, rate: 9.65, recoverable: false },
+          { taxId: rmTaxICMS.id, rate: 18.0, recoverable: true },
         ],
       },
     },
@@ -430,12 +413,6 @@ async function main() {
       measurementUnit: MeasurementUnit.UN,
       inputGroup: 'Fixação',
       paymentTerm: 30,
-      acquisitionPrice: 0.85,
-      currency: Currency.BRL,
-      priceConvertedBrl: 0.85,
-      additionalCost: 0.05,
-      freights: { set: [{ id: freightExpresso.id }] },
-      rawMaterialTaxes: { set: [{ id: rmTaxSIMPLES.id }] },
     },
     create: {
       code: 'MP004',
@@ -444,15 +421,24 @@ async function main() {
       measurementUnit: MeasurementUnit.UN,
       inputGroup: 'Fixação',
       paymentTerm: 30,
+    },
+  });
+
+  await prisma.rawMaterialLocation.create({
+    data: {
+      rawMaterialId: mpParafuso.id,
+      country: 'BR',
+      stateUf: 'SP',
+      city: 'São Paulo',
       acquisitionPrice: 0.85,
       currency: Currency.BRL,
       priceConvertedBrl: 0.85,
       additionalCost: 0.05,
-      freights: {
-        connect: [{ id: freightExpresso.id }],
-      },
-      rawMaterialTaxes: {
-        connect: [{ id: rmTaxSIMPLES.id }],
+      freights: { connect: [{ id: freightExpresso.id }] },
+      locationTaxes: {
+        create: [
+          { taxId: rmTaxSIMPLES.id, rate: 8.0, recoverable: false },
+        ],
       },
     },
   });
@@ -465,18 +451,6 @@ async function main() {
       measurementUnit: MeasurementUnit.L,
       inputGroup: 'Acabamento',
       paymentTerm: 45,
-      acquisitionPrice: 89.0,
-      currency: Currency.BRL,
-      priceConvertedBrl: 89.0,
-      additionalCost: 5.0,
-      freights: { set: [{ id: freightNacional.id }] },
-      rawMaterialTaxes: {
-        set: [
-          { id: rmTaxPISPresumido.id },
-          { id: rmTaxCOFINSPresumido.id },
-          { id: rmTaxICMS.id },
-        ],
-      },
     },
     create: {
       code: 'MP005',
@@ -485,18 +459,25 @@ async function main() {
       measurementUnit: MeasurementUnit.L,
       inputGroup: 'Acabamento',
       paymentTerm: 45,
+    },
+  });
+
+  await prisma.rawMaterialLocation.create({
+    data: {
+      rawMaterialId: mpTinta.id,
+      country: 'BR',
+      stateUf: 'RJ',
+      city: 'Rio de Janeiro',
       acquisitionPrice: 89.0,
       currency: Currency.BRL,
       priceConvertedBrl: 89.0,
       additionalCost: 5.0,
-      freights: {
-        connect: [{ id: freightNacional.id }],
-      },
-      rawMaterialTaxes: {
-        connect: [
-          { id: rmTaxPISPresumido.id },
-          { id: rmTaxCOFINSPresumido.id },
-          { id: rmTaxICMS.id },
+      freights: { connect: [{ id: freightNacional.id }] },
+      locationTaxes: {
+        create: [
+          { taxId: rmTaxPISPresumido.id, rate: 0.65, recoverable: false },
+          { taxId: rmTaxCOFINSPresumido.id, rate: 3.0, recoverable: false },
+          { taxId: rmTaxICMS.id, rate: 18.0, recoverable: true },
         ],
       },
     },
@@ -510,12 +491,6 @@ async function main() {
       measurementUnit: MeasurementUnit.UN,
       inputGroup: 'Embalagens',
       paymentTerm: 30,
-      acquisitionPrice: 2.5,
-      currency: Currency.BRL,
-      priceConvertedBrl: 2.5,
-      additionalCost: 0.15,
-      freights: { set: [{ id: freightNacional.id }] },
-      rawMaterialTaxes: { set: [{ id: rmTaxSIMPLES.id }] },
     },
     create: {
       code: 'MP006',
@@ -524,15 +499,24 @@ async function main() {
       measurementUnit: MeasurementUnit.UN,
       inputGroup: 'Embalagens',
       paymentTerm: 30,
+    },
+  });
+
+  await prisma.rawMaterialLocation.create({
+    data: {
+      rawMaterialId: mpEmbalagem.id,
+      country: 'BR',
+      stateUf: 'SP',
+      city: 'Sorocaba',
       acquisitionPrice: 2.5,
       currency: Currency.BRL,
       priceConvertedBrl: 2.5,
       additionalCost: 0.15,
-      freights: {
-        connect: [{ id: freightNacional.id }],
-      },
-      rawMaterialTaxes: {
-        connect: [{ id: rmTaxSIMPLES.id }],
+      freights: { connect: [{ id: freightNacional.id }] },
+      locationTaxes: {
+        create: [
+          { taxId: rmTaxSIMPLES.id, rate: 8.0, recoverable: false },
+        ],
       },
     },
   });

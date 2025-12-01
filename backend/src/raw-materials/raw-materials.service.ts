@@ -27,61 +27,7 @@ export class RawMaterialsService {
       );
     }
 
-    // 2. Verifica se os fretes existem
-    if (
-      createRawMaterialDto.freightIds &&
-      createRawMaterialDto.freightIds.length > 0
-    ) {
-      const count = await this.prisma.freight.count({
-        where: { id: { in: createRawMaterialDto.freightIds } },
-      });
-      if (count !== createRawMaterialDto.freightIds.length) {
-        throw new BadRequestException(
-          'Um ou mais IDs de frete não foram encontrados',
-        );
-      }
-    }
-
-    // 3. Validar impostos (verificar duplicados na lista enviada)
-    this.validateTaxList(createRawMaterialDto.rawMaterialTaxes);
-
-    // 4. Processar impostos: SEMPRE usar connect para impostos com ID
-    const taxesToConnect: string[] = [];
-    const taxesToCreate: any[] = [];
-
-    for (const tax of createRawMaterialDto.rawMaterialTaxes) {
-      if (tax.id) {
-        // Imposto existente - apenas conectar (o ID já garante que existe)
-        const exists = await this.prisma.rawMaterialTax.findUnique({
-          where: { id: tax.id },
-        });
-        if (!exists) {
-          throw new BadRequestException(
-            `Imposto com ID ${tax.id} não encontrado`,
-          );
-        }
-        taxesToConnect.push(tax.id);
-      } else {
-        // Novo imposto - verificar se nome já existe
-        const existing = await this.prisma.rawMaterialTax.findUnique({
-          where: { name: tax.name.trim() },
-        });
-
-        if (existing) {
-          throw new ConflictException(
-            `Já existe um imposto com o nome "${tax.name}". Selecione o imposto existente da lista.`,
-          );
-        }
-
-        taxesToCreate.push({
-          name: tax.name.trim(),
-          rate: tax.rate,
-          recoverable: tax.recoverable,
-        });
-      }
-    }
-
-    // 5. Cria a matéria-prima
+    // 2. Cria a matéria-prima (campos comuns)
     const rawMaterial = await this.prisma.rawMaterial.create({
       data: {
         code: createRawMaterialDto.code.toUpperCase(),
@@ -90,38 +36,81 @@ export class RawMaterialsService {
         measurementUnit: createRawMaterialDto.measurementUnit,
         inputGroup: createRawMaterialDto.inputGroup,
         paymentTerm: createRawMaterialDto.paymentTerm,
-        acquisitionPrice: createRawMaterialDto.acquisitionPrice,
-        currency: createRawMaterialDto.currency,
-        priceConvertedBrl: createRawMaterialDto.priceConvertedBrl,
-        additionalCost: createRawMaterialDto.additionalCost,
-        freights: {
-          connect: createRawMaterialDto.freightIds.map((id) => ({ id })),
-        },
-        rawMaterialTaxes: {
-          // Conecta impostos existentes
-          connect: taxesToConnect.map((id) => ({ id })),
-          // Cria novos impostos
-          create: taxesToCreate,
-        },
       },
-      include: {
-        freights: {
-          select: {
-            id: true,
-            name: true,
-            unitPrice: true,
-            currency: true,
-            originCity: true,
-            originUf: true,
-            destinationCity: true,
-            destinationUf: true,
-          },
-        },
-        rawMaterialTaxes: true,
-      },
+      include: {},
     });
 
-    // 6. Log de criação
+    // 3. Criar localidades com fretes e impostos locais
+    if (!createRawMaterialDto.locations || createRawMaterialDto.locations.length === 0) {
+      throw new BadRequestException('Deve fornecer ao menos uma localidade');
+    }
+
+    for (const loc of createRawMaterialDto.locations) {
+      // Validar fretes
+      if (loc.freightIds && loc.freightIds.length > 0) {
+        const count = await this.prisma.freight.count({
+          where: { id: { in: loc.freightIds } },
+        });
+        if (count !== loc.freightIds.length) {
+          throw new BadRequestException('Um ou mais IDs de frete da localidade não foram encontrados');
+        }
+      }
+
+      // Processar impostos por localidade
+      const locationTaxesCreate: any[] = [];
+      if (loc.taxes && loc.taxes.length > 0) {
+        // validar duplicados por nome
+        const names = loc.taxes
+          .filter((t) => t.name)
+          .map((t) => t.name!.trim().toLowerCase());
+        const hasDup = names.length !== new Set(names).size;
+        if (hasDup) {
+          throw new BadRequestException('Existem impostos duplicados por localidade');
+        }
+
+        for (const t of loc.taxes) {
+          let taxId = t.taxId;
+          if (!taxId && t.name) {
+            const existing = await this.prisma.rawMaterialTax.findUnique({
+              where: { name: t.name.trim() },
+            });
+            if (existing) taxId = existing.id;
+            else {
+              const createdTax = await this.prisma.rawMaterialTax.create({
+                data: { name: t.name.trim(), rate: t.rate, recoverable: t.recoverable },
+              });
+              taxId = createdTax.id;
+            }
+          }
+          if (!taxId) {
+            throw new BadRequestException('Taxa inválida: informe taxId ou name');
+          }
+          locationTaxesCreate.push({ taxId, rate: t.rate, recoverable: t.recoverable });
+        }
+      }
+
+      // Criar localidade
+      await this.prisma.rawMaterialLocation.create({
+        data: {
+          rawMaterialId: rawMaterial.id,
+          country: loc.country ?? 'BR',
+          stateUf: loc.stateUf,
+          city: loc.city,
+          acquisitionPrice: loc.acquisitionPrice,
+          currency: loc.currency,
+          priceConvertedBrl: loc.priceConvertedBrl,
+          additionalCost: loc.additionalCost,
+          freights: {
+            connect: (loc.freightIds ?? []).map((id) => ({ id })),
+          },
+          locationTaxes: {
+            create: locationTaxesCreate,
+          },
+        },
+      });
+    }
+
+    // 4. Log de criação
     await this.createChangeLog(
       rawMaterial.id,
       'created',
@@ -161,6 +150,21 @@ export class RawMaterialsService {
         inputGroup
           ? { inputGroup: { contains: inputGroup, mode: 'insensitive' } }
           : {},
+        // filtros por localidade
+        query.stateUf || query.city
+          ? {
+              locations: {
+                some: {
+                  AND: [
+                    query.stateUf ? { stateUf: query.stateUf } : {},
+                    query.city
+                      ? { city: { contains: query.city, mode: 'insensitive' } }
+                      : {},
+                  ],
+                },
+              },
+            }
+          : {},
       ],
     };
 
@@ -175,31 +179,20 @@ export class RawMaterialsService {
         take: limit,
         orderBy,
         include: {
-          freights: {
-            select: {
-              id: true,
-              name: true,
-              unitPrice: true,
-              currency: true,
-              originCity: true,
-              originUf: true,
-              destinationCity: true,
-              destinationUf: true,
-              freightTaxes: {
-                select: {
-                  id: true,
-                  name: true,
-                  rate: true,
+          locations: {
+            include: {
+              freights: {
+                include: {
+                  freightTaxes: {
+                    select: { id: true, name: true, rate: true },
+                  },
                 },
               },
-            },
-          },
-          rawMaterialTaxes: {
-            select: {
-              id: true,
-              name: true,
-              rate: true,
-              recoverable: true,
+              locationTaxes: {
+                include: {
+                  tax: { select: { id: true, name: true } },
+                },
+              },
             },
           },
         },
@@ -222,31 +215,18 @@ export class RawMaterialsService {
     const rawMaterial = await this.prisma.rawMaterial.findUnique({
       where: { id },
       include: {
-        freights: {
-          select: {
-            id: true,
-            name: true,
-            unitPrice: true,
-            currency: true,
-            originCity: true,
-            originUf: true,
-            destinationCity: true,
-            destinationUf: true,
-            freightTaxes: {
-              select: {
-                id: true,
-                name: true,
-                rate: true,
+        locations: {
+          include: {
+            freights: {
+              include: {
+                freightTaxes: { select: { id: true, name: true, rate: true } },
               },
             },
-          },
-        },
-        rawMaterialTaxes: {
-          select: {
-            id: true,
-            name: true,
-            rate: true,
-            recoverable: true,
+            locationTaxes: {
+              include: {
+                tax: { select: { id: true, name: true } },
+              },
+            },
           },
         },
       },
@@ -292,76 +272,7 @@ export class RawMaterialsService {
       }
     }
 
-    // 3. Validação de Fretes
-    if (updateRawMaterialDto.freightIds) {
-      const count = await this.prisma.freight.count({
-        where: { id: { in: updateRawMaterialDto.freightIds } },
-      });
-      if (count !== updateRawMaterialDto.freightIds.length) {
-        throw new BadRequestException('Um ou mais fretes não encontrados');
-      }
-    }
-
-    // 4. Validar e processar impostos
-    let taxData: any = undefined;
-
-    if (updateRawMaterialDto.rawMaterialTaxes) {
-      this.validateTaxList(updateRawMaterialDto.rawMaterialTaxes);
-
-      const taxesToConnect: string[] = [];
-      const taxesToCreate: any[] = [];
-
-      // Processar impostos do DTO
-      for (const tax of updateRawMaterialDto.rawMaterialTaxes) {
-        if (tax.id) {
-          // Imposto existente
-          const exists = await this.prisma.rawMaterialTax.findUnique({
-            where: { id: tax.id },
-          });
-
-          if (!exists) {
-            throw new BadRequestException(
-              `Imposto com ID ${tax.id} não encontrado`,
-            );
-          }
-
-          await this.prisma.rawMaterialTax.update({
-            where: { id: tax.id },
-            data: {
-              name: tax.name.trim(),
-              rate: tax.rate,
-              recoverable: tax.recoverable,
-            },
-          });
-
-          taxesToConnect.push(tax.id);
-        } else {
-          const existingTax = await this.prisma.rawMaterialTax.findUnique({
-            where: { name: tax.name.trim() },
-          });
-
-          if (existingTax) {
-            // Se já existe com esse nome, mas veio sem ID, é um conflito ou devemos usar o existente.
-            // Como é um update, lançar conflito é mais seguro para evitar sobrescrita acidental
-            throw new ConflictException(
-              `Já existe um imposto com o nome "${tax.name}". Selecione o imposto existente da lista.`,
-            );
-          }
-
-          taxesToCreate.push({
-            name: tax.name.trim(),
-            rate: tax.rate,
-            recoverable: tax.recoverable,
-          });
-        }
-      }
-
-      // Usar set para substituir completamente a lista de conexões
-      taxData = {
-        set: taxesToConnect.map((id) => ({ id })),
-        create: taxesToCreate,
-      };
-    }
+    // 3. Validações antigas removidas: fretes/impostos agora são por localidade
 
     // 5. Registrar Log de Mudanças (ANTES da atualização)
     await this.logChanges(existing, updateRawMaterialDto, userId);
@@ -384,30 +295,63 @@ export class RawMaterialsService {
       ...(updateRawMaterialDto.paymentTerm !== undefined && {
         paymentTerm: updateRawMaterialDto.paymentTerm,
       }),
-      ...(updateRawMaterialDto.acquisitionPrice !== undefined && {
-        acquisitionPrice: updateRawMaterialDto.acquisitionPrice,
-      }),
-      ...(updateRawMaterialDto.currency && {
-        currency: updateRawMaterialDto.currency,
-      }),
-      ...(updateRawMaterialDto.priceConvertedBrl !== undefined && {
-        priceConvertedBrl: updateRawMaterialDto.priceConvertedBrl,
-      }),
-      ...(updateRawMaterialDto.additionalCost !== undefined && {
-        additionalCost: updateRawMaterialDto.additionalCost,
-      }),
     };
 
-    // Atualização de Fretes
-    if (updateRawMaterialDto.freightIds !== undefined) {
-      data.freights = {
-        set: updateRawMaterialDto.freightIds.map((fid) => ({ id: fid })),
-      };
-    }
+    // Atualização de localidades: substituição completa (set)
+    if (updateRawMaterialDto.locations !== undefined) {
+      // Estratégia simples: apagar e recriar todas as localidades
+      await this.prisma.rawMaterialLocation.deleteMany({ where: { rawMaterialId: id } });
+      for (const loc of updateRawMaterialDto.locations) {
+        // Validar fretes
+        if (loc.freightIds && loc.freightIds.length > 0) {
+          const count = await this.prisma.freight.count({
+            where: { id: { in: loc.freightIds } },
+          });
+          if (count !== loc.freightIds.length) {
+            throw new BadRequestException('Um ou mais IDs de frete da localidade não foram encontrados');
+          }
+        }
 
-    // Atualização de Impostos
-    if (taxData) {
-      data.rawMaterialTaxes = taxData;
+        const locationTaxesCreate: any[] = [];
+        if (loc.taxes && loc.taxes.length > 0) {
+          for (const t of loc.taxes) {
+            let taxId = t.taxId;
+            if (!taxId && t.name) {
+              const existing = await this.prisma.rawMaterialTax.findUnique({
+                where: { name: t.name.trim() },
+              });
+              if (existing) taxId = existing.id;
+              else {
+                const createdTax = await this.prisma.rawMaterialTax.create({
+                  data: { name: t.name.trim(), rate: t.rate, recoverable: t.recoverable },
+                });
+                taxId = createdTax.id;
+              }
+            }
+            if (!taxId) {
+              throw new BadRequestException('Taxa inválida: informe taxId ou name');
+            }
+            locationTaxesCreate.push({ taxId, rate: t.rate, recoverable: t.recoverable });
+          }
+        }
+
+        await this.prisma.rawMaterialLocation.create({
+          data: {
+            rawMaterialId: id,
+            country: loc.country ?? 'BR',
+            stateUf: loc.stateUf,
+            city: loc.city,
+            acquisitionPrice: loc.acquisitionPrice,
+            currency: loc.currency,
+            priceConvertedBrl: loc.priceConvertedBrl,
+            additionalCost: loc.additionalCost,
+            freights: {
+              connect: (loc.freightIds ?? []).map((fid) => ({ id: fid })),
+            },
+            locationTaxes: { create: locationTaxesCreate },
+          },
+        });
+      }
     }
 
     // 7. Executar Update
@@ -415,19 +359,7 @@ export class RawMaterialsService {
       where: { id },
       data,
       include: {
-        freights: {
-          select: {
-            id: true,
-            name: true,
-            unitPrice: true,
-            currency: true,
-            originCity: true,
-            originUf: true,
-            destinationCity: true,
-            destinationUf: true,
-          },
-        },
-        rawMaterialTaxes: true,
+        locations: true,
       },
     });
 
@@ -609,55 +541,12 @@ export class RawMaterialsService {
       }
     }
 
-    // Log de fretes
-    if (newData.freightIds !== undefined) {
-      const oldFreightIds = oldData.freights.map((f: any) => f.id).sort();
-      const newFreightIds = [...newData.freightIds].sort();
-
-      const areFreightsDifferent =
-        JSON.stringify(oldFreightIds) !== JSON.stringify(newFreightIds);
-
-      if (areFreightsDifferent) {
-        const oldFreightNames = oldData.freights
-          .map((f: any) => f.name)
-          .join(', ');
-
-        const newFreights = await this.prisma.freight.findMany({
-          where: { id: { in: newData.freightIds } },
-          select: { name: true },
-        });
-        const newFreightNames = newFreights.map((f) => f.name).join(', ');
-
-        await this.createChangeLog(
-          oldData.id,
-          'freights',
-          oldFreightNames || 'Nenhum',
-          newFreightNames || 'Nenhum',
-          userId,
-        );
-      }
-    }
+    // Log de fretes removido: fretes agora são por localidade (locations).
 
     // Log de impostos
-    if (newData.rawMaterialTaxes !== undefined) {
-      const oldTaxes = oldData.rawMaterialTaxes
-        .map((t: any) => `${t.name} (${t.rate}%)`)
-        .join(', ');
+    // Campos globais de frete/impostos foram movidos para localidades.
+    // Logs específicos de mudanças em localidades são tratados ao recriar locations no update.
 
-      const newTaxes = newData.rawMaterialTaxes
-        .map((t: any) => `${t.name} (${t.rate}%)`)
-        .join(', ');
-
-      if (oldTaxes !== newTaxes) {
-        await this.createChangeLog(
-          oldData.id,
-          'rawMaterialTaxes',
-          oldTaxes || 'Nenhum',
-          newTaxes || 'Nenhum',
-          userId,
-        );
-      }
-    }
   }
 
   // ==========================================
@@ -701,25 +590,29 @@ export class RawMaterialsService {
       take: limit,
       orderBy: { [sortBy]: sortOrder },
       include: {
-        freights: true,
-        rawMaterialTaxes: true,
+        locations: {
+          include: {
+            freights: true,
+            locationTaxes: { include: { tax: true } },
+          },
+        },
       },
     });
 
     const formattedData = data.map((item) => {
-      const freightsStr = item.freights
+      const firstLoc = (item as any).locations?.[0];
+      const freightsStr = (firstLoc?.freights ?? [])
         .map((f) => `${f.name} (${f.currency} ${f.unitPrice})`)
         .join('; ');
 
       // Calcular preço final
-      const basePrice =
-        Number(item.acquisitionPrice) + Number(item.additionalCost);
-      const freightTotal = item.freights.reduce(
+      const basePrice = Number((firstLoc?.acquisitionPrice ?? 0)) + Number((firstLoc?.additionalCost ?? 0));
+      const freightTotal = (firstLoc?.freights ?? []).reduce(
         (sum, f) => sum + Number(f.unitPrice),
         0,
       );
 
-      const recoverableTaxes = item.rawMaterialTaxes
+      const recoverableTaxes = (firstLoc?.locationTaxes ?? [])
         .filter((t) => t.recoverable)
         .reduce((sum, t) => sum + basePrice * (Number(t.rate) / 100), 0);
 
@@ -733,16 +626,16 @@ export class RawMaterialsService {
         'Unidade de Medida': item.measurementUnit,
         'Grupo de Insumo': item.inputGroup || '',
         'Prazo de Pagamento': `${item.paymentTerm} dias`,
-        'Preço Base': item.acquisitionPrice.toString(),
+        'Preço Base': (firstLoc?.acquisitionPrice ?? 0).toString(),
         'Preço Final': finalPrice.toFixed(2),
-        Moeda: item.currency,
-        'Preço em BRL': item.priceConvertedBrl.toString(),
-        'Custo Adicional': item.additionalCost.toString(),
+        Moeda: firstLoc?.currency ?? 'BRL',
+        'Preço em BRL': (firstLoc?.priceConvertedBrl ?? 0).toString(),
+        'Custo Adicional': (firstLoc?.additionalCost ?? 0).toString(),
         Fretes: freightsStr,
-        Impostos: item.rawMaterialTaxes
+        Impostos: (firstLoc?.locationTaxes ?? [])
           .map(
-            (tax) =>
-              `${tax.name} (${tax.rate}%)${tax.recoverable ? ' [Recuperável]' : ''}`,
+            (lt) =>
+              `${lt.tax?.name ?? ''} (${lt.rate}%)${lt.recoverable ? ' [Recuperável]' : ''}`,
           )
           .join('; '),
       };

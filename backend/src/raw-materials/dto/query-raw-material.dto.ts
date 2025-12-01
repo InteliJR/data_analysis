@@ -30,6 +30,15 @@ export class QueryRawMaterialDto {
   @IsString()
   inputGroup?: string;
 
+  // NOVO: filtros por localidade
+  @IsOptional()
+  @IsString()
+  stateUf?: string;
+
+  @IsOptional()
+  @IsString()
+  city?: string;
+
   @IsOptional()
   @IsString()
   sortBy?: string = 'name';

@@ -238,9 +238,17 @@ export class ProductsService {
                     code: true,
                     name: true,
                     measurementUnit: true,
-                    acquisitionPrice: true,
-                    priceConvertedBrl: true,
-                    currency: true,
+                    locations: {
+                      select: {
+                        country: true,
+                        stateUf: true,
+                        city: true,
+                        acquisitionPrice: true,
+                        priceConvertedBrl: true,
+                        currency: true,
+                        additionalCost: true,
+                      },
+                    },
                   },
                 },
               },
@@ -551,6 +559,17 @@ export class ProductsService {
               freightTaxes: true,
             },
           },
+          locations: {
+            select: {
+              acquisitionPrice: true,
+              priceConvertedBrl: true,
+              currency: true,
+              additionalCost: true,
+              country: true,
+              stateUf: true,
+              city: true,
+            },
+          },
         },
       });
 
@@ -603,8 +622,9 @@ export class ProductsService {
         if (!rmData) continue;
 
         const quantity = rmInput.quantity;
+        const firstLoc = (rmData as any).locations?.[0];
         const unitPrice = Number(
-          rmData.priceConvertedBrl || rmData.acquisitionPrice,
+          (firstLoc?.priceConvertedBrl ?? firstLoc?.acquisitionPrice ?? 0),
         );
         const subtotal = unitPrice * quantity;
 
