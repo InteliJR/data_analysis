@@ -1,9 +1,9 @@
 // src/components/features/rawMaterials/RawMaterialForm.tsx
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import type { RawMaterial } from "@/types/rawMaterial";
-import type { CreateRawMaterialDTO } from "@/api/rawMaterials";
+import type { CreateRawMaterialDTO, RawMaterialLocationDTO } from "@/api/rawMaterials";
 import { toast } from "react-hot-toast";
 
 import { Input } from "@/components/common/Input";
@@ -69,12 +69,23 @@ export function RawMaterialForm({
           measurementUnit: rawMaterial.measurementUnit,
           inputGroup: rawMaterial.inputGroup || "",
           paymentTerm: Number(rawMaterial.paymentTerm),
-          acquisitionPrice: Number(rawMaterial.acquisitionPrice),
-          currency: rawMaterial.currency,
-          priceConvertedBrl: Number(rawMaterial.priceConvertedBrl),
-          additionalCost: Number(rawMaterial.additionalCost || 0),
-          freightIds: rawMaterial.freights?.map((f) => f.id) || [],
-          rawMaterialTaxes: rawMaterial.rawMaterialTaxes || [],
+          locations:
+            rawMaterial.locations?.map((loc) => ({
+              country: loc.country || "BR",
+              stateUf: loc.stateUf,
+              city: loc.city,
+              acquisitionPrice: Number(loc.acquisitionPrice || 0),
+              currency: (loc.currency as any) || "BRL",
+              priceConvertedBrl: Number(loc.priceConvertedBrl || 0),
+              additionalCost: Number(loc.additionalCost || 0),
+              freightIds: (loc.freights || []).map((f) => f.id),
+              taxes: (loc.locationTaxes || []).map((t) => ({
+                taxId: t.tax?.id,
+                rate: Number(t.rate),
+                recoverable: !!t.recoverable,
+                name: t.tax?.name,
+              })),
+            })) || [],
         }
       : {
           code: "",
@@ -83,19 +94,27 @@ export function RawMaterialForm({
           measurementUnit: "KG",
           inputGroup: "",
           paymentTerm: 30,
-          acquisitionPrice: 0,
-          currency: "BRL",
-          priceConvertedBrl: 0,
-          additionalCost: 0,
-          freightIds: [],
-          rawMaterialTaxes: [],
+          locations: [
+            {
+              country: "BR",
+              stateUf: "SP",
+              city: "",
+              acquisitionPrice: 0,
+              currency: "BRL",
+              priceConvertedBrl: 0,
+              additionalCost: 0,
+              freightIds: [],
+              taxes: [],
+            },
+          ],
         },
   });
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "rawMaterialTaxes",
-  });
+  const {
+    fields: locationFields,
+    append: appendLocation,
+    remove: removeLocation,
+  } = useFieldArray({ control, name: "locations" });
 
   // Queries
   const { data: freightsData, isLoading: isLoadingFreights } = useFreightsQuery(
@@ -116,22 +135,21 @@ export function RawMaterialForm({
     setFreightSearch(value);
   }, 300);
 
-  const acquisitionPrice = Number(watch("acquisitionPrice")) || 0;
-  const additionalCost = Number(watch("additionalCost")) || 0;
-  const currency = watch("currency");
-  const rawMaterialTaxes = watch("rawMaterialTaxes") || [];
-  const selectedFreightIds = watch("freightIds") || [];
+  const locations = (watch("locations") || []) as RawMaterialLocationDTO[];
+
+  const firstLoc = (locations[0] || {}) as RawMaterialLocationDTO;
+  const acquisitionPrice = Number(firstLoc?.acquisitionPrice || 0);
+  const additionalCost = Number(firstLoc?.additionalCost || 0);
+  const currency = (firstLoc?.currency as any) || "BRL";
+  const selectedFreightIds = (firstLoc?.freightIds || []) as string[];
+  const rawMaterialTaxes = (firstLoc?.taxes || []) as any[];
 
   const totalBeforeTaxes = acquisitionPrice + additionalCost;
 
-  // CORREÇÃO: Calcular total de fretes baseado nos IDs selecionados
-  const totalFreightCost = (selectedFreightIds || []).reduce(
-    (sum, freightId) => {
-      const freight = freightsData?.data?.find((f) => f.id === freightId);
-      return sum + (freight ? Number(freight.unitPrice || 0) : 0);
-    },
-    0
-  );
+  const totalFreightCost = (selectedFreightIds || []).reduce((sum, freightId) => {
+    const freight = freightsData?.data?.find((f) => f.id === freightId);
+    return sum + (freight ? Number(freight.unitPrice || 0) : 0);
+  }, 0);
 
   const recoverableTaxes = rawMaterialTaxes.reduce((sum, tax) => {
     if (tax.recoverable) {
@@ -149,91 +167,64 @@ export function RawMaterialForm({
     return sum;
   }, 0);
 
-  // Regra: NÃO somar impostos não recuperáveis ao custo final
-  // Fórmula: Base + Frete - Impostos Recuperáveis
   const totalCost = totalBeforeTaxes + totalFreightCost - recoverableTaxes;
 
-  // Verificar se um imposto já foi adicionado
-  const isTaxAlreadyAdded = (taxId: string, taxName: string): boolean => {
-    return rawMaterialTaxes.some(
-      (t) => t.id === taxId || t.name.toLowerCase() === taxName.toLowerCase()
-    );
+  const addTax = (locIndex: number) => {
+    const current = (locations[locIndex]?.taxes || []) as any[];
+    const next = [...current, { rate: 0, recoverable: false }];
+    setValue(`locations.${locIndex}.taxes` as any, next, { shouldDirty: true });
   };
 
-  const addTax = () => {
-    append({ name: "", rate: 0, recoverable: false });
-  };
-
-  const addExistingTax = (taxId: string) => {
+  const addExistingTax = (taxId: string, locIndex: number) => {
     const tax = existingTaxesData?.data?.find((t) => t.id === taxId);
     if (tax) {
-      if (isTaxAlreadyAdded(tax.id, tax.name)) {
+      const current = (locations[locIndex]?.taxes || []) as any[];
+      const already = current.some((t) => t.taxId === tax.id);
+      if (already) {
         toast.error(`O imposto "${tax.name}" já foi adicionado`);
         return;
       }
-
-      append({
-        id: tax.id,
-        name: tax.name,
-        rate: Number(tax.rate),
-        recoverable: tax.recoverable,
-      });
+      const next = [
+        ...current,
+        { taxId: tax.id, rate: Number(tax.rate), recoverable: tax.recoverable },
+      ];
+      setValue(`locations.${locIndex}.taxes` as any, next, { shouldDirty: true });
       toast.success(`Imposto "${tax.name}" adicionado`);
     }
     setTaxSearch("");
   };
 
-  const toggleFreight = (freightId: string) => {
-    const current = selectedFreightIds || [];
-    if (current.includes(freightId)) {
-      setValue(
-        "freightIds",
-        current.filter((id: string) => id !== freightId)
-      );
-    } else {
-      setValue("freightIds", [...current, freightId]);
-    }
+  const toggleFreight = (freightId: string, locIndex: number) => {
+    const current = (locations[locIndex]?.freightIds || []) as string[];
+    const next = current.includes(freightId)
+      ? current.filter((id) => id !== freightId)
+      : [...current, freightId];
+    setValue(`locations.${locIndex}.freightIds` as any, next, { shouldDirty: true });
   };
 
   const handleFormSubmit = (data: CreateRawMaterialDTO) => {
-    // Validar impostos duplicados
-    const taxNames = data.rawMaterialTaxes.map((t) =>
-      t.name.trim().toLowerCase()
-    );
-    const hasDuplicates = taxNames.length !== new Set(taxNames).size;
-
-    if (hasDuplicates) {
-      toast.error(
-        "Existem impostos duplicados. Cada imposto deve ter um nome único."
-      );
-      return;
-    }
-
-    // Verificar nomes vazios
-    const hasEmptyNames = data.rawMaterialTaxes.some((t) => !t.name.trim());
-    if (hasEmptyNames) {
-      toast.error("Todos os impostos devem ter um nome");
-      return;
-    }
-
-    const cleanedData = {
-      ...data,
+    const cleanedData: CreateRawMaterialDTO = {
       code: data.code.trim().toUpperCase(),
       name: data.name.trim(),
       description: data.description?.trim() || "",
+      measurementUnit: data.measurementUnit,
       inputGroup: data.inputGroup?.trim() || "",
       paymentTerm: Number(data.paymentTerm),
-      acquisitionPrice: Number(data.acquisitionPrice),
-      additionalCost: Number(data.additionalCost),
-      priceConvertedBrl:
-        data.currency === "BRL"
-          ? Number(data.acquisitionPrice)
-          : Number(data.priceConvertedBrl || 0),
-
-      rawMaterialTaxes: data.rawMaterialTaxes.map((tax) => ({
-        ...tax,
-        name: tax.name.trim(),
-        rate: Number(tax.rate),
+      locations: (data.locations || []).map((loc) => ({
+        country: (loc.country || "BR").trim(),
+        stateUf: loc.stateUf.trim().toUpperCase(),
+        city: loc.city.trim(),
+        acquisitionPrice: Number(loc.acquisitionPrice || 0),
+        currency: loc.currency,
+        priceConvertedBrl: Number(loc.priceConvertedBrl || 0),
+        additionalCost: Number(loc.additionalCost || 0),
+        freightIds: (loc.freightIds || []).slice(),
+        taxes: (loc.taxes || []).map((t) => ({
+          taxId: t.taxId,
+          name: t.name?.trim(),
+          rate: Number(t.rate || 0),
+          recoverable: !!t.recoverable,
+        })),
       })),
     };
     onSubmit(cleanedData);
@@ -366,146 +357,295 @@ export function RawMaterialForm({
         </div>
       </div>
 
-      {/* SEÇÃO 2: VALORES */}
+      {/* Campo: Prazo de Pagamento */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">
-          Valores e Custos
-        </h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <Label htmlFor="acquisitionPrice">
-              Preço de Aquisição <span className="text-red-500">*</span>
-            </Label>
-            <CurrencyInput
-              id="acquisitionPrice"
-              value={acquisitionPrice}
-              currency={currency}
-              onChange={(value) =>
-                setValue("acquisitionPrice", value, { shouldValidate: true })
-              }
-              placeholder="0,00"
-            />
-            {acquisitionPrice <= 0 && (
-              <Text className="text-xs text-red-600 mt-1">
-                Preço deve ser maior que zero
-              </Text>
-            )}
-          </div>
-
-          <div>
-            <Label htmlFor="currency">Moeda</Label>
-            <Select id="currency" {...register("currency")}>
-              <option value="BRL">Real (R$)</option>
-              <option value="USD">Dólar (US$)</option>
-              <option value="EUR">Euro (€)</option>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="additionalCost">Custo Adicional (Opcional)</Label>
-            <CurrencyInput
-              id="additionalCost"
-              value={additionalCost}
-              currency={currency}
-              onChange={(value) => setValue("additionalCost", value)}
-              placeholder="0,00"
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="paymentTerm">
-              Prazo de Pagamento (dias) <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="paymentTerm"
-              type="number"
-              min="0"
-              max="365"
-              {...register("paymentTerm", {
-                required: "Prazo de pagamento é obrigatório",
-                min: { value: 0, message: "Prazo deve ser no mínimo 0" },
-                max: {
-                  value: 365,
-                  message: "Prazo deve ser no máximo 365 dias",
-                },
-                valueAsNumber: true,
-              })}
-              error={errors.paymentTerm?.message}
-            />
-          </div>
-        </div>
+        <Label htmlFor="paymentTerm">
+          Prazo de Pagamento (dias) <span className="text-red-500">*</span>
+        </Label>
+        <Input
+          id="paymentTerm"
+          type="number"
+          min="0"
+          max="365"
+          {...register("paymentTerm", {
+            required: "Prazo de pagamento é obrigatório",
+            min: { value: 0, message: "Prazo deve ser no mínimo 0" },
+            max: { value: 365, message: "Prazo deve ser no máximo 365 dias" },
+            valueAsNumber: true,
+          })}
+          error={errors.paymentTerm?.message}
+        />
       </div>
 
-      {/* SEÇÃO 3: FRETES */}
+      {/* SEÇÃO 2: LOCALIDADES */}
       <div>
-        <h3 className="text-sm font-semibold text-gray-700 mb-3">
-          Fretes (Opcional)
-        </h3>
-
-        <div className="mb-4">
-          <Autocomplete
-            options={
-              freightsData?.data
-                ?.filter((f) => !selectedFreightIds.includes(f.id))
-                .map((f) => ({
-                  value: f.id,
-                  label: f.name,
-                  description: `${getCurrencySymbol(
-                    f.currency
-                  )} ${formatCurrency(Number(f.unitPrice) || 0)
-                    .replace("R$", "")
-                    .trim()} - ${f.originCity}/${f.originUf} → ${
-                    f.destinationCity
-                  }/${f.destinationUf}`,
-                })) || []
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-700">Localidades</h3>
+          <SecondaryButton
+            type="button"
+            variant="secondary"
+            leftIcon={FiPlus}
+            onClick={() =>
+              appendLocation({
+                country: "BR",
+                stateUf: "SP",
+                city: "",
+                acquisitionPrice: 0,
+                currency: "BRL",
+                priceConvertedBrl: 0,
+                additionalCost: 0,
+                freightIds: [],
+                taxes: [],
+              })
             }
-            value=""
-            searchValue={freightSearch}
-            onChange={toggleFreight}
-            onSearchChange={(value) => {
-              setFreightSearch(value);
-              debouncedSetFreightSearch(value);
-            }}
-            placeholder="Buscar e adicionar frete..."
-            emptyMessage="Nenhum frete encontrado"
-            isLoading={isLoadingFreights}
-          />
+            className="cursor-pointer"
+          >
+            Adicionar Localidade
+          </SecondaryButton>
         </div>
 
-        {selectedFreightIds.length > 0 && (
-          <div className="space-y-2">
-            {selectedFreightIds.map((freightId: string) => {
-              const freight = freightsData?.data?.find(
-                (f) => f.id === freightId
-              );
-              if (!freight) return null;
+        {locationFields.length === 0 ? (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
+            <Text className="text-gray-500 text-sm">Nenhuma localidade adicionada.</Text>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {locationFields.map((field, idx) => {
+              const locPrefix = `locations.${idx}` as const;
+              const locValue = (locations[idx] || {}) as RawMaterialLocationDTO;
+              const locCurrency = (locValue?.currency as any) || "BRL";
+              const locAcq = Number(locValue?.acquisitionPrice || 0);
+              const locAdd = Number(locValue?.additionalCost || 0);
+              const locFreightIds = (locValue?.freightIds || []) as string[];
+              const locTaxes = (locValue?.taxes || []) as any[];
+              const locTotalBeforeTaxes = locAcq + locAdd;
+              const locRecoverableTaxes = locTaxes
+                .filter((t) => t.recoverable)
+                .reduce((s, t) => s + locTotalBeforeTaxes * (Number(t.rate) / 100), 0);
+              const locFreightTotal = locFreightIds.reduce((s, id) => {
+                const f = freightsData?.data?.find((fr) => fr.id === id);
+                return s + (f ? Number(f.unitPrice || 0) : 0);
+              }, 0);
+              const locFinal = locTotalBeforeTaxes + locFreightTotal - locRecoverableTaxes;
 
               return (
-                <div
-                  key={freightId}
-                  className="flex items-center justify-between bg-gray-50 p-3 rounded-lg"
-                >
-                  <div className="flex-1">
-                    <Text variant="caption" className="font-semibold">
-                      {freight.name}
-                    </Text>
-                    <Text className="text-xs text-gray-500">
-                      {freight.originCity}/{freight.originUf} →{" "}
-                      {freight.destinationCity}/{freight.destinationUf} •{" "}
-                      {getCurrencySymbol(freight.currency)}{" "}
-                      {formatCurrency(Number(freight.unitPrice) || 0)
-                        .replace("R$", "")
-                        .trim()}
-                    </Text>
+                <div key={field.id} className="border rounded-lg p-4">
+                  <div className="flex justify-between items-center mb-3">
+                    <Text className="font-semibold text-gray-800">Localidade #{idx + 1}</Text>
+                    <SecondaryButton
+                      type="button"
+                      variant="ghost"
+                      leftIcon={FiTrash2}
+                      onClick={() => removeLocation(idx)}
+                      className="cursor-pointer text-red-600 hover:bg-red-50"
+                    >
+                      Remover
+                    </SecondaryButton>
                   </div>
-                  <SecondaryButton
-                    type="button"
-                    variant="ghost"
-                    leftIcon={FiTrash2}
-                    onClick={() => toggleFreight(freightId)}
-                    className="cursor-pointer text-red-600 hover:bg-red-50"
-                    aria-label="Remover frete"
-                  />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                      <Label>UF</Label>
+                      <Input
+                        placeholder="SP"
+                        maxLength={2}
+                        {...register(`${locPrefix}.stateUf` as any, { required: 'UF é obrigatória' })}
+                        error={(errors as any)?.locations?.[idx]?.stateUf?.message}
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label>Cidade</Label>
+                      <Input
+                        placeholder="São Paulo"
+                        {...register(`${locPrefix}.city` as any, { required: 'Cidade é obrigatória' })}
+                        error={(errors as any)?.locations?.[idx]?.city?.message}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Moeda</Label>
+                      <Select {...register(`${locPrefix}.currency` as any)}>
+                        <option value="BRL">Real (R$)</option>
+                        <option value="USD">Dólar (US$)</option>
+                        <option value="EUR">Euro (€)</option>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>Preço de Aquisição</Label>
+                      <CurrencyInput
+                        value={locAcq}
+                        currency={locCurrency}
+                        onChange={(v) => setValue(`${locPrefix}.acquisitionPrice` as any, v, { shouldValidate: true })}
+                        placeholder="0,00"
+                      />
+                    </div>
+                    <div>
+                      <Label>Preço em BRL</Label>
+                      <CurrencyInput
+                        value={Number(locValue?.priceConvertedBrl || 0)}
+                        currency={'BRL'}
+                        onChange={(v) => setValue(`${locPrefix}.priceConvertedBrl` as any, v)}
+                        placeholder="0,00"
+                      />
+                    </div>
+                    <div>
+                      <Label>Custo Adicional</Label>
+                      <CurrencyInput
+                        value={locAdd}
+                        currency={locCurrency}
+                        onChange={(v) => setValue(`${locPrefix}.additionalCost` as any, v)}
+                        placeholder="0,00"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Fretes da Localidade */}
+                  <div className="mt-4">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Fretes</h4>
+                    <Autocomplete
+                      options={
+                        freightsData?.data
+                          ?.filter((f) => !locFreightIds.includes(f.id))
+                          .map((f) => ({
+                            value: f.id,
+                            label: f.name,
+                            description: `${getCurrencySymbol(f.currency)} ${formatCurrency(Number(f.unitPrice) || 0).replace('R$', '').trim()} - ${f.originCity}/${f.originUf} → ${f.destinationCity}/${f.destinationUf}`,
+                          })) || []
+                      }
+                      value=""
+                      searchValue={freightSearch}
+                      onChange={(v) => toggleFreight(v, idx)}
+                      onSearchChange={(value) => {
+                        setFreightSearch(value);
+                        debouncedSetFreightSearch(value);
+                      }}
+                      placeholder="Buscar e adicionar frete..."
+                      emptyMessage="Nenhum frete encontrado"
+                      isLoading={isLoadingFreights}
+                    />
+
+                    {locFreightIds.length > 0 && (
+                      <div className="space-y-2 mt-2">
+                        {locFreightIds.map((freightId: string) => {
+                          const freight = freightsData?.data?.find((f) => f.id === freightId);
+                          if (!freight) return null;
+                          return (
+                            <div key={freightId} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                              <div className="flex-1">
+                                <Text variant="caption" className="font-semibold">{freight.name}</Text>
+                                <Text className="text-xs text-gray-500">
+                                  {freight.originCity}/{freight.originUf} → {freight.destinationCity}/{freight.destinationUf} • {getCurrencySymbol(freight.currency)} {formatCurrency(Number(freight.unitPrice) || 0).replace('R$', '').trim()}
+                                </Text>
+                              </div>
+                              <SecondaryButton
+                                type="button"
+                                variant="ghost"
+                                leftIcon={FiTrash2}
+                                onClick={() => toggleFreight(freightId, idx)}
+                                className="cursor-pointer text-red-600 hover:bg-red-50"
+                                aria-label="Remover frete"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Impostos da Localidade */}
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-sm font-semibold text-gray-700">Impostos</h4>
+                      <SecondaryButton type="button" variant="secondary" leftIcon={FiPlus} onClick={() => addTax(idx)} className="cursor-pointer">Novo Imposto</SecondaryButton>
+                    </div>
+                    <Autocomplete
+                      options={
+                        existingTaxesData?.data
+                          ?.map((t) => ({ value: t.id, label: t.name, description: `${t.rate}% ${t.recoverable ? '(Recuperável)' : '(Não Recuperável)'}` })) || []
+                      }
+                      value=""
+                      searchValue={taxSearch}
+                      onChange={(v) => addExistingTax(v, idx)}
+                      onSearchChange={setTaxSearch}
+                      placeholder="Buscar e adicionar imposto existente..."
+                      emptyMessage="Nenhum imposto encontrado"
+                    />
+
+                    {(locTaxes || []).length === 0 ? (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center mt-2">
+                        <Text className="text-gray-500 text-sm">Nenhum imposto adicionado.</Text>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 mt-2">
+                        {locTaxes.map((tax, tIdx) => (
+                          <div key={`${tax.taxId || tax.name || tIdx}`} className="flex gap-3 items-center bg-gray-50 p-3 rounded-lg">
+                            <div className="flex-1 min-w-[180px]">
+                              <Input
+                                placeholder="Nome do imposto (opcional se taxId)"
+                                {...register(`${locPrefix}.taxes.${tIdx}.name` as any)}
+                              />
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                max="100"
+                                className="w-[70px] text-center"
+                                placeholder="Taxa %"
+                                {...register(`${locPrefix}.taxes.${tIdx}.rate` as any, { valueAsNumber: true })}
+                              />
+                              <p className="font-bold">%</p>
+                            </div>
+                            <div className="flex items-center gap-2 w-[140px]">
+                              <label className="flex items-center gap-2 text-sm font-medium">
+                                <Checkbox {...register(`${locPrefix}.taxes.${tIdx}.recoverable` as any)} />
+                                Recuperável
+                              </label>
+                            </div>
+                            <SecondaryButton
+                              type="button"
+                              variant="ghost"
+                              leftIcon={FiTrash2}
+                              onClick={() => {
+                                const current = (locations[idx]?.taxes || []) as any[];
+                                const next = current.filter((_, i) => i !== tIdx);
+                                setValue(`${locPrefix}.taxes` as any, next, { shouldDirty: true });
+                              }}
+                              className="cursor-pointer text-red-600 hover:bg-red-50"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Preview simples da localidade */}
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
+                    <Text className="font-semibold text-blue-900">Resumo Localidade #{idx + 1}</Text>
+                    <div className="grid grid-cols-2 gap-2 text-sm mt-2">
+                      <div>
+                        <Text className="text-gray-600">Preço Base:</Text>
+                        <Text className="font-semibold">{formatCurrency(locAcq)}</Text>
+                      </div>
+                      <div>
+                        <Text className="text-gray-600">Custo Adicional:</Text>
+                        <Text className="font-semibold">{formatCurrency(locAdd)}</Text>
+                      </div>
+                      <div>
+                        <Text className="text-gray-600">Total Fretes:</Text>
+                        <Text className="font-semibold text-purple-600">{formatCurrency(locFreightTotal)}</Text>
+                      </div>
+                      <div>
+                        <Text className="text-gray-600">Créditos Recuperáveis:</Text>
+                        <Text className="font-semibold text-green-700">{formatCurrency(locRecoverableTaxes)}</Text>
+                      </div>
+                      <div className="col-span-2 pt-2 border-t border-blue-300">
+                        <Text className="text-gray-600">Custo Final (resumo):</Text>
+                        <Text className="font-bold text-lg text-blue-900">{formatCurrency(locFinal)}</Text>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               );
             })}
@@ -513,132 +653,9 @@ export function RawMaterialForm({
         )}
       </div>
 
-      {/* SEÇÃO 4: IMPOSTOS */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-700">
-            Impostos do produto (Opcional)
-          </h3>
-          <SecondaryButton
-            type="button"
-            variant="secondary"
-            leftIcon={FiPlus}
-            onClick={addTax}
-            className="cursor-pointer"
-          >
-            Novo Imposto
-          </SecondaryButton>
-        </div>
+      {/* Seções antigas de Fretes e Impostos substituídas por controles por localidade */}
 
-        <div className="mb-4">
-          <Autocomplete
-            options={
-              existingTaxesData?.data
-                ?.filter((t) => !isTaxAlreadyAdded(t.id, t.name))
-                .map((t) => ({
-                  value: t.id,
-                  label: t.name,
-                  description: `${t.rate}% ${
-                    t.recoverable ? "(Recuperável)" : "(Não Recuperável)"
-                  }`,
-                })) || []
-            }
-            value=""
-            searchValue={taxSearch}
-            onChange={addExistingTax}
-            onSearchChange={setTaxSearch}
-            placeholder="Buscar e adicionar imposto existente..."
-            emptyMessage="Nenhum imposto encontrado"
-          />
-        </div>
-
-        {fields.length === 0 ? (
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-            <Text className="text-gray-500 text-sm">
-              Nenhum imposto adicionado. Clique em "Novo Imposto" ou busque um
-              existente.
-            </Text>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {fields.map((field, index) => (
-              <div
-                key={field.id}
-                className="flex gap-4 items-center bg-gray-50 p-4 rounded-lg"
-              >
-                <div className="flex-1 min-w-[190px]">
-                  <Input
-                    placeholder="Nome do imposto (ICMS, IPI...)"
-                    maxLength={40}
-                    {...register(`rawMaterialTaxes.${index}.name`, {
-                      required: "Nome do imposto é obrigatório",
-                      validate: {
-                        notEmpty: (value) =>
-                          validateNotEmpty(value) ||
-                          "Nome do imposto não pode conter apenas espaços",
-                      },
-                      maxLength: {
-                        value: 40,
-                        message: "Nome deve ter no máximo 40 caracteres",
-                      },
-                    })}
-                    error={errors.rawMaterialTaxes?.[index]?.name?.message}
-                  />
-                </div>
-
-                <div className="flex items-center justify-center gap-2">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    max="100"
-                    placeholder="Taxa %"
-                    className="w-[60px] text-center p-0"
-                    {...register(`rawMaterialTaxes.${index}.rate`, {
-                      required: "Taxa é obrigatória",
-                      min: {
-                        value: 0.01,
-                        message: "Taxa deve ser maior que 0%",
-                      },
-                      max: {
-                        value: 100,
-                        message: "Taxa deve ser no máximo 100%",
-                      },
-                      valueAsNumber: true,
-                    })}
-                    error={errors.rawMaterialTaxes?.[index]?.rate?.message}
-                  />
-                  <p className="font-bold">%</p>
-                </div>
-
-                <div className="flex justify-center w-[140px]">
-                  <label
-                    htmlFor={`tax-recoverable-${index}`}
-                    className="flex items-center gap-2 cursor-pointer text-sm font-medium"
-                  >
-                    <Checkbox
-                      id={`tax-recoverable-${index}`}
-                      {...register(`rawMaterialTaxes.${index}.recoverable`)}
-                    />
-                    Recuperável
-                  </label>
-                </div>
-
-                <SecondaryButton
-                  type="button"
-                  variant="ghost"
-                  leftIcon={FiTrash2}
-                  onClick={() => remove(index)}
-                  className="cursor-pointer text-red-600 hover:bg-red-50"
-                  aria-label={`Remover imposto ${index + 1}`}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* PREVIEW CORRIGIDO */}
+      {/* PREVIEW (usa primeira localidade como referência rápida) */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
         <Text className="font-semibold text-blue-900">Preview de Custos</Text>
         <div className="grid grid-cols-2 gap-2 text-sm">

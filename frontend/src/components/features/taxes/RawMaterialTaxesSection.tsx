@@ -22,7 +22,7 @@ const EXPORT_COLUMNS = [
   { key: "name", label: "Nome do Imposto" },
   { key: "rate", label: "Taxa (%)" },
   { key: "recoverable", label: "Recuperável" },
-  { key: "rawMaterialsCount", label: "Qtd. Matérias-Primas" },
+  { key: "rawMaterialsCount", label: "Qtd. Produtos" },
   { key: "productsCount", label: "Qtd. Produtos" },
   { key: "createdAt", label: "Data de Criação" },
 ];
@@ -119,7 +119,7 @@ export function RawMaterialTaxesSection() {
         filters: { search },
       });
 
-      const filename = `impostos-materia-prima-${
+      const filename = `impostos-produto-${
         new Date().toISOString().split("T")[0]
       }.csv`;
       triggerCsvDownload(blob, filename);

@@ -8,11 +8,24 @@ import type { RawMaterial, RawMaterialChangeLog } from '@/types/rawMaterial';
 // Tipagens de Requisição e Resposta
 // ========================================
 
-export interface RawMaterialTaxDTO {
-  id?: string;
-  name: string;
+export interface LocationTaxDTO {
+  taxId?: string; // preferível quando existir no catálogo
+  name?: string;  // alternativa para criar
   rate: number;
   recoverable: boolean;
+}
+
+export interface RawMaterialLocationDTO {
+  id?: string;
+  country?: string;
+  stateUf: string;
+  city: string;
+  acquisitionPrice: number;
+  currency: 'BRL' | 'USD' | 'EUR';
+  priceConvertedBrl: number;
+  additionalCost: number;
+  freightIds: string[];
+  taxes: LocationTaxDTO[];
 }
 
 export interface CreateRawMaterialDTO {
@@ -22,12 +35,7 @@ export interface CreateRawMaterialDTO {
   measurementUnit: string;
   inputGroup?: string;
   paymentTerm: number;
-  acquisitionPrice: number;
-  currency: string;
-  priceConvertedBrl: number;
-  additionalCost: number;
-  freightId: string;
-  rawMaterialTaxes: RawMaterialTaxDTO[];
+  locations: RawMaterialLocationDTO[];
 }
 
 export interface UpdateRawMaterialDTO extends Partial<CreateRawMaterialDTO> {}

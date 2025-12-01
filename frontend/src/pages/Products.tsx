@@ -27,7 +27,7 @@ const EXPORT_COLUMNS = [
   { key: "priceWithTaxesAndFreight", label: "Preço s/ Overhead" },
   { key: "overhead", label: "Overhead (Grupo)" },
   { key: "finalPrice", label: "Preço Final" },
-  { key: "rawMaterialsCount", label: "Qtd. Matérias-Primas" },
+  { key: "rawMaterialsCount", label: "Qtd. Produtos" },
 ];
 
 export default function Products() {
@@ -38,6 +38,9 @@ export default function Products() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  // Filtros por localidade dos materiais
+  const [stateUf, setStateUf] = useState<string>("");
+  const [city, setCity] = useState<string>("");
 
   // Modais
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -50,6 +53,8 @@ export default function Products() {
     page,
     limit,
     search,
+    stateUf: stateUf || undefined,
+    city: city || undefined,
     sortBy,
     sortOrder,
   });
@@ -125,7 +130,7 @@ export default function Products() {
         limit: options.limit,
         sortBy: options.sortBy,
         sortOrder: options.sortOrder,
-        filters: { search },
+        filters: { search, stateUf: stateUf || undefined, city: city || undefined },
       });
 
       const filename = `produtos-${new Date().toISOString().split("T")[0]}.csv`;
@@ -181,6 +186,46 @@ export default function Products() {
         onSearchChange={handleSearchChange}
         searchValue={searchInput}
       />
+      {/* Filtros por Localidade dos Materiais */}
+      <div className="bg-white rounded-lg shadow-sm p-4 mb-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label className="text-xs font-medium text-gray-600">UF (Localidade do material)</label>
+          <input
+            className="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm"
+            placeholder="Ex: SP"
+            value={stateUf}
+            maxLength={2}
+            onChange={(e) => {
+              setStateUf(e.target.value.toUpperCase());
+              setPage(1);
+            }}
+          />
+        </div>
+        <div>
+          <label className="text-xs font-medium text-gray-600">Cidade (Localidade do material)</label>
+          <input
+            className="mt-1 w-full border border-gray-300 rounded px-2 py-1 text-sm"
+            placeholder="Ex: São Paulo"
+            value={city}
+            onChange={(e) => {
+              setCity(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+        <div className="flex items-end gap-2">
+          <button
+            className="px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm"
+            onClick={() => {
+              setStateUf("");
+              setCity("");
+              setPage(1);
+            }}
+          >
+            Limpar filtros
+          </button>
+        </div>
+      </div>
 
       {!hasProducts && !search ? (
         <div className="bg-white rounded-lg shadow-sm p-12 text-center">

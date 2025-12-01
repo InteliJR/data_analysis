@@ -46,6 +46,31 @@ export interface Freight {
   }>;
 }
 
+export interface RawMaterialLocationTax {
+  id?: string;
+  rawMaterialLocationId?: string;
+  taxId?: string; // referência ao catálogo
+  rate: number;
+  recoverable: boolean;
+  tax?: { id: string; name: string };
+}
+
+export interface RawMaterialLocation {
+  id: string;
+  rawMaterialId: string;
+  country?: string;
+  stateUf: string;
+  city: string;
+  acquisitionPrice: number | string;
+  currency: "BRL" | "USD" | "EUR";
+  priceConvertedBrl: number | string;
+  additionalCost: number | string;
+  createdAt?: string;
+  updatedAt?: string;
+  freights?: Freight[];
+  locationTaxes?: RawMaterialLocationTax[];
+}
+
 export interface RawMaterial {
   id: string;
   code: string;
@@ -54,15 +79,18 @@ export interface RawMaterial {
   measurementUnit: string;
   inputGroup?: string;
   paymentTerm: number;
-  acquisitionPrice: number;
-  currency: "BRL" | "USD" | "EUR";
-  priceConvertedBrl: number;
-  additionalCost: number;
   createdAt: string;
   updatedAt: string;
 
-  // Relações
-  freights?: Freight[]; // PLURAL - Array de fretes
-  rawMaterialTaxes?: RawMaterialTax[];
+  // Novo modelo: localidades com preços/impostos/fretes
+  locations?: RawMaterialLocation[];
+
+  // Compat: campos antigos podem existir em respostas antigas/opcionais
+  acquisitionPrice?: number;
+  currency?: "BRL" | "USD" | "EUR";
+  priceConvertedBrl?: number;
+  additionalCost?: number;
+  freights?: Freight[]; // legado
+  rawMaterialTaxes?: RawMaterialTax[]; // legado
   changeLogs?: RawMaterialChangeLog[];
 }

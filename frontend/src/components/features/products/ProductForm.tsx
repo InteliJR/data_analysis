@@ -35,6 +35,17 @@ export function ProductForm({
   onSubmit,
   isLoading,
 }: ProductFormProps) {
+  // Converte strings como "1.234,56" para número 1234.56
+  const toNumber = (val: any): number => {
+    if (val === null || val === undefined) return 0;
+    if (typeof val === "number") return val || 0;
+    if (typeof val === "string") {
+      const cleaned = val.replace(/\./g, "").replace(/,/g, ".");
+      const n = Number(cleaned);
+      return isNaN(n) ? 0 : n;
+    }
+    return Number(val) || 0;
+  };
   const [rawMaterialSearch, setRawMaterialSearch] = useState("");
   const [freightSearch, setFreightSearch] = useState("");
 
@@ -125,7 +136,7 @@ export function ProductForm({
     let totalRawMaterialFreightService = 0; // serviço de frete das MPs (sem impostos)
 
     // 1. Calcular custos das 
-    rawMaterials.forEach((rm: any) => {
+    rawMaterials.forEach((rm: any, idx: number) => {
       let rawMat = rawMaterialsData?.data?.find(
         (r) => r.id === rm.rawMaterialId
       );
@@ -142,14 +153,22 @@ export function ProductForm({
       if (!rawMat) return;
 
       const quantity = Number(rm.quantity) || 0;
-      const unitPrice =
-        Number(rawMat.priceConvertedBrl || rawMat.acquisitionPrice) || 0;
+      // Seleciona localidade da matéria-prima conforme filtros
+      const selectedLocId = rawMaterials[idx]?.selectedLocationId;
+      const matchedLoc = (rawMat.locations || []).find((loc: any) => loc.id === selectedLocId) || rawMat.locations?.[0];
+
+      const unitBasePrice = toNumber(matchedLoc?.priceConvertedBrl ?? matchedLoc?.acquisitionPrice ?? 0);
+      const additionalCost = toNumber(matchedLoc?.additionalCost ?? 0);
+      const unitPrice = unitBasePrice + additionalCost;
       const materialCost = unitPrice * quantity;
 
       totalRawMaterials += materialCost;
 
       // Impostos da matéria-prima
-      const taxes = rawMat.rawMaterialTaxes || [];
+      const taxes = (matchedLoc?.locationTaxes || []).map((t: any) => ({
+        rate: toNumber(t.rate),
+        recoverable: t.recoverable,
+      }));
       taxes.forEach((tax: any) => {
         const taxValue = (materialCost * Number(tax.rate)) / 100;
         if (tax.recoverable) {
@@ -160,16 +179,16 @@ export function ProductForm({
       });
 
       // Fretes da matéria-prima
-      const freights = rawMat.freights || [];
+      const freights = matchedLoc?.freights || [];
       freights.forEach((freight: any) => {
-        const freightCost = Number(freight.unitPrice) || 0;
+        const freightCost = toNumber(freight.unitPrice);
         const freightServiceCost = freightCost * quantity;
         totalRawMaterialFreightService += freightServiceCost;
 
         // IMPOSTOS DO FRETE DA MATÉRIA-PRIMA
         const freightTaxes = freight.freightTaxes || [];
         freightTaxes.forEach((fTax: any) => {
-          const taxValue = (freightServiceCost * Number(fTax.rate)) / 100;
+          const taxValue = (freightServiceCost * toNumber(fTax.rate)) / 100;
           freightTaxesTotal += taxValue;
         });
       });
@@ -187,13 +206,13 @@ export function ProductForm({
       }
 
       if (freight) {
-        const freightCost = Number(freight.unitPrice) || 0;
+        const freightCost = toNumber(freight.unitPrice);
         productFreightServiceCost += freightCost;
 
         // CRÍTICO: IMPOSTOS DO FRETE DO PRODUTO
         const freightTaxes = freight.freightTaxes || [];
         freightTaxes.forEach((fTax: any) => {
-          const taxValue = (freightCost * Number(fTax.rate)) / 100;
+          const taxValue = (freightCost * toNumber(fTax.rate)) / 100;
           freightTaxesTotal += taxValue;
           productFreightTaxesTotal += taxValue; // Para debug
         });
@@ -466,12 +485,10 @@ export function ProductForm({
         </div>
       </div>
 
-      {/* SEÇÃO 2: MATÉRIAS-PRIMAS */}
+      {/* SEÇÃO 2: PRODUTOS */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-700">
-             <span className="text-red-500">*</span>
-          </h3>
+          <h3 className="text-sm font-semibold text-gray-700">Produtos <span className="text-red-500">*</span></h3>
           <Text className="text-xs text-gray-500">Mínimo: 1 item</Text>
         </div>
 
@@ -486,27 +503,22 @@ export function ProductForm({
                 .map((rm) => ({
                   value: rm.id,
                   label: `${rm.code} - ${rm.name}`,
-                  description: `${formatCurrency(
-                    Number(rm.priceConvertedBrl) || 0
-                  )} - ${rm.measurementUnit}`,
+                  description: `${formatCurrency((toNumber(rm.locations?.[0]?.priceConvertedBrl ?? rm.locations?.[0]?.acquisitionPrice ?? 0)) + (toNumber(rm.locations?.[0]?.additionalCost ?? 0)))} - ${rm.measurementUnit} • ${rm.locations?.[0]?.city || '-'} / ${rm.locations?.[0]?.stateUf || '-'}`,
                 })) || []
             }
             value=""
             searchValue={rawMaterialSearch}
             onChange={addRawMaterial}
             onSearchChange={setRawMaterialSearch}
-            placeholder="Buscar e adicionar Produtos..."
-            emptyMessage="Nenhuma Produtos encontrada"
+            placeholder="Buscar e adicionar produtos..."
+            emptyMessage="Nenhum produto encontrado"
             isLoading={isLoadingRM}
           />
         </div>
 
         {fields.length === 0 ? (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-            <Text className="text-gray-500 text-sm">
-              Nenhuma Produtos adicionada. Busque e adicione pelo menos
-              uma.
-            </Text>
+            <Text className="text-gray-500 text-sm">Nenhum produto adicionado. Busque e adicione pelo menos um.</Text>
           </div>
         ) : (
           <div className="space-y-3">
@@ -514,11 +526,9 @@ export function ProductForm({
               const rawMat = rawMaterialsData?.data?.find(
                 (r) => r.id === rawMaterials[index]?.rawMaterialId
               );
-
-              const totalFreightUnit = (rawMat?.freights || []).reduce(
-                (acc, f) => acc + Number(f.unitPrice),
-                0
-              );
+              const selectedLocId = (rawMaterials[index] as any)?.selectedLocationId;
+              const matchedLoc = (rawMat?.locations || []).find((l: any) => l.id === selectedLocId) || rawMat?.locations?.[0];
+              const totalFreightUnit = (matchedLoc?.freights || []).reduce((acc: number, f: any) => acc + toNumber(f.unitPrice), 0);
 
               return (
                 <div
@@ -537,13 +547,28 @@ export function ProductForm({
                       </Text>
                     </div>
 
+                    {/* Localidade por produto */}
+                    {rawMat?.locations?.length ? (
+                      <div className="mb-2">
+                        <Label>Localidade</Label>
+                        <Select
+                          value={selectedLocId || matchedLoc?.id || ""}
+                          onChange={(e) => setValue(`rawMaterials.${index}.selectedLocationId`, e.target.value)}
+                        >
+                          {rawMat.locations.map((loc: any) => (
+                            <option key={loc.id} value={loc.id}>
+                              {loc.city}/{loc.stateUf} • {formatCurrency((toNumber(loc.priceConvertedBrl ?? loc.acquisitionPrice ?? 0)) + (toNumber(loc.additionalCost ?? 0)))}
+                            </option>
+                          ))}
+                        </Select>
+                      </div>
+                    ) : null}
+
                     <div className="text-xs text-gray-500 space-y-1">
                       <div>
-                        Preço unitário:{" "}
+                        Preço unitário: {" "}
                         <span className="font-medium">
-                          {formatCurrency(
-                            Number(rawMat?.priceConvertedBrl) || 0
-                          )}
+                          {formatCurrency(((toNumber(matchedLoc?.priceConvertedBrl ?? matchedLoc?.acquisitionPrice ?? 0)) + (toNumber(matchedLoc?.additionalCost ?? 0))))}
                         </span>
                       </div>
                       <div>
@@ -588,10 +613,7 @@ export function ProductForm({
                       Subtotal:
                     </Text>
                     <Text className="font-semibold text-gray-900">
-                      {formatCurrency(
-                        (Number(rawMat?.priceConvertedBrl) || 0) *
-                          (Number(rawMaterials[index]?.quantity) || 0)
-                      )}
+                      {formatCurrency((((toNumber(matchedLoc?.priceConvertedBrl ?? matchedLoc?.acquisitionPrice ?? 0)) + (toNumber(matchedLoc?.additionalCost ?? 0)))) * (toNumber(rawMaterials[index]?.quantity)))}
                     </Text>
                   </div>
 
@@ -610,9 +632,7 @@ export function ProductForm({
         )}
 
         {fields.length === 0 && (
-          <Text className="text-xs text-red-600 mt-2">
-            Adicione pelo menos um Produto para criar a estrutura.
-          </Text>
+          <Text className="text-xs text-red-600 mt-2">Adicione pelo menos um produto para criar a estrutura.</Text>
         )}
       </div>
 

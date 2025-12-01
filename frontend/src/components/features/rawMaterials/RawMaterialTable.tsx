@@ -78,6 +78,9 @@ export function RawMaterialTable({
                 label="Prazo Pgto"
                 width="120px"
               />
+              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[160px]">
+                Localidades
+              </th>
               <SortableHeader
                 column="acquisitionPrice"
                 label="Preços"

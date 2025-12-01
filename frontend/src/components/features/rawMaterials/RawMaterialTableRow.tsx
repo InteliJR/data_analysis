@@ -2,6 +2,8 @@
 
 import type { RawMaterial } from "@/types/rawMaterial";
 import { Text } from "@/components/common/Text";
+import { Select } from "@/components/common/Select";
+import { useState } from "react";
 import { IconButton } from "@/components/common/IconButton";
 import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import { formatCurrency } from "@/lib/utils";
@@ -17,6 +19,7 @@ export function RawMaterialTableRow({
   onEdit,
   onDelete,
 }: RawMaterialTableRowProps) {
+  const [selectedLocIndex, setSelectedLocIndex] = useState(0);
   const getCurrencySymbol = (currency: string) => {
     const symbols = { BRL: "R$", USD: "US$", EUR: "€" };
     return symbols[currency as keyof typeof symbols] || currency;
@@ -37,29 +40,24 @@ export function RawMaterialTableRow({
     return labels[unit] || unit;
   };
 
-  // Frete total
-  const totalFreightCost = (rawMaterial.freights || []).reduce(
+  // Localidade selecionada via dropdown
+  const selectedLoc = rawMaterial.locations?.[selectedLocIndex];
+  const locFreights = selectedLoc?.freights || [];
+  const totalFreightCost = locFreights.reduce(
     (sum, freight) => sum + Number(freight.unitPrice || 0),
     0
   );
+  const freightCount = locFreights.length;
 
-  const freightCount = rawMaterial.freights?.length || 0;
-
-  // Base e final
   const basePrice =
-    Number(rawMaterial.acquisitionPrice) +
-    Number(rawMaterial.additionalCost || 0);
+    Number(selectedLoc?.acquisitionPrice || 0) +
+    Number(selectedLoc?.additionalCost || 0);
 
-    const nonRecoverableTaxes = (rawMaterial.rawMaterialTaxes || [])
-      .filter((tax) => !tax.recoverable)
-      .reduce((sum, tax) => sum + basePrice * (Number(tax.rate) / 100), 0);
-
-    const recoverableTaxes = (rawMaterial.rawMaterialTaxes || [])
-      .filter((tax) => tax.recoverable)
-      .reduce((sum, tax) => sum + basePrice * (Number(tax.rate) / 100), 0);
-
-    // Regra: NÃO somar impostos não recuperáveis ao custo final
-    const finalPrice = basePrice + totalFreightCost - recoverableTaxes;
+  const locTaxes = selectedLoc?.locationTaxes || [];
+  const recoverableTaxes = locTaxes
+    .filter((tax) => tax.recoverable)
+    .reduce((sum, tax) => sum + basePrice * (Number(tax.rate) / 100), 0);
+  const finalPrice = basePrice + totalFreightCost - recoverableTaxes;
 
   return (
     <tr className="border-b border-gray-200 hover:bg-gray-50 transition-colors align-top">
@@ -117,6 +115,35 @@ export function RawMaterialTableRow({
         </Text>
       </td>
 
+      {/* Localidades */}
+      <td className="px-4 py-3">
+        {rawMaterial.locations?.length ? (
+          <div className="max-w-[220px] space-y-1">
+            <Text variant="caption" className="font-semibold text-gray-900">
+              {rawMaterial.locations.length} localidades
+            </Text>
+            {/* Dropdown para selecionar localidade */}
+            <Select
+              value={String(selectedLocIndex)}
+              onChange={(e) => setSelectedLocIndex(Number(e.target.value))}
+            >
+              {rawMaterial.locations.map((loc, idx) => (
+                <option key={loc.id || idx} value={idx}>
+                  {loc.city}/{loc.stateUf}
+                </option>
+              ))}
+            </Select>
+            {selectedLoc && (
+              <Text variant="small" className="text-gray-500 block truncate">
+                {selectedLoc.city}/{selectedLoc.stateUf} • {getCurrencySymbol(selectedLoc.currency || 'BRL')} {formatCurrency(Number(selectedLoc.acquisitionPrice || 0)).replace('R$', '').trim()}
+              </Text>
+            )}
+          </div>
+        ) : (
+          <span className="text-gray-400">-</span>
+        )}
+      </td>
+
       {/* Preços */}
       <td className="px-4 py-3">
         <div className="space-y-1">
@@ -125,7 +152,7 @@ export function RawMaterialTableRow({
               Base:
             </Text>
             <Text variant="caption" className="font-medium text-gray-900">
-              {getCurrencySymbol(rawMaterial.currency)}{" "}
+              {getCurrencySymbol(selectedLoc?.currency || 'BRL')} {" "}
               {formatCurrency(basePrice).replace("R$", "").trim()}
             </Text>
           </div>
@@ -135,7 +162,7 @@ export function RawMaterialTableRow({
               Final:
             </Text>
             <Text variant="caption" className="font-semibold text-blue-900">
-              {getCurrencySymbol(rawMaterial.currency)}{" "}
+              {getCurrencySymbol(selectedLoc?.currency || 'BRL')} {" "}
               {formatCurrency(finalPrice).replace("R$", "").trim()}
             </Text>
           </div>
@@ -147,7 +174,7 @@ export function RawMaterialTableRow({
         {freightCount > 0 ? (
           <div
             className="max-w-[160px] max-h-[56px] overflow-hidden"
-            title={rawMaterial.freights
+            title={locFreights
               ?.map(
                 (f) =>
                   `${f.name}: ${getCurrencySymbol(f.currency)} ${formatCurrency(
@@ -178,14 +205,14 @@ export function RawMaterialTableRow({
             ?.map((t) => `${t.name} (${t.rate}%)`)
             .join(", ")}
         >
-          {rawMaterial.rawMaterialTaxes?.length ? (
+          {locTaxes?.length ? (
             <div className="flex flex-wrap gap-1">
-              {rawMaterial.rawMaterialTaxes.map((tax, index) => (
+              {locTaxes.map((tax, index) => (
                 <span
-                  key={tax.id || index}
+                  key={(tax.id || tax.taxId || index) as any}
                   className="inline-flex px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700"
                 >
-                  {tax.name} ({tax.rate}%)
+                  {(tax.tax?.name || '')} ({tax.rate}%)
                 </span>
               ))}
             </div>

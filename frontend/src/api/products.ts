@@ -30,6 +30,8 @@ export interface ExportProductsPayload {
   filters?: {
     search?: string;
     productGroupId?: string;
+    stateUf?: string;
+    city?: string;
   };
 }
 
@@ -38,6 +40,8 @@ export interface FindAllProductsQuery {
   limit?: number;
   search?: string;
   productGroupId?: string;
+  stateUf?: string;
+  city?: string;
   sortBy?: string;
   sortOrder?: "asc" | "desc";
 }
