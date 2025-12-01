@@ -38,13 +38,28 @@ export function ProductForm({
   // Converte strings como "1.234,56" para número 1234.56
   const toNumber = (val: any): number => {
     if (val === null || val === undefined) return 0;
-    if (typeof val === "number") return val || 0;
+    if (typeof val === "number") return isFinite(val) ? val : 0;
     if (typeof val === "string") {
-      const cleaned = val.replace(/\./g, "").replace(/,/g, ".");
-      const n = Number(cleaned);
+      const s = val.trim();
+      if (s === "") return 0;
+      // Heurística: se tiver ambos "." e "," => "." milhares, "," decimal
+      if (s.includes(".") && s.includes(",")) {
+        const cleaned = s.replace(/\./g, "").replace(/,/g, ".");
+        const n = Number(cleaned);
+        return isNaN(n) ? 0 : n;
+      }
+      // Se tem apenas "," -> vírgula como decimal
+      if (s.includes(",")) {
+        const cleaned = s.replace(/,/g, ".");
+        const n = Number(cleaned);
+        return isNaN(n) ? 0 : n;
+      }
+      // Caso contrário, tenta direto ("." como decimal ou inteiro simples)
+      const n = Number(s);
       return isNaN(n) ? 0 : n;
     }
-    return Number(val) || 0;
+    const n = Number(val);
+    return isNaN(n) ? 0 : n;
   };
   const [rawMaterialSearch, setRawMaterialSearch] = useState("");
   const [freightSearch, setFreightSearch] = useState("");
@@ -157,7 +172,9 @@ export function ProductForm({
       const selectedLocId = rawMaterials[idx]?.selectedLocationId;
       const matchedLoc = (rawMat.locations || []).find((loc: any) => loc.id === selectedLocId) || rawMat.locations?.[0];
 
-      const unitBasePrice = toNumber(matchedLoc?.priceConvertedBrl ?? matchedLoc?.acquisitionPrice ?? 0);
+      const brl = toNumber(matchedLoc?.priceConvertedBrl);
+      const acq = toNumber(matchedLoc?.acquisitionPrice);
+      const unitBasePrice = brl > 0 ? brl : acq;
       const additionalCost = toNumber(matchedLoc?.additionalCost ?? 0);
       const unitPrice = unitBasePrice + additionalCost;
       const materialCost = unitPrice * quantity;
@@ -557,7 +574,7 @@ export function ProductForm({
                         >
                           {rawMat.locations.map((loc: any) => (
                             <option key={loc.id} value={loc.id}>
-                              {loc.city}/{loc.stateUf} • {formatCurrency((toNumber(loc.priceConvertedBrl ?? loc.acquisitionPrice ?? 0)) + (toNumber(loc.additionalCost ?? 0)))}
+                              {loc.city}/{loc.stateUf} • {formatCurrency(((toNumber(loc.priceConvertedBrl) > 0 ? toNumber(loc.priceConvertedBrl) : toNumber(loc.acquisitionPrice))) + (toNumber(loc.additionalCost ?? 0)))}
                             </option>
                           ))}
                         </Select>
@@ -568,7 +585,7 @@ export function ProductForm({
                       <div>
                         Preço unitário: {" "}
                         <span className="font-medium">
-                          {formatCurrency(((toNumber(matchedLoc?.priceConvertedBrl ?? matchedLoc?.acquisitionPrice ?? 0)) + (toNumber(matchedLoc?.additionalCost ?? 0))))}
+                          {formatCurrency(((toNumber(matchedLoc?.priceConvertedBrl) > 0 ? toNumber(matchedLoc?.priceConvertedBrl) : toNumber(matchedLoc?.acquisitionPrice)) + (toNumber(matchedLoc?.additionalCost ?? 0))))}
                         </span>
                       </div>
                       <div>
@@ -577,6 +594,21 @@ export function ProductForm({
                           {rawMat?.measurementUnit || "-"}
                         </span>
                       </div>
+                      {Array.isArray(matchedLoc?.locationTaxes) && matchedLoc.locationTaxes.length > 0 && (
+                        <div>
+                          Impostos (Localidade): {" "}
+                          <span className="font-medium">
+                            {matchedLoc.locationTaxes
+                              .map((t: any) => {
+                                const nm = t?.tax?.name || "Imposto";
+                                const rate = toNumber(t?.rate);
+                                const rec = t?.recoverable ? "recuperável" : "não recuperável";
+                                return `${nm} ${rate}% (${rec})`;
+                              })
+                              .join(", ")}
+                          </span>
+                        </div>
+                      )}
                       {totalFreightUnit > 0 && (
                         <div>
                           Frete (Total):{" "}
@@ -613,7 +645,7 @@ export function ProductForm({
                       Subtotal:
                     </Text>
                     <Text className="font-semibold text-gray-900">
-                      {formatCurrency((((toNumber(matchedLoc?.priceConvertedBrl ?? matchedLoc?.acquisitionPrice ?? 0)) + (toNumber(matchedLoc?.additionalCost ?? 0)))) * (toNumber(rawMaterials[index]?.quantity)))}
+                      {formatCurrency((((toNumber(matchedLoc?.priceConvertedBrl) > 0 ? toNumber(matchedLoc?.priceConvertedBrl) : toNumber(matchedLoc?.acquisitionPrice)) + (toNumber(matchedLoc?.additionalCost ?? 0)))) * (toNumber(rawMaterials[index]?.quantity)))}
                     </Text>
                   </div>
 

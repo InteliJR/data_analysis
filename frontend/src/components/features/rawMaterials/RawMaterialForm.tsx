@@ -216,7 +216,11 @@ export function RawMaterialForm({
         city: loc.city.trim(),
         acquisitionPrice: Number(loc.acquisitionPrice || 0),
         currency: loc.currency,
-        priceConvertedBrl: Number(loc.priceConvertedBrl || 0),
+        // Se a moeda for BRL, definimos o convertido em BRL automaticamente pelo valor de aquisição
+        priceConvertedBrl:
+          (loc.currency === "BRL")
+            ? Number(loc.acquisitionPrice || 0)
+            : Number(loc.priceConvertedBrl || 0),
         additionalCost: Number(loc.additionalCost || 0),
         freightIds: (loc.freightIds || []).slice(),
         taxes: (loc.taxes || []).map((t) => ({
@@ -479,15 +483,8 @@ export function RawMaterialForm({
                         placeholder="0,00"
                       />
                     </div>
-                    <div>
-                      <Label>Preço em BRL</Label>
-                      <CurrencyInput
-                        value={Number(locValue?.priceConvertedBrl || 0)}
-                        currency={'BRL'}
-                        onChange={(v) => setValue(`${locPrefix}.priceConvertedBrl` as any, v)}
-                        placeholder="0,00"
-                      />
-                    </div>
+                    {/* Preço em BRL removido para simplificar: usamos o de aquisição.
+                        Se a moeda for BRL, setamos automaticamente no submit. */}
                     <div>
                       <Label>Custo Adicional</Label>
                       <CurrencyInput
