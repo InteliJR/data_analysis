@@ -31,8 +31,7 @@ model User {
 
   createdProducts       Product[]
   revokedTokens         RevokedToken[]
-  
-  rawMaterialChangeLogs RawMaterialChangeLog[] 
+  rawMaterialChangeLogs RawMaterialChangeLog[]
 
   @@map("users")
 }
@@ -50,6 +49,28 @@ model RevokedToken {
   @@index([expiresAt])
   @@index([userId])
   @@map("revoked_tokens")
+}
+
+// ============================================
+// LOCATIONS (NOVO: Entidade Mestre de Unidades)
+// ============================================
+// Cadastra-se as unidades aqui (Ex: "Matriz SP", "Filial SC")
+// Para serem reutilizadas por várias matérias-primas.
+
+model Location {
+  id        String   @id @default(uuid())
+  name      String   // Ex: "Armazém Principal", "Porto de Santos"
+  country   String?  @default("BR")
+  stateUf   String
+  city      String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relação N:N com matérias-primas
+  rawMaterials RawMaterialLocationPivot[]
+
+  @@map("locations")
 }
 
 // ============================================
@@ -83,13 +104,12 @@ model Freight {
   updatedAt       DateTime             @updatedAt
 
   freightTaxes FreightTax[]
-  // Mantido para compatibilidade, será substituído por relação via localidade
-  rawMaterials RawMaterial[]
 
-  // NOVO: relação de frete com localidades de matéria-prima
-  rawMaterialLocations RawMaterialLocation[]
+  // ATUALIZADO: Frete agora se relaciona com a associação MP-Localização
+  // Isso permite calcular o frete específico para trazer aquela MP para aquela Unidade
+  rawMaterialLocations RawMaterialLocationPivot[]
 
-  products     Product[]
+  products Product[]
 
   @@map("freights")
 }
@@ -123,28 +143,25 @@ enum MeasurementUnit {
 }
 
 model RawMaterial {
-  id                String          @id @default(uuid())
-  code              String          @unique
-  name              String
-  description       String?         @db.Text
-  measurementUnit   MeasurementUnit
-  inputGroup        String?
-  paymentTerm       Int
+  id              String          @id @default(uuid())
+  code            String          @unique
+  name            String
+  description     String?         @db.Text
+  measurementUnit MeasurementUnit
+  inputGroup      String?
+  paymentTerm     Int
   
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   productRawMaterials ProductRawMaterial[]
   changeLogs          RawMaterialChangeLog[]
 
-  // NOVO: localidades com preços/impostos/fretes específicos
-  locations           RawMaterialLocation[]
+  // ATUALIZADO: Relação via tabela Pivot (N:N) com Locations
+  locations           RawMaterialLocationPivot[]
 
-  // Compatibilidade: manter relação direta com fretes para não quebrar validações existentes
-  freights            Freight[]
-
-  // Compatibilidade: manter relação direta com impostos (global) para não quebrar validações existentes
-  rawMaterialTaxes    RawMaterialTax[]
+  // OBS: Removi a relação direta com 'Freight' e 'RawMaterialTax' pois 
+  // o usuário especificou que isso depende da localização/aquisição.
 
   @@index([code])
   @@index([name])
@@ -152,54 +169,58 @@ model RawMaterial {
 }
 
 // ============================================
-// NOVO: LOCALIDADES DE MATÉRIAS-PRIMAS
-// Cada localidade possui preços, moeda, custo adicional,
-// e relações específicas com fretes e impostos
+// PIVOT: MATÉRIA-PRIMA <-> LOCALIZAÇÃO
 // ============================================
+// Esta é a tabela intermediária N:N que segura os PREÇOS.
+// Uma MP (Aço) na Location (SP) custa X.
+// Uma MP (Aço) na Location (MG) custa Y.
 
-model RawMaterialLocation {
-  id                String     @id @default(uuid())
-  rawMaterialId     String
-  country           String?    @default("BR")
-  stateUf           String
-  city              String
+model RawMaterialLocationPivot {
+  id             String   @id @default(uuid())
+  
+  rawMaterialId  String
+  locationId     String   // Referência à nova tabela Location
 
-  acquisitionPrice  Decimal    @db.Decimal(12, 2)
-  currency          Currency   @default(BRL)
-  priceConvertedBrl Decimal    @db.Decimal(12, 2)
-  additionalCost    Decimal    @default(0) @db.Decimal(12, 2)
+  // PREÇOS E CUSTOS (Específicos desta relação)
+  acquisitionPrice  Decimal  @db.Decimal(12, 2)
+  currency          Currency @default(BRL)
+  additionalCost    Decimal  @default(0) @db.Decimal(12, 2)
 
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   rawMaterial RawMaterial @relation(fields: [rawMaterialId], references: [id], onDelete: Cascade)
+  location    Location    @relation(fields: [locationId], references: [id], onDelete: Restrict)
 
-  // Impostos específicos por localidade (com taxa/recuperável por localidade)
+  // Impostos específicos desta aquisição (MP nesta Localidade)
   locationTaxes RawMaterialLocationTax[]
 
-  // Fretes aplicáveis à localidade
+  // Fretes aplicáveis para levar esta MP para esta Localidade
   freights Freight[]
 
+  @@unique([rawMaterialId, locationId]) // Impede duplicar a mesma MP na mesma Location
   @@index([rawMaterialId])
-  @@index([stateUf, city])
-  @@map("raw_material_locations")
+  @@index([locationId])
+  @@map("raw_material_location_pivots")
 }
 
-// Pivot com metadados por localidade e imposto (taxa/recuperável)
+// Pivot de Impostos sobre a relação MP-Localização
 model RawMaterialLocationTax {
-  id                    String   @id @default(uuid())
-  rawMaterialLocationId String
-  taxId                 String
-  rate                  Decimal  @db.Decimal(5, 2)
-  recoverable           Boolean  @default(false)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                        String   @id @default(uuid())
+  rawMaterialLocationPivotId String
+  taxId                     String
+  
+  rate                      Decimal  @db.Decimal(5, 2)
+  recoverable               Boolean  @default(false)
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
 
-  rawMaterialLocation RawMaterialLocation @relation(fields: [rawMaterialLocationId], references: [id], onDelete: Cascade)
-  tax                RawMaterialTax       @relation(fields: [taxId], references: [id], onDelete: Restrict)
+  // Aponta para a Pivot acima
+  rawMaterialLocationPivot RawMaterialLocationPivot @relation(fields: [rawMaterialLocationPivotId], references: [id], onDelete: Cascade)
+  tax                      RawMaterialTax           @relation(fields: [taxId], references: [id], onDelete: Restrict)
 
-  @@unique([rawMaterialLocationId, taxId])
-  @@index([rawMaterialLocationId])
+  @@unique([rawMaterialLocationPivotId, taxId])
+  @@index([rawMaterialLocationPivotId])
   @@index([taxId])
   @@map("raw_material_location_taxes")
 }
@@ -211,15 +232,14 @@ model RawMaterialChangeLog {
   oldValue      String?
   newValue      String?
   
-  userId        String   
+  userId        String    
   changedAt     DateTime @default(now())
 
   rawMaterial   RawMaterial @relation(fields: [rawMaterialId], references: [id], onDelete: Cascade)
-  
   user          User        @relation(fields: [userId], references: [id], onDelete: Restrict)
 
   @@index([rawMaterialId])
-  @@index([userId])       
+  @@index([userId])        
   @@index([changedAt])
   @@map("raw_material_change_logs")
 }
@@ -227,15 +247,13 @@ model RawMaterialChangeLog {
 model RawMaterialTax {
   id          String   @id @default(uuid())
   name        String   @unique
-  rate        Decimal  @db.Decimal(5, 2)
+  // A taxa padrão pode existir, mas a taxa real aplicada fica na pivot RawMaterialLocationTax
+  defaultRate Decimal  @db.Decimal(5, 2) 
   recoverable Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  // Compatibilidade com relação antiga
-  rawMaterials RawMaterial[]
-
-  // NOVO: relação com impostos por localidade (pivot)
+  // Apenas relação com a pivot de impostos
   locationTaxes RawMaterialLocationTax[]
 
   @@map("raw_material_taxes")
@@ -246,14 +264,14 @@ model RawMaterialTax {
 // ============================================
 
 model ProductGroup {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String?  @db.Text
-  porcentage Int? @db.Integer
-  volumevendasconsiderar Int? @db.Integer
-  overheadPerUnit       Decimal? @db.Decimal(12, 2)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                     String   @id @default(uuid())
+  name                   String   @unique
+  description            String?  @db.Text
+  porcentage             Int?     @db.Integer
+  volumevendasconsiderar Int?     @db.Integer
+  overheadPerUnit        Decimal? @db.Decimal(12, 2)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
 
   products Product[]
 
@@ -267,18 +285,29 @@ model Product {
   name                        String
   description                 String?  @db.Text
   creatorId                   String
+  
+  // PREÇIFICAÇÃO
+  // Nota: A lógica de cálculo deve somar: 
+  // (Custo MP * Qtd) + (Frete MP * Qtd) + (Impostos MP não recuperáveis) + Frete Produto + Custos Fixos
+  
   priceWithoutTaxesAndFreight Decimal? @db.Decimal(12, 2)
-  priceWithTaxesAndFreight    Decimal? @db.Decimal(12, 2)
+  
+  // Renomeei/Comentei para deixar claro que isso é o custo final total calculado
+  // Deve incluir o frete das matérias-primas (vinda da relation Product -> RawMaterial -> Pivot -> Freight)
+  totalCostWithAllFreights    Decimal? @db.Decimal(12, 2) 
+
   fixedCostId                 String?
   productGroupId              String?
   createdAt                   DateTime @default(now())
   updatedAt                   DateTime @updatedAt
 
-  creator             User                @relation(fields: [creatorId], references: [id])
-  fixedCost           FixedCost?          @relation(fields: [fixedCostId], references: [id], onDelete: SetNull)
-  productGroup        ProductGroup?       @relation(fields: [productGroupId], references: [id], onDelete: SetNull)
+  creator          User               @relation(fields: [creatorId], references: [id])
+  fixedCost        FixedCost?         @relation(fields: [fixedCostId], references: [id], onDelete: SetNull)
+  productGroup     ProductGroup?      @relation(fields: [productGroupId], references: [id], onDelete: SetNull)
+  
   productRawMaterials ProductRawMaterial[]
   
+  // Fretes de SAÍDA do produto (Entrega ao cliente/CD)
   freights            Freight[]
 
   @@index([code])
