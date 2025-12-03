@@ -1,6 +1,6 @@
-import { Pencil, Trash2 } from 'lucide-react';
-import { IconButton } from '@/components/common/IconButton';
-import type { ProductGroup } from '@/types';
+import { Pencil, Trash2 } from "lucide-react";
+import { IconButton } from "@/components/common/IconButton";
+import type { ProductGroup } from "@/types/productGroup";
 
 interface ProductGroupTableRowProps {
   group: ProductGroup;
@@ -14,14 +14,16 @@ export function ProductGroupTableRow({
   onDelete,
 }: ProductGroupTableRowProps) {
   const truncateText = (text: string | undefined, maxLength: number) => {
-    if (!text) return '-';
-    return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
+    if (!text) return "-";
+    return text.length > maxLength
+      ? `${text.substring(0, maxLength)}...`
+      : text;
   };
 
   const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
+    return new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
     }).format(value);
   };
 
@@ -35,18 +37,25 @@ export function ProductGroupTableRow({
         {group.name}
       </td>
       <td className="px-6 py-4 text-sm text-gray-600 max-w-xs">
-        <span title={group.description || ''}>
+        <span title={group.description || ""}>
           {truncateText(group.description, 50)}
         </span>
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
         {formatPercentage(group.volumePercentageByQuantity)}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-        {formatPercentage(group.volumePercentageByValue)}
-      </td>
+      
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
         {formatCurrency(group.averagePrice)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium">
+        {formatCurrency(group.overheadPerUnit ?? 0)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+        {group.porcentage !== undefined && group.porcentage !== null ? `${group.porcentage}%` : '-'}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+        {group.volumevendasconsiderar ?? '-'}
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
         <div className="flex items-center gap-2">

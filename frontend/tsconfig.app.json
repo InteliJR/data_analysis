@@ -31,5 +31,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src", "src/components/features/freights/FreightsTable.tsx"]
+  "include": ["src", "src/components/features/freights/FreightsTable.tsx", "src/components/features/taxes/RawMaterialTaxForm.tsx", "src/components/features/rawMaterials/RecentChangesPreview.tsx"]
 }

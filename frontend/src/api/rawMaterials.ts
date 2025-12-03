@@ -1,136 +1,240 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+// src/api/rawMaterials.ts
+
+import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { apiClient } from './client';
-import type { RawMaterial } from '@/types';
+import type { RawMaterial, RawMaterialChangeLog } from '@/types/rawMaterial';
 
-// Backend model fields
-export interface RawMaterialApi {
-	id: string;
-	code: string;
-	name: string;
-	description?: string;
-	measurementUnit: string;
-	inputGroup?: string;
-	paymentTerm: number;
-	acquisitionPrice: string; // Prisma Decimal returns string via JSON
-	currency: string; // BRL, USD
-	priceConvertedBrl: string;
-	additionalCost: string;
-	taxId: string;
-	freightId: string;
-	createdAt: string;
-	updatedAt: string;
+// ========================================
+// Tipagens de Requisição e Resposta
+// ========================================
+
+export interface LocationTaxDTO {
+  taxId?: string; // preferível quando existir no catálogo
+  name?: string;  // alternativa para criar
+  rate: number;
+  recoverable: boolean;
 }
 
-export interface RawMaterialsListResponse {
-	data: RawMaterialApi[];
-	meta: { total: number; page: number; limit: number; totalPages: number };
+export interface RawMaterialLocationDTO {
+  id?: string;
+  country?: string;
+  stateUf: string;
+  city: string;
+  acquisitionPrice: number;
+  currency: 'BRL' | 'USD' | 'EUR';
+  priceConvertedBrl: number;
+  additionalCost: number;
+  freightIds: string[];
+  taxes: LocationTaxDTO[];
 }
 
-export interface CreateRawMaterialPayload {
-	code: string;
-	name: string;
-	description?: string;
-	measurementUnit: string;
-	inputGroup?: string;
-	paymentTerm: number;
-	acquisitionPrice: number;
-	currency: 'BRL' | 'USD' | 'EUR';
-	priceConvertedBrl: number;
-	additionalCost: number;
-	taxId: string;
-	freightId: string;
+export interface CreateRawMaterialDTO {
+  code: string;
+  name: string;
+  description?: string;
+  measurementUnit: string;
+  inputGroup?: string;
+  paymentTerm: number;
+  locations: RawMaterialLocationDTO[];
 }
 
-export type UpdateRawMaterialPayload = Partial<CreateRawMaterialPayload>;
+export interface UpdateRawMaterialDTO extends Partial<CreateRawMaterialDTO> {}
 
-// Map API -> UI type
-export const mapApiToUi = (api: RawMaterialApi): RawMaterial => ({
-	id: api.id,
-	code: api.code,
-	name: api.name,
-	description: api.description || '',
-	// UI has deadline (string) not present; derive from paymentTerm days after createdAt
-	deadline: new Date(
-		new Date(api.createdAt).getTime() + api.paymentTerm * 24 * 60 * 60 * 1000,
-	)
-		.toISOString()
-		.split('T')[0],
-	price: parseFloat(api.acquisitionPrice),
-	currency: api.currency === 'BRL' ? 'Real' : 'Dólar',
-	additionalCosts: parseFloat(api.additionalCost),
-});
-
-// Usa apiClient compartilhado (inclui interceptors para auth e refresh)
-
-export function fetchRawMaterials(params: {
-	page?: number;
-	limit?: number;
-	search?: string;
-	includeTax?: boolean;
-	includeFreight?: boolean;
-}) {
-	return apiClient
-		.get<RawMaterialsListResponse>('/raw-materials', { params })
-		.then((r) => r.data);
+export interface PaginatedRawMaterialsResponse {
+  data: RawMaterial[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
-export function createRawMaterial(payload: CreateRawMaterialPayload) {
-	return apiClient
-		.post<RawMaterialApi>('/raw-materials', payload)
-		.then((r) => r.data);
+export interface FindAllRawMaterialsQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  measurementUnit?: string;
+  inputGroup?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }
 
-export function updateRawMaterial(id: string, payload: UpdateRawMaterialPayload) {
-	return apiClient
-		.patch<RawMaterialApi>(`/raw-materials/${id}`, payload)
-		.then((r) => r.data);
+export interface ExportRawMaterialsPayload {
+  format: 'csv';
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  filters?: {
+    search?: string;
+    measurementUnit?: string;
+    inputGroup?: string;
+  };
 }
 
-export function deleteRawMaterial(id: string) {
-	return apiClient.delete<{ message: string }>(`/raw-materials/${id}`).then((r) => r.data);
+export interface ChangeLogQuery {
+  page?: number;
+  limit?: number;
 }
 
-export function fetchRawMaterialById(id: string) {
-	return apiClient.get<RawMaterialApi>(`/raw-materials/${id}`).then((r) => r.data);
+export interface PaginatedChangeLogsResponse {
+  data: RawMaterialChangeLog[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
 }
 
-export function useRawMaterialsQuery(params: { page: number; limit: number; search?: string }) {
-	return useQuery({
-		queryKey: ['raw-materials', params],
-		queryFn: () => fetchRawMaterials(params),
-	});
+// ========================================
+// Funções de API
+// ========================================
+
+const RAW_MATERIALS_QUERY_KEY = 'rawMaterials';
+const CHANGE_LOGS_QUERY_KEY = 'changeLogs';
+const RECENT_CHANGES_QUERY_KEY = 'recentChanges';
+
+// GET /raw-materials
+export async function getRawMaterials(
+  query: FindAllRawMaterialsQuery,
+): Promise<PaginatedRawMaterialsResponse> {
+  const { data } = await apiClient.get('/raw-materials', { params: query });
+  return data;
+}
+
+// GET /raw-materials/:id
+export async function getRawMaterialById(id: string): Promise<RawMaterial> {
+  const { data } = await apiClient.get(`/raw-materials/${id}`);
+  return data;
+}
+
+// POST /raw-materials
+export async function createRawMaterial(payload: CreateRawMaterialDTO): Promise<RawMaterial> {
+  const { data } = await apiClient.post('/raw-materials', payload);
+  return data;
+}
+
+// PATCH /raw-materials/:id
+export async function updateRawMaterial({
+  id,
+  payload,
+}: {
+  id: string;
+  payload: UpdateRawMaterialDTO;
+}): Promise<RawMaterial> {
+  const { data } = await apiClient.patch(`/raw-materials/${id}`, payload);
+  return data;
+}
+
+// DELETE /raw-materials/:id
+export async function deleteRawMaterial(id: string): Promise<void> {
+  await apiClient.delete(`/raw-materials/${id}`);
+}
+
+// POST /raw-materials/export
+export async function exportRawMaterials(payload: ExportRawMaterialsPayload): Promise<Blob> {
+  const { data } = await apiClient.post('/raw-materials/export', payload, {
+    responseType: 'blob',
+  });
+  return data;
+}
+
+// GET /raw-materials/:id/change-logs
+export async function getChangeLogsByRawMaterial(
+  id: string,
+  query: ChangeLogQuery,
+): Promise<PaginatedChangeLogsResponse> {
+  const { data } = await apiClient.get(`/raw-materials/${id}/change-logs`, { params: query });
+  return data;
+}
+
+// GET /raw-materials/recent-changes
+export async function getRecentChanges(limit: number = 10): Promise<RawMaterialChangeLog[]> {
+  const { data } = await apiClient.get('/raw-materials/recent-changes', { params: { limit } });
+  return data;
+}
+
+// ========================================
+// Hooks do React Query
+// ========================================
+
+export function useRawMaterialsQuery(query: FindAllRawMaterialsQuery) {
+  return useQuery({
+    queryKey: [RAW_MATERIALS_QUERY_KEY, query],
+    queryFn: () => getRawMaterials(query),
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useRawMaterialQuery(id: string) {
+  return useQuery({
+    queryKey: [RAW_MATERIALS_QUERY_KEY, id],
+    queryFn: () => getRawMaterialById(id),
+    enabled: !!id,
+  });
 }
 
 export function useCreateRawMaterialMutation() {
-	const qc = useQueryClient();
-	return useMutation({
-		mutationFn: createRawMaterial,
-		onSuccess: () => qc.invalidateQueries({ queryKey: ['raw-materials'] }),
-	});
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createRawMaterial,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [RAW_MATERIALS_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [RECENT_CHANGES_QUERY_KEY] });
+    },
+  });
 }
 
 export function useUpdateRawMaterialMutation() {
-	const qc = useQueryClient();
-	return useMutation({
-		mutationFn: (args: { id: string; payload: UpdateRawMaterialPayload }) =>
-			updateRawMaterial(args.id, args.payload),
-		onSuccess: () => qc.invalidateQueries({ queryKey: ['raw-materials'] }),
-	});
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateRawMaterial,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [RAW_MATERIALS_QUERY_KEY] });
+      queryClient.invalidateQueries({ queryKey: [RECENT_CHANGES_QUERY_KEY] });
+    },
+  });
 }
 
 export function useDeleteRawMaterialMutation() {
-	const qc = useQueryClient();
-	return useMutation({
-		mutationFn: (id: string) => deleteRawMaterial(id),
-		onSuccess: () => qc.invalidateQueries({ queryKey: ['raw-materials'] }),
-	});
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteRawMaterial,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [RAW_MATERIALS_QUERY_KEY] });
+    },
+  });
 }
 
-export function useRawMaterialQuery(id?: string | null) {
-	return useQuery({
-		queryKey: ['raw-material', id],
-		queryFn: () => fetchRawMaterialById(id as string),
-		enabled: !!id,
-	});
+export function useExportRawMaterialsMutation() {
+  return useMutation({
+    mutationFn: exportRawMaterials,
+  });
 }
 
+// Hook para scroll infinito no histórico de mudanças
+export function useChangeLogsInfiniteQuery(rawMaterialId: string) {
+  return useInfiniteQuery({
+    queryKey: [CHANGE_LOGS_QUERY_KEY, rawMaterialId],
+    queryFn: ({ pageParam = 1 }) =>
+      getChangeLogsByRawMaterial(rawMaterialId, { page: pageParam, limit: 20 }),
+    getNextPageParam: (lastPage) => {
+      if (lastPage.meta.hasMore) {
+        return lastPage.meta.page + 1;
+      }
+      return undefined;
+    },
+    initialPageParam: 1,
+    enabled: !!rawMaterialId,
+  });
+}
+
+// Hook para as últimas 10 mudanças
+export function useRecentChangesQuery() {
+  return useQuery({
+    queryKey: [RECENT_CHANGES_QUERY_KEY],
+    queryFn: () => getRecentChanges(10),
+  });
+}

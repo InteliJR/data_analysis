@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
   {
-    label: "Produtos",
+    label: "Estruturas",
     path: "/produtos",
     icon: Boxes,
     allowedRoles: ["ADMIN", "COMERCIAL"],
@@ -25,14 +25,14 @@ const navItems = [
     allowedRoles: ['ADMIN', 'COMERCIAL'],
   },
   {
-    label: 'Matérias-primas',
+    label: 'Produtos',
     path: '/materias-primas',
     icon: Component,
     allowedRoles: ["ADMIN", "COMERCIAL", "IMPOSTO"],
   },
   {
-    label: "Premissas",
-    path: "/premissas",
+    label: "Impostos",
+    path: "/impostos",
     icon: Landmark,
     allowedRoles: ["ADMIN", "IMPOSTO", "COMERCIAL"],
   },

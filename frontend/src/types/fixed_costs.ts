@@ -8,8 +8,6 @@ export interface FixedCost {
   depreciation: number;
   totalCost: number;
   considerationPercentage: number;
-  salesVolume: number;
-  overheadPerUnit: number;
   calculationDate: string;
   createdAt: string;
   updatedAt: string;
@@ -26,7 +24,6 @@ export interface FixedCostFormData {
   proLabore: number;
   depreciation: number;
   considerationPercentage: number;
-  salesVolume: number;
 }
 
 export interface FixedCostsListResponse {

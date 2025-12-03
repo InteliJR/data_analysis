@@ -21,7 +21,7 @@ export function ProductGroupModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={initialData ? 'Editar Grupo' : 'Novo Grupo de Produto'}
+      title={initialData ? 'Editar Grupo de Estruturas' : 'Novo Grupo de Estruturas'}
     >
       <ProductGroupForm
         initialData={initialData}

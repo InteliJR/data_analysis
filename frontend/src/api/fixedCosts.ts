@@ -93,8 +93,9 @@ export function useFixedCostsQuery(query: FindAllFixedCostsQuery) {
   return useQuery({
     queryKey: [FIXED_COSTS_QUERY_KEY, query],
     queryFn: () => getFixedCosts(query),
-    staleTime: 0, // Dados sempre considerados "stale" para atualização imediata
-    gcTime: 5 * 60 * 1000, // Garbage collection após 5 minutos
+    staleTime: 0,
+    gcTime: 5 * 60 * 1000,
+    placeholderData: (previousData) => previousData, 
   });
 }
 

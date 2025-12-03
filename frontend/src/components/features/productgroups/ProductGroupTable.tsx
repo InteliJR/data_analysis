@@ -1,7 +1,7 @@
-import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
-import { ProductGroupTableRow } from './ProductGroupTableRow';
-import type { ProductGroup } from '@/types';
-import type { FindAllProductGroupsQuery } from '@/api/productgroups';
+import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ProductGroupTableRow } from "./ProductGroupTableRow";
+import type { ProductGroup } from "@/types/productGroup";
+import type { FindAllProductGroupsQuery } from "@/api/productgroups";
 
 interface ProductGroupTableProps {
   groups: ProductGroup[];
@@ -22,7 +22,7 @@ export function ProductGroupTable({
     if (currentFilters.sortBy !== columnKey) {
       return <ArrowUpDown className="w-4 h-4 text-gray-400" />;
     }
-    return currentFilters.sortOrder === 'asc' ? (
+    return currentFilters.sortOrder === "asc" ? (
       <ArrowUp className="w-4 h-4 text-primary-600" />
     ) : (
       <ArrowDown className="w-4 h-4 text-primary-600" />
@@ -40,11 +40,11 @@ export function ProductGroupTable({
           <tr>
             <th
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-              onClick={() => handleSort('name')}
+              onClick={() => handleSort("name")}
             >
               <div className="flex items-center gap-2">
                 Nome
-                {getSortIcon('name')}
+                {getSortIcon("name")}
               </div>
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -52,30 +52,37 @@ export function ProductGroupTable({
             </th>
             <th
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-              onClick={() => handleSort('volumePercentageByQuantity')}
+              onClick={() => handleSort("volumePercentageByQuantity")}
             >
               <div className="flex items-center gap-2">
                 % Volume (Qtd)
-                {getSortIcon('volumePercentageByQuantity')}
+                {getSortIcon("volumePercentageByQuantity")}
               </div>
             </th>
+            
             <th
               className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-              onClick={() => handleSort('volumePercentageByValue')}
-            >
-              <div className="flex items-center gap-2">
-                % Volume (Valor)
-                {getSortIcon('volumePercentageByValue')}
-              </div>
-            </th>
-            <th
-              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
-              onClick={() => handleSort('averagePrice')}
+              onClick={() => handleSort("averagePrice")}
             >
               <div className="flex items-center gap-2">
                 Preço Médio
-                {getSortIcon('averagePrice')}
+                {getSortIcon("averagePrice")}
               </div>
+            </th>
+            <th
+              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors"
+              onClick={() => handleSort("overheadPerUnit")}
+            >
+              <div className="flex items-center gap-2">
+                Overhead/Unidade
+                {getSortIcon("overheadPerUnit")}
+              </div>
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              % Grupo
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Volume Considerar
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Ações

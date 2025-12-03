@@ -31,6 +31,14 @@ export class CreateProductDto {
   })
   code: string;
 
+  @IsArray({ message: 'freightIds deve ser um array' })
+  @IsUUID('4', {
+    each: true,
+    message: 'Cada ID de frete deve ser um UUID válido',
+  })
+  @IsOptional()
+  freightIds?: string[];
+
   @IsString()
   @IsNotEmpty({ message: 'O nome é obrigatório' })
   name: string;

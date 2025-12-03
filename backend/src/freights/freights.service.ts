@@ -22,6 +22,59 @@ export class FreightsService {
    */
   async create(createFreightDto: CreateFreightDto) {
     try {
+      // 1. Verifica se já existe um frete com este nome
+      const existingName = await this.prisma.freight.findFirst({
+        where: { name: createFreightDto.name },
+      });
+
+      if (existingName) {
+        throw new ConflictException('Já existe um frete com este nome');
+      }
+
+      // 2. Validar impostos (verificar duplicados na lista enviada)
+      if (
+        createFreightDto.freightTaxes &&
+        createFreightDto.freightTaxes.length > 0
+      ) {
+        this.validateTaxList(createFreightDto.freightTaxes);
+      }
+
+      // 3. Processar impostos: SEMPRE usar connect para impostos com ID
+      const taxesToConnect: string[] = [];
+      const taxesToCreate: any[] = [];
+
+      for (const tax of createFreightDto.freightTaxes || []) {
+        if (tax.id) {
+          // Imposto existente - apenas conectar
+          const exists = await this.prisma.freightTax.findUnique({
+            where: { id: tax.id },
+          });
+          if (!exists) {
+            throw new BadRequestException(
+              `Imposto com ID ${tax.id} não encontrado`,
+            );
+          }
+          taxesToConnect.push(tax.id);
+        } else {
+          // Novo imposto - verificar se nome já existe
+          const existing = await this.prisma.freightTax.findUnique({
+            where: { name: tax.name.trim() },
+          });
+
+          if (existing) {
+            throw new ConflictException(
+              `Já existe um imposto com o nome "${tax.name}". Selecione o imposto existente da lista.`,
+            );
+          }
+
+          taxesToCreate.push({
+            name: tax.name.trim(),
+            rate: tax.rate,
+          });
+        }
+      }
+
+      // 4. Cria o frete
       const freight = await this.prisma.freight.create({
         data: {
           name: createFreightDto.name,
@@ -34,14 +87,12 @@ export class FreightsService {
           destinationCity: createFreightDto.destinationCity,
           cargoType: createFreightDto.cargoType,
           operationType: createFreightDto.operationType,
-          freightTaxes: createFreightDto.freightTaxes?.length
-            ? {
-                create: createFreightDto.freightTaxes.map((tax) => ({
-                  name: tax.name,
-                  rate: tax.rate,
-                })),
-              }
-            : undefined,
+          freightTaxes: {
+            // Conecta impostos existentes
+            connect: taxesToConnect.map((id) => ({ id })),
+            // Cria novos impostos
+            create: taxesToCreate,
+          },
         },
         include: {
           freightTaxes: {
@@ -58,6 +109,12 @@ export class FreightsService {
 
       return freight;
     } catch (error: any) {
+      if (
+        error instanceof ConflictException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
       if (error?.code === 'P2002') {
         throw new ConflictException(
           'Já existe um frete com esse nome ou dados únicos',
@@ -77,7 +134,8 @@ export class FreightsService {
       const limit = query.limit || 10;
       const sortBy = query.sortBy || 'createdAt';
       const sortOrder = query.sortOrder || 'desc';
-      const { search, currency, operationType, originUf, destinationUf } = query;
+      const { search, currency, operationType, originUf, destinationUf } =
+        query;
 
       // Configurar filtros
       const where: any = {};
@@ -131,6 +189,7 @@ export class FreightsService {
             _count: {
               select: {
                 rawMaterials: true,
+                products: true,
               },
             },
           },
@@ -184,9 +243,17 @@ export class FreightsService {
               name: true,
             },
           },
+          products: {
+            select: {
+              id: true,
+              code: true,
+              name: true,
+            },
+          },
           _count: {
             select: {
               rawMaterials: true,
+              products: true,
             },
           },
         },
@@ -212,7 +279,20 @@ export class FreightsService {
   async update(id: string, updateFreightDto: UpdateFreightDto) {
     try {
       // Verifica se existe
-      await this.findOne(id);
+      const existing = await this.findOne(id);
+
+      // Validação de nome único
+      if (updateFreightDto.name && updateFreightDto.name !== existing.name) {
+        const nameExists = await this.prisma.freight.findFirst({
+          where: {
+            name: updateFreightDto.name,
+            NOT: { id },
+          },
+        });
+        if (nameExists) {
+          throw new ConflictException('Já existe um frete com este nome');
+        }
+      }
 
       const { freightTaxes, ...freightData } = updateFreightDto;
 
@@ -234,30 +314,65 @@ export class FreightsService {
 
         // 2. Gerencia impostos (se fornecidos)
         if (freightTaxes && freightTaxes.length > 0) {
-          const toUpdate = freightTaxes.filter((tax) => tax.id);
-          const toCreate = freightTaxes.filter((tax) => !tax.id);
+          // Validar impostos
+          this.validateTaxList(freightTaxes);
 
-          // Atualiza impostos existentes
-          for (const tax of toUpdate) {
-            await prisma.freightTax.update({
-              where: { id: tax.id },
-              data: {
-                name: tax.name,
+          const taxesToConnect: string[] = [];
+          const taxesToCreate: any[] = [];
+
+          // Processar impostos do DTO
+          for (const tax of freightTaxes) {
+            if (tax.id) {
+              // Imposto existente - atualizar dados se necessário
+              const existingTax = await prisma.freightTax.findUnique({
+                where: { id: tax.id },
+              });
+
+              if (!existingTax) {
+                throw new BadRequestException(
+                  `Imposto com ID ${tax.id} não encontrado`,
+                );
+              }
+
+              // Atualiza o imposto se os dados mudaram
+              await prisma.freightTax.update({
+                where: { id: tax.id },
+                data: {
+                  name: tax.name.trim(),
+                  rate: tax.rate,
+                },
+              });
+
+              taxesToConnect.push(tax.id);
+            } else {
+              // Novo imposto
+              const existingTax = await prisma.freightTax.findUnique({
+                where: { name: tax.name.trim() },
+              });
+
+              if (existingTax) {
+                throw new ConflictException(
+                  `Já existe um imposto com o nome "${tax.name}". Selecione o imposto existente da lista.`,
+                );
+              }
+
+              taxesToCreate.push({
+                name: tax.name.trim(),
                 rate: tax.rate,
+              });
+            }
+          }
+
+          // IMPORTANTE: Usar 'set' para substituir completamente a lista de impostos
+          await prisma.freight.update({
+            where: { id },
+            data: {
+              freightTaxes: {
+                set: taxesToConnect.map((taxId) => ({ id: taxId })),
+                create: taxesToCreate,
               },
-            });
-          }
-
-          // Cria novos impostos
-          if (toCreate.length > 0) {
-            await prisma.freightTax.createMany({
-              data: toCreate.map((tax) => ({
-                freightId: id,
-                name: tax.name,
-                rate: tax.rate,
-              })),
-            });
-          }
+            },
+          });
         }
 
         // 3. Retorna o frete atualizado
@@ -279,17 +394,16 @@ export class FreightsService {
 
       return updatedFreight;
     } catch (error: any) {
-      if (error instanceof NotFoundException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ConflictException ||
+        error instanceof BadRequestException
+      ) {
         throw error;
       }
       if (error?.code === 'P2002') {
         throw new ConflictException(
           'Já existe um frete com esses dados únicos',
-        );
-      }
-      if (error?.code === 'P2025') {
-        throw new NotFoundException(
-          'Um ou mais impostos não foram encontrados',
         );
       }
       const message = error?.message || 'Erro desconhecido';
@@ -304,9 +418,13 @@ export class FreightsService {
     try {
       const freight = await this.findOne(id);
 
-      // Verifica se há matérias-primas usando este frete
+      // Verifica se há matérias-primas usando este frete (RELAÇÃO N:M)
       const rawMaterialsCount = await this.prisma.rawMaterial.count({
-        where: { freightId: id },
+        where: {
+          freights: {
+            some: { id: id },
+          },
+        },
       });
 
       if (rawMaterialsCount > 0) {
@@ -315,7 +433,22 @@ export class FreightsService {
         );
       }
 
-      // Delete cascade remove freightTaxes automaticamente
+      // Verifica se há produtos usando este frete (RELAÇÃO N:M)
+      const productsCount = await this.prisma.product.count({
+        where: {
+          freights: {
+            some: { id: id },
+          },
+        },
+      });
+
+      if (productsCount > 0) {
+        throw new BadRequestException(
+          `Não é possível remover este frete. Existem ${productsCount} produto(s) associado(s).`,
+        );
+      }
+
+      // Delete cascade remove a relação na tabela pivô
       await this.prisma.freight.delete({
         where: { id },
       });
@@ -351,7 +484,9 @@ export class FreightsService {
           { name: { contains: filters.search, mode: 'insensitive' } },
           { description: { contains: filters.search, mode: 'insensitive' } },
           { originCity: { contains: filters.search, mode: 'insensitive' } },
-          { destinationCity: { contains: filters.search, mode: 'insensitive' } },
+          {
+            destinationCity: { contains: filters.search, mode: 'insensitive' },
+          },
           { cargoType: { contains: filters.search, mode: 'insensitive' } },
         ];
       }
@@ -454,95 +589,6 @@ export class FreightsService {
     }
   }
 
-  // ============================================
-  // MÉTODOS AUXILIARES
-  // ============================================
-
-  /**
-   * Busca fretes por moeda
-   */
-  async findByCurrency(currency: Currency) {
-    return this.prisma.freight.findMany({
-      where: { currency },
-      include: {
-        freightTaxes: true,
-      },
-      orderBy: {
-        unitPrice: 'asc',
-      },
-    });
-  }
-
-  /**
-   * Busca fretes por tipo de operação
-   */
-  async findByOperationType(operationType: FreightOperationType) {
-    return this.prisma.freight.findMany({
-      where: { operationType },
-      include: {
-        freightTaxes: true,
-      },
-      orderBy: {
-        name: 'asc',
-      },
-    });
-  }
-
-  /**
-   * Busca fretes por rota (UF origem e destino)
-   */
-  async findByRoute(originUf: string, destinationUf: string) {
-    return this.prisma.freight.findMany({
-      where: {
-        originUf: originUf.toUpperCase(),
-        destinationUf: destinationUf.toUpperCase(),
-      },
-      include: {
-        freightTaxes: true,
-      },
-      orderBy: {
-        unitPrice: 'asc',
-      },
-    });
-  }
-
-  /**
-   * Busca fretes dentro de uma faixa de preço
-   */
-  async findByPriceRange(minPrice: number, maxPrice: number) {
-    return this.prisma.freight.findMany({
-      where: {
-        unitPrice: {
-          gte: minPrice,
-          lte: maxPrice,
-        },
-      },
-      include: {
-        freightTaxes: true,
-      },
-      orderBy: {
-        unitPrice: 'asc',
-      },
-    });
-  }
-
-  /**
-   * Busca fretes por nome (busca parcial)
-   */
-  async searchByName(searchTerm: string) {
-    return this.prisma.freight.findMany({
-      where: {
-        name: {
-          contains: searchTerm,
-          mode: 'insensitive',
-        },
-      },
-      include: {
-        freightTaxes: true,
-      },
-    });
-  }
-
   /**
    * Retorna estatísticas dos fretes
    */
@@ -590,11 +636,13 @@ export class FreightsService {
       // Verifica se o frete existe
       await this.findOne(freightId);
 
-      // Verifica se o imposto pertence ao frete
+      // Verifica se o imposto pertence ao frete (CORREÇÃO N:M)
       const tax = await this.prisma.freightTax.findFirst({
         where: {
           id: taxId,
-          freightId: freightId,
+          freights: {
+            some: { id: freightId },
+          },
         },
       });
 
@@ -604,12 +652,18 @@ export class FreightsService {
         );
       }
 
-      await this.prisma.freightTax.delete({
-        where: { id: taxId },
+      // Desconecta o imposto deste frete (não deleta o imposto)
+      await this.prisma.freight.update({
+        where: { id: freightId },
+        data: {
+          freightTaxes: {
+            disconnect: { id: taxId },
+          },
+        },
       });
 
       return {
-        message: 'Imposto removido com sucesso',
+        message: 'Imposto removido do frete com sucesso',
         taxId,
       };
     } catch (error: any) {
@@ -618,6 +672,29 @@ export class FreightsService {
       }
       const message = error?.message || 'Erro desconhecido';
       throw new BadRequestException(`Erro ao remover imposto: ${message}`);
+    }
+  }
+
+  /**
+   * VALIDAÇÃO DE IMPOSTOS
+   */
+  private validateTaxList(taxes: any[] | undefined): void {
+    if (!taxes || taxes.length === 0) return;
+
+    // Verificar duplicados na lista enviada
+    const names = taxes.map((t) => t.name.trim().toLowerCase());
+    const hasDuplicates = names.length !== new Set(names).size;
+
+    if (hasDuplicates) {
+      throw new BadRequestException(
+        'Existem impostos duplicados na lista. Cada imposto deve ter um nome único.',
+      );
+    }
+
+    // Verificar nomes vazios
+    const hasEmptyNames = taxes.some((t) => !t.name || !t.name.trim());
+    if (hasEmptyNames) {
+      throw new BadRequestException('Todos os impostos devem ter um nome');
     }
   }
 }

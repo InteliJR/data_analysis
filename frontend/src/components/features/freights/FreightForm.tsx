@@ -1,9 +1,10 @@
 // src/components/features/freights/FreightForm.tsx
 
-import { useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import type { Freight } from "@/types/freights";
 import type { CreateFreightDTO } from "@/api/freights";
+import { toast } from "react-hot-toast";
 
 import { Input } from "@/components/common/Input";
 import { Label } from "@/components/common/Label";
@@ -12,9 +13,13 @@ import { Textarea } from "@/components/common/Textarea";
 import { CurrencyInput } from "@/components/common/CurrencyInput";
 import { SecondaryButton } from "@/components/common/SecondaryButton";
 import { Text } from "@/components/common/Text";
+import { Autocomplete } from "@/components/common/Autocomplete";
 
 import { FiPlus, FiTrash2 } from "react-icons/fi";
 import { formatCurrency } from "@/lib/utils";
+
+import { useFreightTaxesQuery } from "@/api/taxes";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const estados: string[] = [
   "AC",
@@ -81,7 +86,6 @@ interface FreightFormProps {
   isLoading?: boolean;
 }
 
-// Função auxiliar para validar strings (não permite apenas espaços)
 const validateNotEmpty = (value: string | undefined): boolean => {
   return !!value && value.trim().length > 0;
 };
@@ -91,7 +95,8 @@ export function FreightForm({
   onSubmit,
   isLoading,
 }: FreightFormProps) {
-  // ✅ Refs para controlar a primeira mudança de UF (não a primeira renderização)
+  const [taxSearch, setTaxSearch] = useState("");
+
   const originUfPreviousValue = useRef<string>("");
   const destinationUfPreviousValue = useRef<string>("");
 
@@ -137,23 +142,25 @@ export function FreightForm({
     name: "freightTaxes",
   });
 
+  // Query para buscar impostos existentes
+  const { data: existingTaxesData } = useFreightTaxesQuery({
+    page: 1,
+    limit: 50,
+    search: taxSearch,
+  });
+
   const unitPrice = Number(watch("unitPrice")) || 0;
   const currency = watch("currency");
   const freightTaxes = watch("freightTaxes") || [];
-
-  // Watch UFs
   const originUfWatch = watch("originUf");
   const destinationUfWatch = watch("destinationUf");
 
-  // ✅ CORREÇÃO: Só limpa cidade quando UF realmente MUDAR (não no mount inicial)
+  // Limpar cidade quando UF muda
   useEffect(() => {
-    // Se é a primeira vez que está sendo definido, apenas salva o valor
     if (originUfPreviousValue.current === "") {
       originUfPreviousValue.current = originUfWatch;
       return;
     }
-
-    // Se mudou de verdade (não é vazio para vazio), limpa a cidade
     if (originUfPreviousValue.current !== originUfWatch) {
       setValue("originCity", "");
       originUfPreviousValue.current = originUfWatch;
@@ -161,13 +168,10 @@ export function FreightForm({
   }, [originUfWatch, setValue]);
 
   useEffect(() => {
-    // Se é a primeira vez que está sendo definido, apenas salva o valor
     if (destinationUfPreviousValue.current === "") {
       destinationUfPreviousValue.current = destinationUfWatch;
       return;
     }
-
-    // Se mudou de verdade (não é vazio para vazio), limpa a cidade
     if (destinationUfPreviousValue.current !== destinationUfWatch) {
       setValue("destinationCity", "");
       destinationUfPreviousValue.current = destinationUfWatch;
@@ -182,24 +186,72 @@ export function FreightForm({
 
   const totalWithTaxes = unitPrice + totalTaxes;
 
-  const addFreightTax = () => {
+  // Verificar se um imposto já foi adicionado
+  const isTaxAlreadyAdded = (taxId: string, taxName: string): boolean => {
+    return freightTaxes.some(
+      (t) => t.id === taxId || t.name.toLowerCase() === taxName.toLowerCase()
+    );
+  };
+
+  const addNewTax = () => {
     append({ name: "", rate: 0 });
   };
 
-  // Handler de submit com limpeza de strings
+  const addExistingTax = (taxId: string) => {
+    const tax = existingTaxesData?.data?.find((t) => t.id === taxId);
+    if (tax) {
+      if (isTaxAlreadyAdded(tax.id, tax.name)) {
+        toast.error(`O imposto "${tax.name}" já foi adicionado`);
+        return;
+      }
+
+      append({
+        id: tax.id,
+        name: tax.name,
+        rate: Number(tax.rate),
+      });
+      toast.success(`Imposto "${tax.name}" adicionado`);
+    }
+    setTaxSearch("");
+  };
+
   const handleFormSubmit = (data: CreateFreightDTO) => {
-    // Limpa espaços em branco extras
+    // Validar impostos duplicados
+    const taxNames = data.freightTaxes.map((t) => t.name.trim().toLowerCase());
+    const hasDuplicates = taxNames.length !== new Set(taxNames).size;
+
+    if (hasDuplicates) {
+      toast.error(
+        "Existem impostos duplicados. Cada imposto deve ter um nome único."
+      );
+      return;
+    }
+
+    // Verificar nomes vazios
+    const hasEmptyNames = data.freightTaxes.some((t) => !t.name.trim());
+    if (hasEmptyNames) {
+      toast.error("Todos os impostos devem ter um nome");
+      return;
+    }
+
     const cleanedData = {
       ...data,
       name: data.name.trim(),
       description: data.description?.trim() || "",
       cargoType: data.cargoType.trim(),
-      freightTaxes: data.freightTaxes.map(tax => ({
+      freightTaxes: data.freightTaxes.map((tax) => ({
         ...tax,
         name: tax.name.trim(),
+        rate: Number(tax.rate),
       })),
     };
+
     onSubmit(cleanedData);
+  };
+
+  const getCurrencySymbol = (curr: string) => {
+    const symbols = { BRL: "R$", USD: "US$", EUR: "€" };
+    return symbols[curr as keyof typeof symbols] || curr;
   };
 
   return (
@@ -208,16 +260,13 @@ export function FreightForm({
       onSubmit={handleSubmit(handleFormSubmit)}
       className="max-h-[70vh] overflow-y-auto px-2 space-y-6"
     >
-      {/* ==========================================================
-            SEÇÃO 1: INFORMAÇÕES BÁSICAS
-      ========================================================== */}
+      {/* SEÇÃO 1: INFORMAÇÕES BÁSICAS */}
       <div>
         <h3 className="text-sm font-semibold text-gray-700 mb-3">
           Informações Básicas
         </h3>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* Nome */}
           <div className="sm:col-span-2">
             <Label htmlFor="name">
               Nome do Frete <span className="text-red-500">*</span>
@@ -230,22 +279,22 @@ export function FreightForm({
                 required: "Nome é obrigatório",
                 validate: {
                   notEmpty: (value) =>
-                    validateNotEmpty(value) || "Nome não pode conter apenas espaços",
+                    validateNotEmpty(value) ||
+                    "Nome não pode conter apenas espaços",
                 },
-                minLength: { 
-                  value: 3, 
-                  message: "Nome deve ter no mínimo 3 caracteres" 
+                minLength: {
+                  value: 3,
+                  message: "Nome deve ter no mínimo 3 caracteres",
                 },
-                maxLength: { 
-                  value: 80, 
-                  message: "Nome deve ter no máximo 80 caracteres" 
+                maxLength: {
+                  value: 80,
+                  message: "Nome deve ter no máximo 80 caracteres",
                 },
               })}
               error={errors.name?.message}
             />
           </div>
 
-          {/* Descrição */}
           <div className="sm:col-span-2">
             <Label htmlFor="description">Descrição (Opcional)</Label>
             <Textarea
@@ -255,9 +304,9 @@ export function FreightForm({
               maxLength={400}
               className="min-h-[100px] max-h-[240px]"
               {...register("description", {
-                maxLength: { 
-                  value: 400, 
-                  message: "Descrição deve ter no máximo 400 caracteres" 
+                maxLength: {
+                  value: 400,
+                  message: "Descrição deve ter no máximo 400 caracteres",
                 },
               })}
             />
@@ -266,7 +315,6 @@ export function FreightForm({
             </Text>
           </div>
 
-          {/* Tipo de carga */}
           <div>
             <Label htmlFor="cargoType">
               Tipo de Carga <span className="text-red-500">*</span>
@@ -279,18 +327,18 @@ export function FreightForm({
                 required: "Tipo de carga é obrigatório",
                 validate: {
                   notEmpty: (value) =>
-                    validateNotEmpty(value) || "Tipo de carga não pode conter apenas espaços",
+                    validateNotEmpty(value) ||
+                    "Tipo de carga não pode conter apenas espaços",
                 },
-                maxLength: { 
-                  value: 60, 
-                  message: "Tipo de carga deve ter no máximo 60 caracteres" 
+                maxLength: {
+                  value: 60,
+                  message: "Tipo de carga deve ter no máximo 60 caracteres",
                 },
               })}
               error={errors.cargoType?.message}
             />
           </div>
 
-          {/* Tipo de operação */}
           <div>
             <Label htmlFor="operationType">
               Tipo de Operação <span className="text-red-500">*</span>
@@ -309,15 +357,12 @@ export function FreightForm({
         </div>
       </div>
 
-      {/* ==========================================================
-            SEÇÃO 2: ORIGEM E DESTINO
-      ========================================================== */}
+      {/* SEÇÃO 2: ORIGEM E DESTINO */}
       <div>
         <h3 className="text-sm font-semibold text-gray-700 mb-3">
           Origem e Destino
         </h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* UF ORIGEM */}
           <div>
             <Label htmlFor="originUf">
               UF Origem <span className="text-red-500">*</span>
@@ -342,7 +387,6 @@ export function FreightForm({
             </Select>
           </div>
 
-          {/* CIDADE ORIGEM */}
           <div>
             <Label htmlFor="originCity">
               Cidade Origem <span className="text-red-500">*</span>
@@ -369,7 +413,6 @@ export function FreightForm({
             </Select>
           </div>
 
-          {/* UF DESTINO */}
           <div>
             <Label htmlFor="destinationUf">
               UF Destino <span className="text-red-500">*</span>
@@ -394,7 +437,6 @@ export function FreightForm({
             </Select>
           </div>
 
-          {/* CIDADE DESTINO */}
           <div>
             <Label htmlFor="destinationCity">
               Cidade Destino <span className="text-red-500">*</span>
@@ -406,7 +448,8 @@ export function FreightForm({
                 required: "Cidade de destino é obrigatória",
                 validate: {
                   notEmpty: (value) =>
-                    validateNotEmpty(value) || "Selecione uma cidade de destino",
+                    validateNotEmpty(value) ||
+                    "Selecione uma cidade de destino",
                 },
               })}
               error={errors.destinationCity?.message}
@@ -423,13 +466,10 @@ export function FreightForm({
         </div>
       </div>
 
-      {/* ==========================================================
-            SEÇÃO 3: PREÇO
-      ========================================================== */}
+      {/* SEÇÃO 3: PREÇO */}
       <div>
         <h3 className="text-sm font-semibold text-gray-700 mb-3">Valores</h3>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {/* Preço unitário */}
           <div>
             <Label htmlFor="unitPrice">
               Preço Unitário <span className="text-red-500">*</span>
@@ -438,9 +478,9 @@ export function FreightForm({
               id="unitPrice"
               value={unitPrice}
               currency={currency}
-              onChange={(value) => setValue("unitPrice", value, { 
-                shouldValidate: true 
-              })}
+              onChange={(value) =>
+                setValue("unitPrice", value, { shouldValidate: true })
+              }
               placeholder="0,00"
             />
             {unitPrice <= 0 && (
@@ -450,7 +490,6 @@ export function FreightForm({
             )}
           </div>
 
-          {/* Moeda */}
           <div>
             <Label htmlFor="currency">Moeda</Label>
             <Select id="currency" {...register("currency")}>
@@ -462,30 +501,49 @@ export function FreightForm({
         </div>
       </div>
 
-      {/* ==========================================================
-            SEÇÃO 4: IMPOSTOS
-      ========================================================== */}
+      {/* SEÇÃO 4: IMPOSTOS */}
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-gray-700">
             Impostos do Frete
           </h3>
-
           <SecondaryButton
             type="button"
             variant="secondary"
             leftIcon={FiPlus}
-            onClick={addFreightTax}
+            onClick={addNewTax}
             className="cursor-pointer"
           >
-            Adicionar Imposto
+            Novo Imposto
           </SecondaryButton>
+        </div>
+
+        {/* Autocomplete para adicionar impostos existentes */}
+        <div className="mb-4">
+          <Autocomplete
+            options={
+              existingTaxesData?.data
+                ?.filter((t) => !isTaxAlreadyAdded(t.id, t.name))
+                .map((t) => ({
+                  value: t.id,
+                  label: t.name,
+                  description: `${t.rate}%`,
+                })) || []
+            }
+            value=""
+            searchValue={taxSearch}
+            onChange={addExistingTax}
+            onSearchChange={setTaxSearch}
+            placeholder="Buscar e adicionar imposto existente..."
+            emptyMessage="Nenhum imposto encontrado"
+          />
         </div>
 
         {fields.length === 0 ? (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
             <Text className="text-gray-500 text-sm">
-              Nenhum imposto adicionado. Clique em "Adicionar Imposto".
+              Nenhum imposto adicionado. Clique em "Novo Imposto" ou busque um
+              existente.
             </Text>
           </div>
         ) : (
@@ -495,7 +553,6 @@ export function FreightForm({
                 key={field.id}
                 className="flex gap-3 items-start bg-gray-50 p-3 rounded-lg"
               >
-                {/* Nome do imposto */}
                 <div className="flex-1">
                   <Input
                     placeholder="Nome do imposto (ICMS, PIS...)"
@@ -504,7 +561,7 @@ export function FreightForm({
                       required: "Nome do imposto é obrigatório",
                       validate: {
                         notEmpty: (value) =>
-                          validateNotEmpty(value) || 
+                          validateNotEmpty(value) ||
                           "Nome do imposto não pode conter apenas espaços",
                       },
                       maxLength: {
@@ -516,7 +573,6 @@ export function FreightForm({
                   />
                 </div>
 
-                {/* Taxa */}
                 <div className="w-32 flex justify-center gap-2">
                   <Input
                     type="number"
@@ -526,13 +582,13 @@ export function FreightForm({
                     placeholder="Taxa %"
                     {...register(`freightTaxes.${index}.rate`, {
                       required: "Taxa é obrigatória",
-                      min: { 
-                        value: 0.01, 
-                        message: "Taxa deve ser maior que 0%" 
+                      min: {
+                        value: 0.01,
+                        message: "Taxa deve ser maior que 0%",
                       },
-                      max: { 
-                        value: 100, 
-                        message: "Taxa deve ser no máximo 100%" 
+                      max: {
+                        value: 100,
+                        message: "Taxa deve ser no máximo 100%",
                       },
                       valueAsNumber: true,
                     })}
@@ -541,7 +597,6 @@ export function FreightForm({
                   <p className="self-center font-bold text-lg">%</p>
                 </div>
 
-                {/* Remover */}
                 <SecondaryButton
                   type="button"
                   variant="ghost"
@@ -556,25 +611,19 @@ export function FreightForm({
         )}
       </div>
 
-      {/* ==========================================================
-            PREVIEW
-      ========================================================== */}
+      {/* PREVIEW */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
         <Text className="font-semibold text-blue-900">Preview de Valores</Text>
 
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div>
             <Text className="text-gray-600">Preço Base:</Text>
-            <Text className="font-semibold">
-              {formatCurrency(unitPrice)}
-            </Text>
+            <Text className="font-semibold">{formatCurrency(unitPrice)}</Text>
           </div>
 
           <div>
             <Text className="text-gray-600">Total de Impostos:</Text>
-            <Text className="font-semibold">
-              {formatCurrency(totalTaxes)}
-            </Text>
+            <Text className="font-semibold">{formatCurrency(totalTaxes)}</Text>
           </div>
 
           <div className="col-span-2 pt-2 border-t border-blue-300">
@@ -586,16 +635,15 @@ export function FreightForm({
         </div>
       </div>
 
-      {/* Validação de preço */}
       {unitPrice <= 0 && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3">
           <Text className="text-red-700 text-sm font-medium">
-            ⚠️ O preço unitário deve ser maior que zero para submeter o formulário
+            ⚠️ O preço unitário deve ser maior que zero para submeter o
+            formulário
           </Text>
         </div>
       )}
 
-      {/* Nota */}
       <p className="text-xs text-gray-500 pb-4">
         <span className="text-red-500">*</span> Campos obrigatórios
       </p>

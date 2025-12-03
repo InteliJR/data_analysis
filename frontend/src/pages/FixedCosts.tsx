@@ -27,8 +27,6 @@ const EXPORT_COLUMNS = [
   { key: "depreciation", label: "Depreciação" },
   { key: "totalCost", label: "Total" },
   { key: "considerationPercentage", label: "% Considerar" },
-  { key: "salesVolume", label: "Volume Vendas" },
-  { key: "overheadPerUnit", label: "Overhead/Unidade" },
 ];
 
 export default function FixedCosts() {
@@ -243,7 +241,7 @@ export default function FixedCosts() {
         onClose={() => setDeletingCostId(null)}
         onConfirm={handleDelete}
         title="Excluir Custo Fixo"
-        message="Tem certeza que deseja excluir este custo fixo? Os produtos associados terão o custo fixo removido."
+        message="Tem certeza que deseja excluir este custo fixo? As Estruturas associadas terão o custo fixo removido."
         confirmText="Excluir"
       />
 

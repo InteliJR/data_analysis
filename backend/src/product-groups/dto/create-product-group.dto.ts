@@ -1,6 +1,6 @@
 // src/product-groups/dto/create-product-group.dto.ts
 
-import { IsString, IsOptional, MaxLength } from 'class-validator';
+import { IsString, IsOptional, MaxLength, IsInt, Min, Max } from 'class-validator';
 
 export class CreateProductGroupDto {
   @IsString()
@@ -11,4 +11,14 @@ export class CreateProductGroupDto {
   @IsOptional()
   @MaxLength(500)
   description?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(100)
+  porcentage?: number;
+
+  @IsOptional()
+  @IsInt()
+  volumevendasconsiderar?: number;
 }

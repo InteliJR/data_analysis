@@ -31,7 +31,6 @@ export function FixedCostForm({ cost, onSubmit, isLoading }: FixedCostFormProps)
       proLabore: cost.proLabore,
       depreciation: cost.depreciation,
       considerationPercentage: cost.considerationPercentage,
-      salesVolume: cost.salesVolume,
     } : {
       description: '',
       code: '',
@@ -40,7 +39,6 @@ export function FixedCostForm({ cost, onSubmit, isLoading }: FixedCostFormProps)
       proLabore: 0,
       depreciation: 0,
       considerationPercentage: 100,
-      salesVolume: 0,
     },
   });
 
@@ -50,12 +48,10 @@ export function FixedCostForm({ cost, onSubmit, isLoading }: FixedCostFormProps)
   const proLabore = watch('proLabore') || 0;
   const depreciation = watch('depreciation') || 0;
   const considerationPercentage = watch('considerationPercentage') || 0;
-  const salesVolume = watch('salesVolume') || 0;
 
   // Cálculos automáticos
   const totalCost = personnelExpenses + generalExpenses + proLabore + depreciation;
   const overheadToConsider = totalCost * (considerationPercentage / 100);
-  const overheadPerUnit = salesVolume > 0 ? overheadToConsider / salesVolume : 0;
 
   return (
     <form id="fixed-cost-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -162,28 +158,7 @@ export function FixedCostForm({ cost, onSubmit, isLoading }: FixedCostFormProps)
         </div>
       </div>
 
-      {/* Seção 3: Volume de Vendas */}
-      <div>
-        <Label htmlFor="salesVolume">
-          Volume de Vendas <span className="text-red-500">*</span>
-        </Label>
-        <Input
-          id="salesVolume"
-          type="number"
-          step="0.01"
-          min="0"
-          placeholder="130000.00"
-          {...register('salesVolume', {
-            required: 'Volume de vendas é obrigatório',
-            min: { value: 0.01, message: 'Deve ser maior que 0' },
-            valueAsNumber: true,
-          })}
-          error={errors.salesVolume?.message}
-        />
-        <p className="text-xs text-gray-500 mt-1">
-          Volume para cálculo do overhead (em unidades de medida)
-        </p>
-      </div>
+      {/* Seção 3 removida: Volume de Vendas (agora o overhead é por Grupo) */}
 
       {/* Preview dos Cálculos */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
@@ -197,12 +172,7 @@ export function FixedCostForm({ cost, onSubmit, isLoading }: FixedCostFormProps)
             <Text className="text-gray-600">Overhead a Considerar:</Text>
             <Text className="font-semibold">{formatCurrency(overheadToConsider)}</Text>
           </div>
-          <div className="col-span-2 pt-2 border-t border-blue-300">
-            <Text className="text-gray-600">Overhead por Unidade:</Text>
-            <Text className="font-bold text-lg text-blue-900">
-              {formatCurrency(overheadPerUnit)}
-            </Text>
-          </div>
+          {/* Overhead por unidade agora é calculado por Grupo de Produto */}
         </div>
       </div>
 

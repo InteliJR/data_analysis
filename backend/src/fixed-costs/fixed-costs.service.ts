@@ -19,25 +19,17 @@ export class FixedCostsService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Calcula o totalCost e overheadPerUnit
+   * Calcula o totalCost
    */
   private calculateTotals(dto: CreateFixedCostDto | UpdateFixedCostDto) {
     const personnelExpenses = dto.personnelExpenses || 0;
     const generalExpenses = dto.generalExpenses || 0;
     const proLabore = dto.proLabore || 0;
     const depreciation = dto.depreciation || 0;
-    const considerationPercentage = dto.considerationPercentage || 100;
-    const salesVolume = dto.salesVolume || 1;
 
     const totalCost =
       personnelExpenses + generalExpenses + proLabore + depreciation;
-    const overheadToConsider = totalCost * (considerationPercentage / 100);
-    const overheadPerUnit = overheadToConsider / salesVolume;
-
-    return {
-      totalCost,
-      overheadPerUnit,
-    };
+    return { totalCost };
   }
 
   async create(createFixedCostDto: CreateFixedCostDto) {
@@ -52,8 +44,7 @@ export class FixedCostsService {
       }
     }
 
-    const { totalCost, overheadPerUnit } =
-      this.calculateTotals(createFixedCostDto);
+    const { totalCost } = this.calculateTotals(createFixedCostDto);
 
     const fixedCost = await this.prisma.fixedCost.create({
       data: {
@@ -65,9 +56,7 @@ export class FixedCostsService {
         depreciation: createFixedCostDto.depreciation || 0,
         considerationPercentage:
           createFixedCostDto.considerationPercentage || 100,
-        salesVolume: createFixedCostDto.salesVolume,
         totalCost,
-        overheadPerUnit,
       },
       include: {
         _count: {
@@ -185,11 +174,9 @@ export class FixedCostsService {
       updateFixedCostDto.generalExpenses !== undefined ||
       updateFixedCostDto.proLabore !== undefined ||
       updateFixedCostDto.depreciation !== undefined ||
-      updateFixedCostDto.considerationPercentage !== undefined ||
-      updateFixedCostDto.salesVolume !== undefined;
+      updateFixedCostDto.considerationPercentage !== undefined;
 
     let totalCost: number | Prisma.Decimal = existing.totalCost;
-    let overheadPerUnit: number | Prisma.Decimal = existing.overheadPerUnit;
 
     if (shouldRecalculate) {
       // Converte Decimal para number para o cálculo
@@ -214,15 +201,10 @@ export class FixedCostsService {
           updateFixedCostDto.considerationPercentage !== undefined
             ? updateFixedCostDto.considerationPercentage
             : Number(existing.considerationPercentage),
-        salesVolume:
-          updateFixedCostDto.salesVolume !== undefined
-            ? updateFixedCostDto.salesVolume
-            : Number(existing.salesVolume),
       };
 
       const calculated = this.calculateTotals(merged);
       totalCost = calculated.totalCost;
-      overheadPerUnit = calculated.overheadPerUnit;
     }
 
     const updated = await this.prisma.fixedCost.update({
@@ -230,7 +212,6 @@ export class FixedCostsService {
       data: {
         ...updateFixedCostDto,
         totalCost,
-        overheadPerUnit,
       },
       include: {
         _count: {
@@ -326,10 +307,16 @@ export class FixedCostsService {
       });
     }
 
-    // Calcula o overhead para cada produto
+    // Calcula o overhead total considerado e distribui entre produtos selecionados
+    const overheadTotal =
+      fixedCost.totalCost.toNumber() *
+      (fixedCost.considerationPercentage.toNumber() / 100);
+    const perProductOverhead =
+      productsToAffect.length > 0 ? overheadTotal / productsToAffect.length : 0;
+
     const affectedProducts = productsToAffect.map((product) => {
       const priceBeforeOverhead = product.priceWithTaxesAndFreight || 0;
-      const overheadApplied = fixedCost.overheadPerUnit;
+      const overheadApplied = perProductOverhead;
       const priceAfterOverhead = priceBeforeOverhead + overheadApplied;
 
       return {
@@ -337,8 +324,8 @@ export class FixedCostsService {
         code: product.code,
         name: product.name,
         priceBeforeOverhead: priceBeforeOverhead.toNumber(),
-        overheadApplied: overheadApplied.toNumber(),
-        priceAfterOverhead: priceAfterOverhead.toNumber(),
+        overheadApplied: Number(overheadApplied.toFixed(2)),
+        priceAfterOverhead: Number(priceAfterOverhead.toFixed(2)),
         updated: false,
       };
     });
@@ -369,7 +356,9 @@ export class FixedCostsService {
         id: fixedCost.id,
         description: fixedCost.description,
         totalCost: fixedCost.totalCost.toNumber(),
-        overheadPerUnit: fixedCost.overheadPerUnit.toNumber(),
+        considerationPercentage: fixedCost.considerationPercentage.toNumber(),
+        overheadTotal: Number(overheadTotal.toFixed(2)),
+        perProductOverhead: Number(perProductOverhead.toFixed(2)),
       },
       affectedProducts,
       summary: {
@@ -412,8 +401,6 @@ export class FixedCostsService {
       depreciation: 'Depreciação',
       totalCost: 'Total',
       considerationPercentage: '% Considerar',
-      salesVolume: 'Volume Vendas',
-      overheadPerUnit: 'Overhead/Unidade',
     };
 
     // Determina quais colunas incluir

@@ -1,176 +1,262 @@
-import { useState } from 'react';
-import type { RawMaterial } from '@/types';
+// src/pages/RawMaterials.tsx
+
+import { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
+import type { RawMaterial } from "@/types/rawMaterial";
+import { PageHeader } from "@/components/features/rawMaterials/PageHeader";
+import { RawMaterialTable } from "@/components/features/rawMaterials/RawMaterialTable";
+import { RawMaterialModal } from "@/components/features/rawMaterials/RawMaterialModal";
+import { ExportModal } from "@/components/common/ExportModal";
+import { ConfirmModal } from "@/components/common/ConfirmModal";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import { Pagination } from "@/components/common/Pagination";
+import { RecentChangesPreview } from "@/components/features/rawMaterials/RecentChangesPreview";
 import {
   useRawMaterialsQuery,
-  useCreateRawMaterialMutation,
-  useUpdateRawMaterialMutation,
   useDeleteRawMaterialMutation,
-  mapApiToUi,
-} from '@/api/rawMaterials';
-import type {
-  CreateRawMaterialPayload,
-  UpdateRawMaterialPayload,
-} from '@/api/rawMaterials';
-import { toast } from 'react-hot-toast';
+  useExportRawMaterialsMutation,
+} from "@/api/rawMaterials";
+import { useDebounce } from "@/hooks/useDebounce";
+import { triggerCsvDownload } from "@/lib/utils";
 
-import { PageHeader } from '@/components/features/rawMaterials/PageHeader';
-import { ActionBar } from '@/components/features/rawMaterials/ActionBar';
-import { RawMaterialTable } from '@/components/features/rawMaterials/RawMaterialTable';
-import { ConfirmModal } from '@/components/common/ConfirmModal';
-import { RawMaterialModal } from '@/components/features/rawMaterials/RawMaterialModal';
+const EXPORT_COLUMNS = [
+  { key: "code", label: "Código" },
+  { key: "name", label: "Nome" },
+  { key: "description", label: "Descrição" },
+  { key: "measurementUnit", label: "Unidade de Medida" },
+  { key: "inputGroup", label: "Grupo de Insumo" },
+  { key: "paymentTerm", label: "Prazo de Pagamento" },
+  { key: "acquisitionPrice", label: "Preço de Aquisição" },
+  { key: "currency", label: "Moeda" },
+  { key: "priceConvertedBrl", label: "Preço em BRL" },
+  { key: "additionalCost", label: "Custo Adicional" },
+  { key: "freight", label: "Frete" },
+];
 
 export default function RawMaterials() {
-  const [page] = useState(1);
+  // Estados
+  const [page, setPage] = useState(1);
   const [limit] = useState(10);
-  const { data, isLoading, isError } = useRawMaterialsQuery({ page, limit });
-  const createMutation = useCreateRawMaterialMutation();
-  const [updateId, setUpdateId] = useState<string | null>(null);
-  const deleteMutation = useDeleteRawMaterialMutation();
-  const updateMutation = useUpdateRawMaterialMutation();
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
-  // Evita erro quando data ainda undefined durante loading
-  const materials: RawMaterial[] = (data?.data ?? []).map(mapApiToUi);
-  const [selectedMaterial, setSelectedMaterial] = useState<RawMaterial | undefined>(undefined);
+  // Modais
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [editingRawMaterial, setEditingRawMaterial] = useState<RawMaterial | null>(null);
+  const [deletingRawMaterialId, setDeletingRawMaterialId] = useState<string | null>(null);
 
-  const handleOpenDeleteModal = (material: RawMaterial) => {
-    setSelectedMaterial(material);
-    setIsDeleteModalOpen(true);
+  // Queries e Mutations
+  const { data, isLoading, isError, isFetching, refetch } = useRawMaterialsQuery({
+    page,
+    limit,
+    search,
+    sortBy,
+    sortOrder,
+  });
+
+  const deleteMutation = useDeleteRawMaterialMutation();
+  const exportMutation = useExportRawMaterialsMutation();
+
+  // Debounce na busca
+  const debouncedSetSearch = useDebounce((value: string) => {
+    setSearch(value);
+    setPage(1);
+  }, 300);
+
+  // Handler para mudança no input
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    debouncedSetSearch(value);
   };
 
-  const handleCloseDeleteModal = () => {
-    setIsDeleteModalOpen(false);
-    setSelectedMaterial(undefined);
-  };
+  // Refetch quando sortBy ou sortOrder mudam
+  useEffect(() => {
+    refetch();
+  }, [sortBy, sortOrder, refetch]);
 
-  const handleConfirmDelete = async () => {
-    if (!selectedMaterial) return;
-    try {
-      await deleteMutation.mutateAsync(selectedMaterial.id);
-      toast.success('Matéria-prima deletada');
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Erro ao deletar');
-    }
-    handleCloseDeleteModal();
-  };
-  
+  // Handlers
   const handleOpenCreateModal = () => {
-    setSelectedMaterial(undefined);
-    setModalMode('create');
+    setEditingRawMaterial(null);
     setIsModalOpen(true);
   };
-  
-  const handleOpenEditModal = (material: RawMaterial) => {
-    setSelectedMaterial(material);
-    setUpdateId(material.id);
-    setModalMode('edit');
+
+  const handleOpenEditModal = (rawMaterial: RawMaterial) => {
+    setEditingRawMaterial(rawMaterial);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
-    setSelectedMaterial(undefined);
-    setUpdateId(null);
+    setEditingRawMaterial(null);
   };
 
-  const handleSubmit = async (formData: FormData) => {
-    // Extrai campos do formulário
-    const payloadBase: CreateRawMaterialPayload = {
-      code: String(formData.get('raw_code') || '').trim(),
-      name: String(formData.get('raw_name') || '').trim(),
-      description: String(formData.get('raw_description') || '').trim(),
-      measurementUnit: String(formData.get('raw_measurementUnit') || 'KG'),
-      inputGroup: String(formData.get('raw_inputGroup') || '').trim() || undefined,
-      paymentTerm: Number(formData.get('raw_paymentTerm') || 30),
-      acquisitionPrice: parseFloat(String(formData.get('raw_price') || '0')),
-      currency: (String(formData.get('raw_currency') || 'BRL') as 'BRL' | 'USD' | 'EUR'),
-      priceConvertedBrl: parseFloat(String(formData.get('raw_price') || '0')),
-      additionalCost: parseFloat(String(formData.get('raw_additionalCosts') || '0')),
-      taxId: String(formData.get('raw_taxId') || ''),
-      freightId: String(formData.get('raw_freightId') || ''),
-    };
+  const handleDelete = async () => {
+    if (!deletingRawMaterialId) return;
 
     try {
-      // Validações básicas no cliente
-      if (!payloadBase.code || !payloadBase.name) {
-        toast.error('Código e Nome são obrigatórios');
-        return;
+      await deleteMutation.mutateAsync(deletingRawMaterialId);
+      toast.success("Produto excluído com sucesso");
+      setDeletingRawMaterialId(null);
+    } catch (error: any) {
+      const message = error?.response?.data?.message;
+      if (error?.response?.status === 409) {
+        toast.error(
+          "Este produto está associado a estruturas e não pode ser excluído"
+        );
+      } else {
+        toast.error(message || "Erro ao excluir produto");
       }
-      if (!payloadBase.taxId || !payloadBase.freightId) {
-        toast.error('Selecione Imposto e Frete');
-        return;
-      }
-      if (Number.isNaN(payloadBase.acquisitionPrice) || payloadBase.acquisitionPrice < 0) {
-        toast.error('Preço inválido');
-        return;
-      }
-      if (Number.isNaN(payloadBase.additionalCost) || payloadBase.additionalCost < 0) {
-        toast.error('Custos adicionais inválidos');
-        return;
-      }
-      if (Number.isNaN(payloadBase.paymentTerm) || payloadBase.paymentTerm < 0) {
-        toast.error('Prazo de pagamento inválido');
-        return;
-      }
-
-      if (modalMode === 'create') {
-        await createMutation.mutateAsync(payloadBase);
-        toast.success('Matéria-prima criada');
-      } else if (modalMode === 'edit' && updateId) {
-        const updatePayload: UpdateRawMaterialPayload = {
-          code: payloadBase.code,
-          name: payloadBase.name,
-          description: payloadBase.description,
-          measurementUnit: payloadBase.measurementUnit as any,
-          inputGroup: payloadBase.inputGroup,
-          paymentTerm: payloadBase.paymentTerm,
-          acquisitionPrice: payloadBase.acquisitionPrice,
-          currency: payloadBase.currency as any,
-          priceConvertedBrl: payloadBase.priceConvertedBrl,
-          additionalCost: payloadBase.additionalCost,
-          taxId: payloadBase.taxId,
-          freightId: payloadBase.freightId,
-        };
-        await updateMutation.mutateAsync({ id: updateId, payload: updatePayload });
-        toast.success('Matéria-prima atualizada');
-      }
-      handleCloseModal();
-    } catch (e: any) {
-      toast.error(e?.response?.data?.message || 'Erro ao salvar');
     }
   };
 
-  return (
-    <> 
-      <PageHeader />
-      <ActionBar onNewRawMaterialClick={handleOpenCreateModal} />
-      {isLoading && <div className="p-4">Carregando...</div>}
-      {isError && <div className="p-4 text-red-600">Erro ao carregar matérias-primas</div>}
-      {!isLoading && !isError && (
-        <RawMaterialTable
-          materials={materials}
-          onEditMaterial={handleOpenEditModal}
-          onDeleteMaterial={handleOpenDeleteModal}
+  const handleSort = (column: string) => {
+    if (sortBy === column) {
+      const newOrder = sortOrder === "asc" ? "desc" : "asc";
+      setSortOrder(newOrder);
+    } else {
+      setSortBy(column);
+      setSortOrder("asc");
+    }
+  };
+
+  const handleExport = async (options: {
+    limit: number;
+    columns: string[];
+    sortBy: string;
+    sortOrder: "asc" | "desc";
+  }) => {
+    try {
+      const blob = await exportMutation.mutateAsync({
+        format: "csv",
+        limit: options.limit,
+        sortBy: options.sortBy,
+        sortOrder: options.sortOrder,
+        filters: { search },
+      });
+
+      const filename = `materias-primas-${new Date().toISOString().split("T")[0]}.csv`;
+      triggerCsvDownload(blob, filename);
+      toast.success("CSV exportado com sucesso");
+      setIsExportModalOpen(false);
+    } catch (error) {
+      toast.error("Erro ao exportar CSV");
+    }
+  };
+
+  // Render
+  if (isLoading) {
+    return (
+      <>
+        <PageHeader
+          onNewRawMaterialClick={handleOpenCreateModal}
+          onExportClick={() => setIsExportModalOpen(true)}
+          onSearchChange={handleSearchChange}
+          searchValue={searchInput}
         />
-      )}
-      
-      <ConfirmModal
-        isOpen={isDeleteModalOpen}
-        onClose={handleCloseDeleteModal}
-        onConfirm={handleConfirmDelete}
-        title="Excluir Matéria-prima"
-        message="Você tem certeza que deseja excluir essa matéria-prima?"
+        <LoadingSpinner size="lg" />
+      </>
+    );
+  }
+
+  if (isError) {
+    return (
+      <>
+        <PageHeader
+          onNewRawMaterialClick={handleOpenCreateModal}
+          onExportClick={() => setIsExportModalOpen(true)}
+          onSearchChange={handleSearchChange}
+          searchValue={searchInput}
+        />
+        <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+          <p className="text-red-600 font-semibold">Erro ao carregar produtos</p>
+          <p className="text-sm text-gray-500 mt-2">
+            Tente recarregar a página ou entre em contato com o suporte
+          </p>
+        </div>
+      </>
+    );
+  }
+
+  const hasRawMaterials = data?.data && data.data.length > 0;
+
+  return (
+    <>
+      <PageHeader
+        onNewRawMaterialClick={handleOpenCreateModal}
+        onExportClick={() => setIsExportModalOpen(true)}
+        onSearchChange={handleSearchChange}
+        searchValue={searchInput}
       />
-      
+
+      {!hasRawMaterials && !search ? (
+        <div className="bg-white rounded-lg shadow-sm p-12 text-center mb-8">
+          <p className="text-gray-500">Nenhum produto cadastrado</p>
+          <p className="text-sm text-gray-400 mt-2">
+            Clique em "Novo produto" para começar
+          </p>
+        </div>
+      ) : !hasRawMaterials && search ? (
+        <div className="bg-white rounded-lg shadow-sm p-12 text-center mb-8">
+          <p className="text-gray-500">
+            Nenhum resultado encontrado para "{search}"
+          </p>
+        </div>
+      ) : hasRawMaterials ? (
+        <>
+          {isFetching && (
+            <div className="mb-2 text-sm text-blue-600 text-right animate-pulse">
+              🔄 Atualizando...
+            </div>
+          )}
+
+          <RawMaterialTable
+            rawMaterials={data.data}
+            onEdit={handleOpenEditModal}
+            onDelete={(id) => setDeletingRawMaterialId(id)}
+            onSort={handleSort}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+          />
+
+          {data.meta && data.meta.totalPages > 1 && (
+            <div className="mb-8">
+              <Pagination
+                currentPage={page}
+                totalPages={data.meta.totalPages}
+                onPageChange={setPage}
+              />
+            </div>
+          )}
+        </>
+      ) : null}
+
+      {/* Preview das últimas alterações */}
+      <RecentChangesPreview />
+
+      {/* Modais */}
       <RawMaterialModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        mode={modalMode}
-        material={selectedMaterial}
-        onSubmit={handleSubmit}
-        submitting={createMutation.isPending || deleteMutation.isPending || updateMutation.isPending}
+        rawMaterial={editingRawMaterial}
+      />
+
+      <ConfirmModal
+        isOpen={!!deletingRawMaterialId}
+        onClose={() => setDeletingRawMaterialId(null)}
+        onConfirm={handleDelete}
+        title="Excluir Produto"
+        message="Tem certeza que deseja excluir este produto? Esta ação não pode ser desfeita."
+        confirmText="Excluir"
+      />
+
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        onConfirm={handleExport}
+        defaultColumns={EXPORT_COLUMNS}
       />
     </>
   );

@@ -89,7 +89,7 @@ export default function Login() {
             Sistema de Precificação
           </h1>
           <p className="text-blue-100 text-lg">
-            Gestão completa de custos e produtos
+            Gestão completa de custos e estruturas.
           </p>
         </div>
       </div>

@@ -1,8 +1,8 @@
 // src/api/freights.ts
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from './client';
-import type { Freight } from '@/types';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "./client";
+import type { Freight } from "@/types";
 
 // ========================================
 // Tipagens de Requisição e Resposta
@@ -18,13 +18,13 @@ export interface CreateFreightDTO {
   name: string;
   description?: string;
   unitPrice: number;
-  currency: 'BRL' | 'USD' | 'EUR';
+  currency: "BRL" | "USD" | "EUR";
   originUf: string;
   originCity: string;
   destinationUf: string;
   destinationCity: string;
   cargoType: string;
-  operationType: 'INTERNAL' | 'EXTERNAL';
+  operationType: "INTERNAL" | "EXTERNAL";
   freightTaxes: FreightTax[];
 }
 
@@ -46,14 +46,14 @@ export interface FindAllFreightsQuery {
   search?: string;
   currency?: string;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface ExportFreightsPayload {
-  format: 'csv';
+  format: "csv";
   limit?: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
   filters?: {
     search?: string;
     currency?: string;
@@ -64,13 +64,13 @@ export interface ExportFreightsPayload {
 // Funções de API
 // ========================================
 
-const FREIGHTS_QUERY_KEY = 'freights';
+const FREIGHTS_QUERY_KEY = "freights";
 
 // GET /freights
 export async function getFreights(
-  query: FindAllFreightsQuery,
+  query: FindAllFreightsQuery
 ): Promise<PaginatedFreightsResponse> {
-  const { data } = await apiClient.get('/freights', { params: query });
+  const { data } = await apiClient.get("/freights", { params: query });
   return data;
 }
 
@@ -81,8 +81,10 @@ export async function getFreightById(id: string): Promise<Freight> {
 }
 
 // POST /freights
-export async function createFreight(payload: CreateFreightDTO): Promise<Freight> {
-  const { data } = await apiClient.post('/freights', payload);
+export async function createFreight(
+  payload: CreateFreightDTO
+): Promise<Freight> {
+  const { data } = await apiClient.post("/freights", payload);
   return data;
 }
 
@@ -104,9 +106,11 @@ export async function deleteFreight(id: string): Promise<void> {
 }
 
 // POST /freights/export
-export async function exportFreights(payload: ExportFreightsPayload): Promise<Blob> {
-  const { data } = await apiClient.post('/freights/export', payload, {
-    responseType: 'blob',
+export async function exportFreights(
+  payload: ExportFreightsPayload
+): Promise<Blob> {
+  const { data } = await apiClient.post("/freights/export", payload, {
+    responseType: "blob",
   });
   return data;
 }
@@ -137,6 +141,8 @@ export function useCreateFreightMutation() {
     mutationFn: createFreight,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [FREIGHTS_QUERY_KEY] });
+      // IMPORTANTE: Invalida também os impostos pois podem ter sido criados novos
+      queryClient.invalidateQueries({ queryKey: ["freight-taxes"] });
     },
   });
 }
@@ -147,6 +153,8 @@ export function useUpdateFreightMutation() {
     mutationFn: updateFreight,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [FREIGHTS_QUERY_KEY] });
+      // IMPORTANTE: Invalida também os impostos pois podem ter sido atualizados
+      queryClient.invalidateQueries({ queryKey: ["freight-taxes"] });
     },
   });
 }

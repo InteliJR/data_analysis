@@ -11,6 +11,8 @@ import {
   type FindAllProductGroupsQuery,
   type ExportProductGroupsPayload,
 } from "@/api/productgroups";
+import { useFixedCostsQuery } from "@/api/fixedCosts";
+import type { FindAllFixedCostsQuery } from "@/types/fixed_costs";
 
 import { Heading } from "@/components/common/Heading";
 import { ActionBar } from "@/components/features/productgroups/ActionBar";
@@ -43,6 +45,10 @@ export default function ProductGroups() {
   const updateMutation = useUpdateProductGroupMutation();
   const deleteMutation = useDeleteProductGroupMutation();
   const exportMutation = useExportProductGroupsMutation();
+
+  // Fetch fixed costs to compute considered total for overhead calculation
+  const fixedCostsQueryParams: FindAllFixedCostsQuery = { page: 1, limit: 1000 };
+  const { data: fixedCostsData } = useFixedCostsQuery(fixedCostsQueryParams);
 
   // Handlers
   const handleFilterChange = (
@@ -83,9 +89,30 @@ export default function ProductGroups() {
   const handleSubmit = (
     data: CreateProductGroupDTO | UpdateProductGroupDTO
   ) => {
+    // Clean payload to respect backend DTO (whitelist) and avoid NaN
+    const payload: typeof data = { ...data } as any;
+    // Remove client-side computed fields (backend computes overheadPerUnit)
+    // Ensure numeric fields are integers or undefined
+    if ('porcentage' in payload) {
+      const v = (payload as any).porcentage;
+      if (v === undefined || v === null || !Number.isFinite(v)) {
+        delete (payload as any).porcentage;
+      } else {
+        (payload as any).porcentage = Math.trunc(v);
+      }
+    }
+    if ('volumevendasconsiderar' in payload) {
+      const v = (payload as any).volumevendasconsiderar;
+      if (v === undefined || v === null || !Number.isFinite(v)) {
+        delete (payload as any).volumevendasconsiderar;
+      } else {
+        (payload as any).volumevendasconsiderar = Math.trunc(v);
+      }
+    }
+
     if (selectedGroup) {
       updateMutation.mutate(
-        { id: selectedGroup.id, payload: data },
+        { id: selectedGroup.id, payload: payload },
         {
           onSuccess: () => {
             toast.success("Grupo atualizado com sucesso!");
@@ -99,7 +126,7 @@ export default function ProductGroups() {
         }
       );
     } else {
-      createMutation.mutate(data as CreateProductGroupDTO, {
+      createMutation.mutate(payload as CreateProductGroupDTO, {
         onSuccess: () => {
           toast.success("Grupo criado com sucesso!");
           setIsModalOpen(false);
@@ -161,12 +188,12 @@ export default function ProductGroups() {
     return (
       <div className="p-6">
         <div className="mb-6">
-          <Heading as="h1">Grupos de Produtos</Heading>
+          <Heading as="h1">Grupos de Estruturas</Heading>
         </div>
         <EmptyState
           icon={Package}
           title="Erro ao carregar grupos"
-          description="Ocorreu um erro ao carregar os grupos de produtos. Tente novamente."
+          description="Ocorreu um erro ao carregar os grupos de Estruturas. Tente novamente."
           action={{
             label: "Tentar novamente",
             onClick: () => window.location.reload(),
@@ -177,9 +204,9 @@ export default function ProductGroups() {
   }
 
   return (
-    <div className="p-6">
+    <div >
       <div className="mb-6">
-        <Heading as="h1">Grupos de Produtos</Heading>
+        <Heading as="h1">Grupos de Estruturas</Heading>
       </div>
 
       <ActionBar
@@ -224,8 +251,6 @@ export default function ProductGroups() {
           )}
         </>
       )}
-
-      <p className="mt-10">ISSO TEM QUE IR PRA PARTE DE GRUPOS E VIRA UMA COLUNA. COLOCAR SO UMA DESCRIÇÃO DEPOIS DA TABELA.</p>
 
       <ProductGroupModal
         isOpen={isModalOpen}

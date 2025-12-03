@@ -4,10 +4,14 @@ export class ProductGroupEntity {
   id: string;
   name: string;
   description?: string;
+  porcentage?: number;
+  volumevendasconsiderar?: number;
+  overheadPerUnit?: number;
   productsCount: number;
   volumePercentageByQuantity: number;
   volumePercentageByValue: number;
   averagePrice: number;
+  totalValue: number;
   createdAt: Date;
   updatedAt: Date;
 }

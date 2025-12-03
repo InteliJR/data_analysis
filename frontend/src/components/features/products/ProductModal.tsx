@@ -1,57 +1,84 @@
-import type { Product } from '@/types'; 
+// src/components/features/products/ProductModal.tsx
 
-import { Modal } from '@/components/common/Modal'; 
-
+import { toast } from 'react-hot-toast';
+import type { Product } from '@/types/products';
+import type { CreateProductDTO } from '@/api/products';
+import { Modal } from '@/components/common/Modal';
 import { ProductForm } from './ProductForm';
-import { RawMaterialSelector } from './RawMaterialSelector';
-
 import { Button } from '@/components/common/Button';
-import { useState } from 'react';
+import { 
+  useCreateProductMutation, 
+  useUpdateProductMutation 
+} from '@/api/products';
 
 interface ProductModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mode: 'create' | 'edit';
-  product?: Product; 
-  onSubmit?: (formData: FormData) => void | Promise<void>;
-  submitting?: boolean;
+  product?: Product | null;
 }
 
-export function ProductModal({ isOpen, onClose, mode, product, onSubmit, submitting = false }: ProductModalProps) {
-  const [rawMaterials, setRawMaterials] = useState<{ rawMaterialId: string; quantity: number }[]>([]);
+export function ProductModal({ 
+  isOpen, 
+  onClose, 
+  product 
+}: ProductModalProps) {
   
-  const title = mode === 'create' ? 'Adicionar produto' : 'Editar produto';
-  const buttonText = mode === 'create' ? 'Adicionar produto' : 'Salvar alterações';
+  const createMutation = useCreateProductMutation();
+  const updateMutation = useUpdateProductMutation();
 
-  const modalFooter = (
-    <Button variant="primary" type="submit" form="product-form" disabled={submitting}>
-      {submitting ? 'Salvando...' : buttonText}
-    </Button>
-  );
+  const isEditing = !!product;
+  const title = isEditing ? 'Editar Estrutura' : 'Adicionar Estrutura';
+
+  const handleSubmit = async (data: CreateProductDTO) => {
+    try {
+      if (isEditing) {
+        await updateMutation.mutateAsync({ 
+          id: product.id, 
+          payload: data 
+        });
+        toast.success('Estrutura atualizada com sucesso');
+      } else {
+        await createMutation.mutateAsync(data);
+        toast.success('Estrutura criada com sucesso');
+      }
+      onClose();
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Erro ao salvar estrutura';
+      toast.error(message);
+    }
+  };
+
+  const isLoading = createMutation.isPending || updateMutation.isPending;
 
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
       title={title}
-      footer={modalFooter}
     >
-
-      <form
-        id="product-form"
-        className="grid grid-cols-1 gap-8 md:grid-cols-2"
-        onSubmit={e => {
-          e.preventDefault();
-          if (!onSubmit) return;
-          const formData = new FormData(e.currentTarget);
-          // rawMaterials already serialized in hidden input; ensure sync state if needed
-          formData.set('rawMaterials', JSON.stringify(rawMaterials));
-          onSubmit(formData);
-        }}
-      >
-        <ProductForm product={product} />
-        <RawMaterialSelector onChange={setRawMaterials} />
-      </form>
+      <ProductForm 
+        product={product} 
+        onSubmit={handleSubmit}
+        isLoading={isLoading}
+      />
+      
+      <div className="flex justify-end gap-3 mt-6 pt-6 border-t">
+        <Button 
+          variant="secondary" 
+          onClick={onClose}
+          disabled={isLoading}
+        >
+          Cancelar
+        </Button>
+        <Button 
+          type="submit"
+          variant="primary"
+          form="product-form"
+          isLoading={isLoading}
+        >
+          {isEditing ? 'Atualizar' : 'Adicionar'}
+        </Button>
+      </div>
     </Modal>
   );
 }

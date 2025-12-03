@@ -59,12 +59,4 @@ export class CreateFixedCostDto {
   @Type(() => Number)
   @IsOptional()
   considerationPercentage?: number;
-
-  @IsNumber(
-    { maxDecimalPlaces: 2 },
-    { message: 'Volume de vendas deve ter no máximo 2 casas decimais' },
-  )
-  @Min(0.01, { message: 'Volume de vendas deve ser maior que 0' })
-  @Type(() => Number)
-  salesVolume: number;
 }

@@ -71,7 +71,7 @@ export const productSchema = z.object({
   name: z.string().min(3, 'Nome deve ter no mínimo 3 caracteres'),
   description: z.string().optional(),
   fixedCostId: z.string().uuid().optional(),
-  rawMaterials: z.array(productRawMaterialSchema).min(1, 'Adicione pelo menos 1 matéria-prima'),
+  rawMaterials: z.array(productRawMaterialSchema).min(1, 'Adicione pelo menos 1 produto'),
 });
 
 // Fixed Cost

@@ -1,10 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from './client';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "./client";
 import type {
   ProductGroup,
   CreateProductGroupDTO,
   UpdateProductGroupDTO,
-} from '@/types/productGroup';
+} from "@/types/productGroup";
 
 // ========================================
 // Tipagens de Requisição e Resposta
@@ -22,14 +22,20 @@ export interface FindAllProductGroupsQuery {
   page?: number;
   limit?: number;
   search?: string;
-  sortBy?: 'name' | 'volumePercentageByQuantity' | 'volumePercentageByValue' | 'averagePrice';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?:
+    | "name"
+    | "volumePercentageByQuantity"
+    | "volumePercentageByValue"
+    | "averagePrice"
+    | "totalValue"
+    | "overheadPerUnit";
+  sortOrder?: "asc" | "desc";
 }
 
 export interface ExportProductGroupsPayload {
   search?: string;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
   limit?: number;
 }
 
@@ -37,13 +43,13 @@ export interface ExportProductGroupsPayload {
 // Funções de API
 // ========================================
 
-const PRODUCT_GROUPS_QUERY_KEY = 'product-groups';
+const PRODUCT_GROUPS_QUERY_KEY = "product-groups";
 
 // GET /product-groups
 export async function getProductGroups(
-  query: FindAllProductGroupsQuery,
+  query: FindAllProductGroupsQuery
 ): Promise<PaginatedProductGroupsResponse> {
-  const { data } = await apiClient.get('/product-groups', { params: query });
+  const { data } = await apiClient.get("/product-groups", { params: query });
   return data;
 }
 
@@ -54,8 +60,10 @@ export async function getProductGroupById(id: string): Promise<ProductGroup> {
 }
 
 // POST /product-groups
-export async function createProductGroup(payload: CreateProductGroupDTO): Promise<ProductGroup> {
-  const { data } = await apiClient.post('/product-groups', payload);
+export async function createProductGroup(
+  payload: CreateProductGroupDTO
+): Promise<ProductGroup> {
+  const { data } = await apiClient.post("/product-groups", payload);
   return data;
 }
 
@@ -77,9 +85,11 @@ export async function deleteProductGroup(id: string): Promise<void> {
 }
 
 // POST /product-groups/export
-export async function exportProductGroups(payload: ExportProductGroupsPayload): Promise<Blob> {
-  const { data } = await apiClient.post('/product-groups/export', payload, {
-    responseType: 'blob', // <-- ESSENCIAL para download de arquivo
+export async function exportProductGroups(
+  payload: ExportProductGroupsPayload
+): Promise<Blob> {
+  const { data } = await apiClient.post("/product-groups/export", payload, {
+    responseType: "blob", // <-- ESSENCIAL para download de arquivo
   });
   return data;
 }
