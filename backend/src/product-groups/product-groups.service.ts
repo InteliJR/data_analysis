@@ -31,7 +31,7 @@ export class ProductGroupsService {
         include: {
           products: {
             select: {
-              priceWithTaxesAndFreight: true,
+              totalCostWithAllFreights: true,
             },
           },
         },
@@ -67,7 +67,7 @@ export class ProductGroupsService {
         include: {
           products: {
             select: {
-              priceWithTaxesAndFreight: true,
+              totalCostWithAllFreights: true,
             },
           },
         },
@@ -110,7 +110,7 @@ export class ProductGroupsService {
       include: {
         products: {
           select: {
-            priceWithTaxesAndFreight: true,
+              totalCostWithAllFreights: true,
           },
         },
       },
@@ -152,7 +152,7 @@ export class ProductGroupsService {
         include: {
           products: {
             select: {
-              priceWithTaxesAndFreight: true,
+              totalCostWithAllFreights: true,
             },
           },
         },
@@ -201,7 +201,7 @@ export class ProductGroupsService {
       include: {
         products: {
           select: {
-            priceWithTaxesAndFreight: true,
+            totalCostWithAllFreights: true,
           },
         },
       },
@@ -228,13 +228,13 @@ export class ProductGroupsService {
   private async getGlobalStats() {
     const allProducts = await this.prisma.product.findMany({
       select: {
-        priceWithTaxesAndFreight: true,
+        totalCostWithAllFreights: true,
       },
     });
 
     const totalQuantity = allProducts.length;
     const totalValue = allProducts.reduce(
-      (sum, p) => sum + (p.priceWithTaxesAndFreight?.toNumber() || 0),
+      (sum, p) => sum + (p.totalCostWithAllFreights?.toNumber() || 0),
       0,
     );
 
@@ -256,7 +256,7 @@ export class ProductGroupsService {
   private mapToEntity(group: any): ProductGroupEntity {
     // 1. Calcular o valor total (mesmo que na criação geralmente seja 0, é bom garantir)
     const groupValue = group.products?.reduce(
-      (sum: number, p: any) => sum + (p.priceWithTaxesAndFreight?.toNumber() || 0),
+      (sum: number, p: any) => sum + (p.totalCostWithAllFreights?.toNumber() || 0),
       0,
     ) || 0;
 
@@ -295,7 +295,7 @@ export class ProductGroupsService {
   ): ProductGroupEntity {
     const productsCount = group.products?.length || 0;
     const groupValue = group.products.reduce(
-      (sum, p) => sum + (p.priceWithTaxesAndFreight?.toNumber() || 0),
+      (sum, p) => sum + (p.totalCostWithAllFreights?.toNumber() || 0),
       0,
     );
 

@@ -6,7 +6,8 @@ export class Product {
   creatorId: string;
   fixedCostId: string | null;
   priceWithoutTaxesAndFreight: number;
-  priceWithTaxesAndFreight: number;
+  totalCostWithAllFreights: number;
+  priceWithTaxesAndFreight?: number;
   createdAt: Date;
   updatedAt: Date;
 
@@ -43,22 +44,39 @@ export class Product {
       code: string;
       name: string;
       measurementUnit: string;
-      acquisitionPrice: number;
-      currency: string;
-      priceConvertedBrl?: number;
-      additionalCost?: number;
-      // MUDANÇA AQUI: plural
-      freights?: Array<{
+      locations?: Array<{
         id: string;
-        name: string;
-        unitPrice: number;
+        acquisitionPrice: number;
+        priceConvertedBrl?: number;
         currency: string;
-        freightTaxes?: Array<{
+        additionalCost?: number;
+        location?: {
+          id: string;
+          name?: string | null;
+          stateUf?: string | null;
+          city?: string | null;
+        };
+        freights?: Array<{
+          id: string;
           name: string;
+          unitPrice: number;
+          currency: string;
+          freightTaxes?: Array<{
+            name: string;
+            rate: number;
+          }>;
+        }>;
+        locationTaxes?: Array<{
+          id: string;
           rate: number;
+          recoverable: boolean;
+          tax?: {
+            id: string;
+            name: string;
+            defaultRate: number;
+          };
         }>;
       }>;
-      rawMaterialTaxes?: Array<any>;
     };
   }>;
 

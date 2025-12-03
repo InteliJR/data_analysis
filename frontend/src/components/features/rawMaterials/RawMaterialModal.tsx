@@ -16,12 +16,14 @@ interface RawMaterialModalProps {
   isOpen: boolean;
   onClose: () => void;
   rawMaterial?: RawMaterial | null;
+  onOpenLocationModal?: () => void;
 }
 
 export function RawMaterialModal({
   isOpen,
   onClose,
   rawMaterial,
+  onOpenLocationModal,
 }: RawMaterialModalProps) {
   const createMutation = useCreateRawMaterialMutation();
   const updateMutation = useUpdateRawMaterialMutation();
@@ -93,6 +95,7 @@ export function RawMaterialModal({
           rawMaterial={rawMaterial}
           onSubmit={handleSubmit}
           isLoading={isLoading}
+          onOpenLocationModal={onOpenLocationModal}
         />
 
         {/* Histórico de mudanças (apenas em edição) */}

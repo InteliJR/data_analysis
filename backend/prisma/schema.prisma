@@ -32,6 +32,7 @@ model User {
   createdProducts       Product[]
   revokedTokens         RevokedToken[]
   rawMaterialChangeLogs RawMaterialChangeLog[]
+  locationChangeLogs   LocationChangeLog[]
 
   @@map("users")
 }
@@ -70,7 +71,27 @@ model Location {
   // Relação N:N com matérias-primas
   rawMaterials RawMaterialLocationPivot[]
 
+  changeLogs LocationChangeLog[]
+
   @@map("locations")
+}
+
+model LocationChangeLog {
+  id         String   @id @default(uuid())
+  locationId String
+  field      String
+  oldValue   String?
+  newValue   String?
+  userId     String
+  changedAt  DateTime @default(now())
+
+  location Location @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([locationId])
+  @@index([userId])
+  @@index([changedAt])
+  @@map("location_change_logs")
 }
 
 // ============================================
@@ -184,6 +205,7 @@ model RawMaterialLocationPivot {
   // PREÇOS E CUSTOS (Específicos desta relação)
   acquisitionPrice  Decimal  @db.Decimal(12, 2)
   currency          Currency @default(BRL)
+  priceConvertedBrl Decimal? @db.Decimal(12, 2)
   additionalCost    Decimal  @default(0) @db.Decimal(12, 2)
 
   createdAt      DateTime @default(now())

@@ -15,6 +15,41 @@ import { QueryTaxesDto } from './dto/query-taxes.dto';
 import { ExportTaxesDto } from './dto/export-taxes.dto';
 import { Prisma } from '@prisma/client';
 
+const RAW_MATERIAL_TAX_RELATIONS = {
+  locationTaxes: {
+    include: {
+      rawMaterialLocationPivot: {
+        select: {
+          id: true,
+          rawMaterialId: true,
+          locationId: true,
+          rawMaterial: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+              measurementUnit: true,
+            },
+          },
+          location: {
+            select: {
+              id: true,
+              name: true,
+              stateUf: true,
+              city: true,
+              country: true,
+            },
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.RawMaterialTaxInclude;
+
+type RawMaterialTaxWithLocations = Prisma.RawMaterialTaxGetPayload<{
+  include: typeof RAW_MATERIAL_TAX_RELATIONS;
+}>;
+
 @Injectable()
 export class TaxesService {
   constructor(private readonly prisma: PrismaService) {}
@@ -387,10 +422,11 @@ export class TaxesService {
     ];
     const shouldSortByCount =
       sortBy === 'rawMaterialsCount' || sortBy === 'productsCount';
+    const normalizedSortField = sortBy === 'rate' ? 'defaultRate' : sortBy;
 
     let orderBy: any = {};
     if (validSortFields.includes(sortBy)) {
-      orderBy = { [sortBy]: sortOrder };
+      orderBy = { [normalizedSortField]: sortOrder };
     } else if (!shouldSortByCount) {
       orderBy = { name: 'asc' };
     }
@@ -401,48 +437,13 @@ export class TaxesService {
         skip,
         take: limit,
         orderBy: shouldSortByCount ? undefined : orderBy,
-        include: {
-          _count: {
-            select: {
-              rawMaterials: true,
-            },
-          },
-          rawMaterials: {
-            select: {
-              id: true,
-              name: true,
-              code: true,
-            },
-          },
-        },
+        include: RAW_MATERIAL_TAX_RELATIONS,
       }),
       this.prisma.rawMaterialTax.count({ where }),
     ]);
 
     const dataWithCounts = await Promise.all(
-      data.map(async (tax) => {
-        const productsCount = await this.prisma.product.count({
-          where: {
-            productRawMaterials: {
-              some: {
-                rawMaterial: {
-                  rawMaterialTaxes: {
-                    some: {
-                      id: tax.id,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        });
-
-        return {
-          ...tax,
-          rawMaterialsCount: tax._count.rawMaterials,
-          productsCount,
-        };
-      }),
+      data.map((tax) => this.hydrateRawMaterialTax(tax)),
     );
 
     if (shouldSortByCount) {
@@ -467,48 +468,14 @@ export class TaxesService {
   async findOneRawMaterialTax(id: string) {
     const tax = await this.prisma.rawMaterialTax.findUnique({
       where: { id },
-      include: {
-        rawMaterials: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-            measurementUnit: true,
-          },
-        },
-        _count: {
-          select: {
-            rawMaterials: true,
-          },
-        },
-      },
+      include: RAW_MATERIAL_TAX_RELATIONS,
     });
 
     if (!tax) {
       throw new NotFoundException('Imposto de matéria-prima não encontrado');
     }
 
-    const productsCount = await this.prisma.product.count({
-      where: {
-        productRawMaterials: {
-          some: {
-            rawMaterial: {
-              rawMaterialTaxes: {
-                some: {
-                  id: tax.id,
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    return {
-      ...tax,
-      rawMaterialsCount: tax._count.rawMaterials,
-      productsCount,
-    };
+    return this.hydrateRawMaterialTax(tax);
   }
 
   async createRawMaterialTax(dto: CreateRawMaterialTaxDto) {
@@ -521,85 +488,30 @@ export class TaxesService {
     }
 
     if (dto.rawMaterialIds && dto.rawMaterialIds.length > 0) {
-      const rawMaterials = await this.prisma.rawMaterial.findMany({
-        where: { id: { in: dto.rawMaterialIds } },
-        include: {
-          rawMaterialTaxes: true,
-        },
-      });
-
-      if (rawMaterials.length !== dto.rawMaterialIds.length) {
-        throw new BadRequestException(
-          'Uma ou mais matérias-primas não foram encontradas',
-        );
-      }
-
-      for (const rawMaterial of rawMaterials) {
-        const hasTax = rawMaterial.rawMaterialTaxes.some(
-          (t) => t.name === dto.name,
-        );
-        if (hasTax) {
-          throw new ConflictException(
-            `A matéria-prima "${rawMaterial.name}" já possui um imposto com o nome "${dto.name}"`,
-          );
-        }
-      }
+      throw new BadRequestException(
+        'Associe impostos às matérias-primas diretamente nas localizações da matéria-prima.',
+      );
     }
 
     const tax = await this.prisma.rawMaterialTax.create({
       data: {
         name: dto.name,
-        rate: new Prisma.Decimal(dto.rate),
+        defaultRate: new Prisma.Decimal(dto.rate),
         recoverable: dto.recoverable,
-        rawMaterials:
-          dto.rawMaterialIds && dto.rawMaterialIds.length > 0
-            ? {
-                connect: dto.rawMaterialIds.map((id) => ({ id })),
-              }
-            : undefined,
-      },
-      include: {
-        rawMaterials: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-            measurementUnit: true,
-          },
-        },
-        _count: {
-          select: {
-            rawMaterials: true,
-          },
-        },
       },
     });
 
-    const productsCount = await this.prisma.product.count({
-      where: {
-        productRawMaterials: {
-          some: {
-            rawMaterial: {
-              rawMaterialTaxes: {
-                some: {
-                  id: tax.id,
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    return {
-      ...tax,
-      rawMaterialsCount: tax._count.rawMaterials,
-      productsCount,
-    };
+    return this.findOneRawMaterialTax(tax.id);
   }
 
   async updateRawMaterialTax(id: string, dto: UpdateRawMaterialTaxDto) {
-    const currentTax = await this.findOneRawMaterialTax(id);
+    const currentTax = await this.prisma.rawMaterialTax.findUnique({
+      where: { id },
+    });
+
+    if (!currentTax) {
+      throw new NotFoundException('Imposto de matéria-prima não encontrado');
+    }
 
     if (dto.name && dto.name !== currentTax.name) {
       const existing = await this.prisma.rawMaterialTax.findFirst({
@@ -617,88 +529,22 @@ export class TaxesService {
     const updateData: Prisma.RawMaterialTaxUpdateInput = {};
 
     if (dto.name !== undefined) updateData.name = dto.name;
-    if (dto.rate !== undefined) updateData.rate = new Prisma.Decimal(dto.rate);
+    if (dto.rate !== undefined)
+      updateData.defaultRate = new Prisma.Decimal(dto.rate);
     if (dto.recoverable !== undefined) updateData.recoverable = dto.recoverable;
 
-    // CORREÇÃO: Adiciona as novas matérias-primas SEM remover as existentes
-    if (dto.rawMaterialIds !== undefined && dto.rawMaterialIds.length > 0) {
-      const rawMaterials = await this.prisma.rawMaterial.findMany({
-        where: { id: { in: dto.rawMaterialIds } },
-        include: {
-          rawMaterialTaxes: true,
-        },
-      });
-
-      if (rawMaterials.length !== dto.rawMaterialIds.length) {
-        throw new BadRequestException(
-          'Uma ou mais matérias-primas não foram encontradas',
-        );
-      }
-
-      const taxName = dto.name || currentTax.name;
-      for (const rawMaterial of rawMaterials) {
-        const hasTax = rawMaterial.rawMaterialTaxes.some(
-          (t) => t.name === taxName && t.id !== id,
-        );
-        if (hasTax) {
-          throw new ConflictException(
-            `A matéria-prima "${rawMaterial.name}" já possui um imposto com o nome "${taxName}"`,
-          );
-        }
-      }
-
-      const currentRawMaterialIds =
-        currentTax.rawMaterials?.map((rm) => rm.id) || [];
-      const allRawMaterialIds = [
-        ...new Set([...currentRawMaterialIds, ...dto.rawMaterialIds]),
-      ];
-
-      updateData.rawMaterials = {
-        set: allRawMaterialIds.map((id) => ({ id })),
-      };
+    if (dto.rawMaterialIds && dto.rawMaterialIds.length > 0) {
+      throw new BadRequestException(
+        'Associe impostos às matérias-primas diretamente nas localizações da matéria-prima.',
+      );
     }
 
-    const tax = await this.prisma.rawMaterialTax.update({
+    await this.prisma.rawMaterialTax.update({
       where: { id },
       data: updateData,
-      include: {
-        rawMaterials: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-            measurementUnit: true,
-          },
-        },
-        _count: {
-          select: {
-            rawMaterials: true,
-          },
-        },
-      },
     });
 
-    const productsCount = await this.prisma.product.count({
-      where: {
-        productRawMaterials: {
-          some: {
-            rawMaterial: {
-              rawMaterialTaxes: {
-                some: {
-                  id: tax.id,
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    return {
-      ...tax,
-      rawMaterialsCount: tax._count.rawMaterials,
-      productsCount,
-    };
+    return this.findOneRawMaterialTax(id);
   }
 
   async removeRawMaterialTax(id: string) {
@@ -727,10 +573,11 @@ export class TaxesService {
     ];
     const shouldSortByCount =
       sortBy === 'rawMaterialsCount' || sortBy === 'productsCount';
+    const normalizedSortField = sortBy === 'rate' ? 'defaultRate' : sortBy;
 
     let orderBy: any = {};
     if (validSortFields.includes(sortBy)) {
-      orderBy = { [sortBy]: sortOrder };
+      orderBy = { [normalizedSortField]: sortOrder };
     } else if (!shouldSortByCount) {
       orderBy = { name: 'asc' };
     }
@@ -739,39 +586,11 @@ export class TaxesService {
       where,
       take: limit,
       orderBy: shouldSortByCount ? undefined : orderBy,
-      include: {
-        _count: {
-          select: {
-            rawMaterials: true,
-          },
-        },
-      },
+      include: RAW_MATERIAL_TAX_RELATIONS,
     });
 
     const taxesWithCounts = await Promise.all(
-      taxes.map(async (tax) => {
-        const productsCount = await this.prisma.product.count({
-          where: {
-            productRawMaterials: {
-              some: {
-                rawMaterial: {
-                  rawMaterialTaxes: {
-                    some: {
-                      id: tax.id,
-                    },
-                  },
-                },
-              },
-            },
-          },
-        });
-
-        return {
-          ...tax,
-          rawMaterialsCount: tax._count.rawMaterials,
-          productsCount,
-        };
-      }),
+      taxes.map((tax) => this.hydrateRawMaterialTax(tax)),
     );
 
     if (shouldSortByCount) {
@@ -786,7 +605,7 @@ export class TaxesService {
       'Nome,Taxa (%),Recuperável,Qtd. Matérias-Primas,Qtd. Produtos,Data de Criação';
     const rows = taxesWithCounts.map((tax) => {
       const name = this.escapeCsv(tax.name);
-      const rate = Number(tax.rate).toFixed(2);
+      const rate = Number(tax.rate ?? tax.defaultRate).toFixed(2);
       const recoverable = tax.recoverable ? 'Sim' : 'Não';
       const rawMaterialsCount = tax.rawMaterialsCount;
       const productsCount = tax.productsCount;
@@ -796,6 +615,100 @@ export class TaxesService {
     });
 
     return [header, ...rows].join('\n');
+  }
+
+  private extractRawMaterialsFromLocationTaxes(
+    locationTaxes: RawMaterialTaxWithLocations['locationTaxes'],
+  ) {
+    const map = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        code: string;
+        measurementUnit: string;
+        locations: Array<{
+          pivotId: string;
+          locationId?: string | null;
+          locationName?: string | null;
+          stateUf?: string | null;
+          city?: string | null;
+          country?: string | null;
+          rate: number;
+          recoverable: boolean;
+          rawMaterialLocationTaxId: string;
+          taxId: string;
+        }>;
+      }
+    >();
+
+    for (const locationTax of locationTaxes) {
+      const pivot = locationTax.rawMaterialLocationPivot;
+      const rawMaterial = pivot?.rawMaterial;
+      if (!pivot || !rawMaterial) {
+        continue;
+      }
+
+      if (!map.has(rawMaterial.id)) {
+        map.set(rawMaterial.id, {
+          id: rawMaterial.id,
+          name: rawMaterial.name,
+          code: rawMaterial.code,
+          measurementUnit: rawMaterial.measurementUnit,
+          locations: [],
+        });
+      }
+
+      map.get(rawMaterial.id)?.locations.push({
+        pivotId: pivot.id,
+        locationId: pivot.location?.id,
+        locationName: pivot.location?.name,
+        stateUf: pivot.location?.stateUf,
+        city: pivot.location?.city,
+        country: pivot.location?.country,
+        rate: Number(locationTax.rate),
+        recoverable: locationTax.recoverable,
+        rawMaterialLocationTaxId: locationTax.id,
+        taxId: locationTax.taxId,
+      });
+    }
+
+    return Array.from(map.values());
+  }
+
+  private async hydrateRawMaterialTax(tax: RawMaterialTaxWithLocations) {
+    const rawMaterials = this.extractRawMaterialsFromLocationTaxes(
+      tax.locationTaxes,
+    );
+    const rawMaterialIds = rawMaterials.map((rm) => rm.id);
+    const productsCount = await this.countProductsByRawMaterialIds(
+      rawMaterialIds,
+    );
+
+    return {
+      ...tax,
+      rate: tax.defaultRate,
+      rawMaterials,
+      rawMaterialsCount: rawMaterials.length,
+      locationAssociationsCount: tax.locationTaxes.length,
+      productsCount,
+    };
+  }
+
+  private async countProductsByRawMaterialIds(rawMaterialIds: string[]) {
+    if (!rawMaterialIds.length) {
+      return 0;
+    }
+
+    return this.prisma.product.count({
+      where: {
+        productRawMaterials: {
+          some: {
+            rawMaterialId: { in: rawMaterialIds },
+          },
+        },
+      },
+    });
   }
 
   private escapeCsv(value: string): string {

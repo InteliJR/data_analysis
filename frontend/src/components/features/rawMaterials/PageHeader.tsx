@@ -9,6 +9,7 @@ import { FiPlus, FiDownload, FiSearch } from "react-icons/fi";
 interface PageHeaderProps {
   onNewRawMaterialClick: () => void;
   onExportClick: () => void;
+  onNewLocationClick: () => void;
   onSearchChange: (value: string) => void;
   searchValue: string;
 }
@@ -16,6 +17,7 @@ interface PageHeaderProps {
 export function PageHeader({
   onNewRawMaterialClick,
   onExportClick,
+  onNewLocationClick,
   onSearchChange,
   searchValue,
 }: PageHeaderProps) {
@@ -40,6 +42,14 @@ export function PageHeader({
 
         {/* Botões à direita */}
         <div className="flex gap-3 flex-shrink-0">
+          <SecondaryButton
+            variant="ghost"
+            leftIcon={FiPlus}
+            onClick={onNewLocationClick}
+            className="cursor-pointer"
+          >
+            Nova Localização
+          </SecondaryButton>
           <SecondaryButton
             variant="secondary"
             leftIcon={FiDownload}

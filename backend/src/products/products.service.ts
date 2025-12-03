@@ -6,11 +6,30 @@ import {
   BadRequestException,
   ConflictException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CalculatePriceDto } from './dto/calculate-price.dto';
 import { ExportProductsDto } from './dto/export-products.dto';
+
+const RAW_MATERIAL_WITH_LOCATIONS_INCLUDE = {
+  locations: {
+    include: {
+      location: true,
+      freights: {
+        include: {
+          freightTaxes: true,
+        },
+      },
+      locationTaxes: {
+        include: {
+          tax: true,
+        },
+      },
+    },
+  },
+} satisfies Prisma.RawMaterialInclude;
 
 @Injectable()
 export class ProductsService {
@@ -95,7 +114,7 @@ export class ProductsService {
           // VALORES CALCULADOS - NÃO RECALCULAR
           priceWithoutTaxesAndFreight:
             calculations.calculations.priceWithoutTaxesAndFreight,
-          priceWithTaxesAndFreight:
+          totalCostWithAllFreights:
             calculations.calculations.priceWithTaxesAndFreight,
           productRawMaterials: {
             create: createProductDto.rawMaterials.map((rm) => ({
@@ -123,14 +142,7 @@ export class ProductsService {
           productRawMaterials: {
             include: {
               rawMaterial: {
-                include: {
-                  freights: {
-                    include: {
-                      freightTaxes: true,
-                    },
-                  },
-                  rawMaterialTaxes: true,
-                },
+                include: RAW_MATERIAL_WITH_LOCATIONS_INCLUDE,
               },
             },
           },
@@ -142,8 +154,10 @@ export class ProductsService {
         },
       });
 
+      const normalizedProduct = this.withLegacyPriceField(product);
+
       return {
-        ...product,
+        ...normalizedProduct,
         calculations: calculations.calculations,
         breakdown: calculations.breakdown,
       };
@@ -175,6 +189,10 @@ export class ProductsService {
 
       const rawSortBy = query?.sortBy || 'code';
       const sortOrder = query?.sortOrder || 'asc';
+      const normalizedSortBy =
+        rawSortBy === 'priceWithTaxesAndFreight'
+          ? 'totalCostWithAllFreights'
+          : rawSortBy;
 
       let orderBy: any = {};
 
@@ -185,7 +203,7 @@ export class ProductsService {
       } else if (rawSortBy === 'creator') {
         orderBy = { creator: { name: sortOrder } };
       } else {
-        orderBy = { [rawSortBy]: sortOrder };
+        orderBy = { [normalizedSortBy]: sortOrder };
       }
 
       const where: any = {};
@@ -233,23 +251,7 @@ export class ProductsService {
             productRawMaterials: {
               include: {
                 rawMaterial: {
-                  select: {
-                    id: true,
-                    code: true,
-                    name: true,
-                    measurementUnit: true,
-                    locations: {
-                      select: {
-                        country: true,
-                        stateUf: true,
-                        city: true,
-                        acquisitionPrice: true,
-                        priceConvertedBrl: true,
-                        currency: true,
-                        additionalCost: true,
-                      },
-                    },
-                  },
+                  include: RAW_MATERIAL_WITH_LOCATIONS_INCLUDE,
                 },
               },
             },
@@ -266,8 +268,12 @@ export class ProductsService {
         this.prisma.product.count({ where }),
       ]);
 
+      const normalizedProducts = products.map((product) =>
+        this.withLegacyPriceField(product),
+      );
+
       return {
-        data: products,
+        data: normalizedProducts,
         meta: {
           total,
           page,
@@ -298,14 +304,7 @@ export class ProductsService {
           productRawMaterials: {
             include: {
               rawMaterial: {
-                include: {
-                  freights: {
-                    include: {
-                      freightTaxes: true,
-                    },
-                  },
-                  rawMaterialTaxes: true,
-                },
+                include: RAW_MATERIAL_WITH_LOCATIONS_INCLUDE,
               },
             },
           },
@@ -321,7 +320,7 @@ export class ProductsService {
         throw new NotFoundException('Produto não encontrado');
       }
 
-      return product;
+      return this.withLegacyPriceField(product);
     } catch (error: any) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -435,7 +434,7 @@ export class ProductsService {
         newPrices = {
           priceWithoutTaxesAndFreight:
             calculations.calculations.priceWithoutTaxesAndFreight,
-          priceWithTaxesAndFreight:
+          totalCostWithAllFreights:
             calculations.calculations.priceWithTaxesAndFreight,
         };
       }
@@ -478,14 +477,7 @@ export class ProductsService {
           productRawMaterials: {
             include: {
               rawMaterial: {
-                include: {
-                  freights: {
-                    include: {
-                      freightTaxes: true,
-                    },
-                  },
-                  rawMaterialTaxes: true,
-                },
+                include: RAW_MATERIAL_WITH_LOCATIONS_INCLUDE,
               },
             },
           },
@@ -497,7 +489,7 @@ export class ProductsService {
         },
       });
 
-      return updatedProduct;
+      return this.withLegacyPriceField(updatedProduct);
     } catch (error: any) {
       if (
         error instanceof NotFoundException ||
@@ -552,25 +544,7 @@ export class ProductsService {
         where: {
           id: { in: rawMaterials.map((rm) => rm.rawMaterialId) },
         },
-        include: {
-          rawMaterialTaxes: true,
-          freights: {
-            include: {
-              freightTaxes: true,
-            },
-          },
-          locations: {
-            select: {
-              acquisitionPrice: true,
-              priceConvertedBrl: true,
-              currency: true,
-              additionalCost: true,
-              country: true,
-              stateUf: true,
-              city: true,
-            },
-          },
-        },
+        include: RAW_MATERIAL_WITH_LOCATIONS_INCLUDE,
       });
 
       if (rawMaterialsData.length !== rawMaterials.length) {
@@ -622,9 +596,16 @@ export class ProductsService {
         if (!rmData) continue;
 
         const quantity = rmInput.quantity;
-        const firstLoc = (rmData as any).locations?.[0];
+        const firstLoc = rmData.locations?.[0];
+
+        if (!firstLoc) {
+          throw new BadRequestException(
+            `A matéria-prima "${rmData.name}" não possui localizações configuradas.`,
+          );
+        }
+
         const unitPrice = Number(
-          (firstLoc?.priceConvertedBrl ?? firstLoc?.acquisitionPrice ?? 0),
+          firstLoc.priceConvertedBrl ?? firstLoc.acquisitionPrice ?? 0,
         );
         const subtotal = unitPrice * quantity;
 
@@ -634,16 +615,19 @@ export class ProductsService {
         let taxesTotal = 0; // somente não recuperáveis (MP)
         let creditsTotal = 0; // créditos recuperáveis (MP)
 
-        if (rmData.rawMaterialTaxes) {
-          for (const taxItem of rmData.rawMaterialTaxes) {
-            const taxValue = (subtotal * Number(taxItem.rate)) / 100;
-            if (taxItem.recoverable) {
-              recoverableCredits[taxItem.name] = Number(taxValue.toFixed(2));
-              creditsTotal += taxValue;
-            } else {
-              taxes[taxItem.name] = Number(taxValue.toFixed(2));
-              taxesTotal += taxValue;
-            }
+        for (const taxItem of firstLoc.locationTaxes ?? []) {
+          const taxName = taxItem.tax?.name || 'Imposto';
+          const appliedRate =
+            taxItem.rate !== null && taxItem.rate !== undefined
+              ? Number(taxItem.rate)
+              : Number(taxItem.tax?.defaultRate ?? 0);
+          const taxValue = (subtotal * appliedRate) / 100;
+          if (taxItem.recoverable) {
+            recoverableCredits[taxName] = Number(taxValue.toFixed(2));
+            creditsTotal += taxValue;
+          } else {
+            taxes[taxName] = Number(taxValue.toFixed(2));
+            taxesTotal += taxValue;
           }
         }
 
@@ -652,20 +636,17 @@ export class ProductsService {
         let freightTaxesTotal = 0; // impostos de frete (MP)
         const freightTaxes: Record<string, number> = {};
 
-        if (rmData.freights && rmData.freights.length > 0) {
-          for (const freight of rmData.freights) {
-            const currentFreightCost =
-              Number(freight.unitPrice || 0) * quantity;
-            freightServiceSubtotal += currentFreightCost;
+        for (const freight of firstLoc.freights ?? []) {
+          const currentFreightCost = Number(freight.unitPrice || 0) * quantity;
+          freightServiceSubtotal += currentFreightCost;
 
-            if (freight.freightTaxes) {
-              for (const fTax of freight.freightTaxes) {
-                const taxValue = (currentFreightCost * Number(fTax.rate)) / 100;
-                const key = fTax.name;
-                freightTaxes[key] =
-                  (freightTaxes[key] || 0) + Number(taxValue.toFixed(2));
-                freightTaxesTotal += taxValue;
-              }
+          if (freight.freightTaxes) {
+            for (const fTax of freight.freightTaxes) {
+              const taxValue = (currentFreightCost * Number(fTax.rate)) / 100;
+              const key = fTax.name;
+              freightTaxes[key] =
+                (freightTaxes[key] || 0) + Number(taxValue.toFixed(2));
+              freightTaxesTotal += taxValue;
             }
           }
         }
@@ -784,10 +765,23 @@ export class ProductsService {
     }
   }
 
+  private withLegacyPriceField<T extends { totalCostWithAllFreights?: any }>(
+    product: T,
+  ) {
+    return {
+      ...product,
+      priceWithTaxesAndFreight: product.totalCostWithAllFreights,
+    };
+  }
+
   async exportProducts(exportDto: ExportProductsDto) {
     try {
       const rawSortBy = exportDto.sortBy || 'code';
       const sortOrder = exportDto.sortOrder || 'asc';
+      const normalizedSortBy =
+        rawSortBy === 'priceWithTaxesAndFreight'
+          ? 'totalCostWithAllFreights'
+          : rawSortBy;
 
       let orderBy: any = {};
 
@@ -798,7 +792,7 @@ export class ProductsService {
       } else if (rawSortBy === 'creator') {
         orderBy = { creator: { name: sortOrder } };
       } else {
-        orderBy = { [rawSortBy]: sortOrder };
+        orderBy = { [normalizedSortBy]: sortOrder };
       }
 
       const where: any = {};
@@ -863,6 +857,10 @@ export class ProductsService {
         },
       });
 
+      const normalizedProducts = products.map((product) =>
+        this.withLegacyPriceField(product),
+      );
+
       const headers = [
         'Código',
         'Nome',
@@ -877,7 +875,7 @@ export class ProductsService {
         'Data Criação',
       ];
 
-      const rows = products.map((product) => {
+      const rows = normalizedProducts.map((product) => {
         const rawMaterialsStr = product.productRawMaterials
           .map(
             (prm: any) =>

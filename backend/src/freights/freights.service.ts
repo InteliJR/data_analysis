@@ -188,7 +188,7 @@ export class FreightsService {
             },
             _count: {
               select: {
-                rawMaterials: true,
+                rawMaterialLocations: true,
                 products: true,
               },
             },
@@ -236,11 +236,24 @@ export class FreightsService {
               updatedAt: true,
             },
           },
-          rawMaterials: {
+          rawMaterialLocations: {
             select: {
               id: true,
-              code: true,
-              name: true,
+              rawMaterial: {
+                select: {
+                  id: true,
+                  code: true,
+                  name: true,
+                },
+              },
+              location: {
+                select: {
+                  id: true,
+                  name: true,
+                  stateUf: true,
+                  city: true,
+                },
+              },
             },
           },
           products: {
@@ -252,7 +265,7 @@ export class FreightsService {
           },
           _count: {
             select: {
-              rawMaterials: true,
+              rawMaterialLocations: true,
               products: true,
             },
           },
@@ -419,17 +432,18 @@ export class FreightsService {
       const freight = await this.findOne(id);
 
       // Verifica se há matérias-primas usando este frete (RELAÇÃO N:M)
-      const rawMaterialsCount = await this.prisma.rawMaterial.count({
-        where: {
-          freights: {
-            some: { id: id },
+      const rawMaterialLocationsCount =
+        await this.prisma.rawMaterialLocationPivot.count({
+          where: {
+            freights: {
+              some: { id },
+            },
           },
-        },
-      });
+        });
 
-      if (rawMaterialsCount > 0) {
+      if (rawMaterialLocationsCount > 0) {
         throw new BadRequestException(
-          `Não é possível remover este frete. Existem ${rawMaterialsCount} matéria(s)-prima(s) associada(s).`,
+          `Não é possível remover este frete. Existem ${rawMaterialLocationsCount} associação(ões) de matéria-prima/localização utilizando este frete.`,
         );
       }
 
