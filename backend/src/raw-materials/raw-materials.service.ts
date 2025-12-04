@@ -15,7 +15,7 @@ type PrismaTx = Prisma.TransactionClient;
 type PivotWithRelations = Prisma.RawMaterialLocationPivotGetPayload<{
   include: {
     location: true;
-    freights: true;
+    freights: { include: { freightTaxes: true } };
     locationTaxes: { include: { tax: true } };
   };
 }>;
@@ -24,7 +24,11 @@ const RAW_MATERIAL_DEFAULT_INCLUDE = {
   locations: {
     include: {
       location: true,
-      freights: true,
+      freights: {
+        include: {
+          freightTaxes: true,
+        },
+      },
       locationTaxes: {
         include: {
           tax: true,

@@ -80,14 +80,18 @@ export function FreightsTable({
     }
 
     // Sum tax percentage rates
-    const totalRatePercent = freight.freightTaxes.reduce((sum: number, tax: any) => {
-      const rate = typeof tax.rate === "string" ? parseFloat(tax.rate) : tax.rate;
-      return sum + (rate || 0);
-    }, 0);
+    const totalRatePercent = freight.freightTaxes.reduce(
+      (sum: number, tax: any) => {
+        const rate =
+          typeof tax.rate === "string" ? parseFloat(tax.rate) : tax.rate;
+        return sum + (rate || 0);
+      },
+      0
+    );
 
-    // Final price is base minus tax percentage
-    const final = unitPrice * (1 - totalRatePercent / 100);
-    return final < 0 ? 0 : final;
+    // Final price is base plus tax percentage (non-recoverable impact)
+    const final = unitPrice * (1 + totalRatePercent / 100);
+    return final;
   };
 
   // 📌 Classe utilitária para truncamento
@@ -244,14 +248,16 @@ export function FreightsTable({
                     >
                       {freight.freightTaxes?.length ? (
                         <div className="flex gap-1 flex-nowrap overflow-hidden">
-                          {freight.freightTaxes.map((tax: any, index: number) => (
-                            <span
-                              key={tax.id || index}
-                              className="inline-flex px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 whitespace-nowrap"
-                            >
-                              {tax.name} ({tax.rate}%)
-                            </span>
-                          ))}
+                          {freight.freightTaxes.map(
+                            (tax: any, index: number) => (
+                              <span
+                                key={tax.id || index}
+                                className="inline-flex px-2 py-0.5 rounded text-xs bg-gray-100 text-gray-700 whitespace-nowrap"
+                              >
+                                {tax.name} ({tax.rate}%)
+                              </span>
+                            )
+                          )}
                         </div>
                       ) : (
                         <span className="text-gray-400">-</span>
@@ -275,11 +281,14 @@ export function FreightsTable({
                           variant="caption"
                           className="text-xs text-gray-500"
                         >
-                          (
-                          {(
-                            ((finalPrice - unitPrice) / unitPrice) * 100
-                          ).toFixed(2)}
-                          %)
+                          {(() => {
+                            const percentage = unitPrice
+                              ? ((finalPrice - unitPrice) / unitPrice) * 100
+                              : 0;
+                            const formatted = percentage.toFixed(2);
+                            const sign = percentage > 0 ? "+" : "";
+                            return `(${sign}${formatted}%)`;
+                          })()}
                         </Text>
                       ) : null}
                     </div>

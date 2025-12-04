@@ -6,6 +6,7 @@ import { Text } from "@/components/common/Text";
 import { IconButton } from "@/components/common/IconButton";
 import { FiEdit2, FiTrash2 } from "react-icons/fi";
 import { formatCurrency } from "@/lib/utils";
+import { calculateFreightCostWithTaxes } from "@/lib/costs";
 
 interface LocationColumnMeta {
   id: string;
@@ -42,7 +43,10 @@ export function RawMaterialTableRow({
   };
 
   const locationMetrics = useMemo(() => {
-    const map = new Map<string, { currency: string; base: number; final: number }>();
+    const map = new Map<
+      string,
+      { currency: string; base: number; final: number }
+    >();
 
     rawMaterial.locations?.forEach((pivot) => {
       if (!pivot?.locationId) return;
@@ -51,16 +55,19 @@ export function RawMaterialTableRow({
       const basePrice = acquisition + additional;
 
       const freightTotal = (pivot.freights ?? []).reduce((sum, freight) => {
-        return sum + Number(freight.unitPrice ?? 0);
+        return sum + calculateFreightCostWithTaxes(freight);
       }, 0);
 
-      const recoverableTaxes = (pivot.locationTaxes ?? []).reduce((sum, tax) => {
-        if (!tax.recoverable) return sum;
-        const rate = Number(tax.rate ?? 0) / 100;
-        return sum + basePrice * rate;
-      }, 0);
+      const nonRecoverableTaxes = (pivot.locationTaxes ?? []).reduce(
+        (sum, tax) => {
+          if (tax.recoverable) return sum;
+          const rate = Number(tax.rate ?? 0) / 100;
+          return sum + basePrice * rate;
+        },
+        0
+      );
 
-      const finalPrice = basePrice + freightTotal - recoverableTaxes;
+      const finalPrice = basePrice + freightTotal + nonRecoverableTaxes;
 
       map.set(pivot.locationId, {
         currency: pivot.currency ?? "BRL",
@@ -134,14 +141,20 @@ export function RawMaterialTableRow({
           const metrics = locationMetrics.get(column.id);
 
           return (
-            <td key={`${rawMaterial.id}-${column.id}`} className="px-4 py-3 align-top">
+            <td
+              key={`${rawMaterial.id}-${column.id}`}
+              className="px-4 py-3 align-top"
+            >
               {metrics ? (
                 <div className="space-y-2">
                   <div>
                     <Text variant="small" className="text-gray-500">
                       Base:
                     </Text>
-                    <Text variant="caption" className="font-medium text-gray-900">
+                    <Text
+                      variant="caption"
+                      className="font-medium text-gray-900"
+                    >
                       {formatCurrency(metrics.base, metrics.currency)}
                     </Text>
                   </div>
@@ -149,7 +162,10 @@ export function RawMaterialTableRow({
                     <Text variant="small" className="text-gray-500">
                       Final:
                     </Text>
-                    <Text variant="caption" className="font-semibold text-blue-900">
+                    <Text
+                      variant="caption"
+                      className="font-semibold text-blue-900"
+                    >
                       {formatCurrency(metrics.final, metrics.currency)}
                     </Text>
                   </div>
@@ -161,7 +177,9 @@ export function RawMaterialTableRow({
           );
         })
       ) : (
-        <td className="px-4 py-3 text-gray-400">Nenhuma localidade cadastrada</td>
+        <td className="px-4 py-3 text-gray-400">
+          Nenhuma localidade cadastrada
+        </td>
       )}
 
       {/* Ações */}

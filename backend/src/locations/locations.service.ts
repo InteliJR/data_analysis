@@ -10,12 +10,19 @@ export class LocationsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateLocationDto, userId: string) {
+    const normalizedName = dto.name.trim();
+    const normalizedCountry = (dto.country || 'BR').toUpperCase();
+    const normalizedState = dto.stateUf.toUpperCase();
+    const normalizedCity = dto.city.trim();
+
+    await this.ensureUniqueName(normalizedName);
+
     const location = await this.prisma.location.create({
       data: {
-        name: dto.name.trim(),
-        country: (dto.country || 'BR').toUpperCase(),
-        stateUf: dto.stateUf.toUpperCase(),
-        city: dto.city.trim(),
+        name: normalizedName,
+        country: normalizedCountry,
+        stateUf: normalizedState,
+        city: normalizedCity,
       },
     });
 
@@ -73,18 +80,47 @@ export class LocationsService {
       throw new BadRequestException('Nenhuma alteração informada');
     }
 
+    const data: Prisma.LocationUpdateInput = {};
+
+    if (dto.name) {
+      const normalizedName = dto.name.trim();
+      await this.ensureUniqueName(normalizedName, id);
+      data.name = normalizedName;
+    }
+
+    if (dto.city) {
+      data.city = dto.city.trim();
+    }
+
+    if (dto.stateUf) {
+      data.stateUf = dto.stateUf.toUpperCase();
+    }
+
+    if (dto.country) {
+      data.country = dto.country.toUpperCase();
+    }
+
     const updated = await this.prisma.location.update({
       where: { id },
-      data: {
-        ...(dto.name && { name: dto.name.trim() }),
-        ...(dto.city && { city: dto.city.trim() }),
-        ...(dto.stateUf && { stateUf: dto.stateUf.toUpperCase() }),
-        ...(dto.country && { country: dto.country.toUpperCase() }),
-      },
+      data,
     });
 
     await this.logDifferences(existing, updated, userId);
     return updated;
+  }
+
+  async remove(id: string, _userId: string) {
+    await this.findOne(id);
+
+    try {
+      const deleted = await this.prisma.location.delete({ where: { id } });
+      return deleted;
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+        throw new BadRequestException('Não é possível remover a localização pois ela está associada a uma matéria-prima.');
+      }
+      throw error;
+    }
   }
 
   async getChangeLogs(id: string, page: number = 1, limit: number = 20) {
@@ -143,5 +179,29 @@ export class LocationsService {
         userId,
       },
     });
+  }
+
+  private async ensureUniqueName(name: string, excludeId?: string) {
+    if (!name) {
+      return;
+    }
+
+    const conditions: Prisma.LocationWhereInput[] = [
+      { name: { equals: name, mode: 'insensitive' } },
+    ];
+
+    if (excludeId) {
+      conditions.push({ id: { not: excludeId } });
+    }
+
+    const existing = await this.prisma.location.findFirst({
+      where: {
+        AND: conditions,
+      },
+    });
+
+    if (existing) {
+      throw new BadRequestException('Já existe uma localização com esse nome');
+    }
   }
 }
