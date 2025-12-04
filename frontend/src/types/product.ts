@@ -1,5 +1,7 @@
 // src/types/products.ts
 
+import type { RawMaterialLocation } from "./RawMaterials";
+
 export interface ProductGroup {
   id: string;
   name: string;
@@ -11,6 +13,7 @@ export interface FixedCost {
   id: string;
   description: string;
   code?: string;
+  totalCost?: number;
 }
 
 export interface FreightTax {
@@ -46,13 +49,16 @@ export interface RawMaterial {
   priceConvertedBrl: number;
   freights?: Freight[];
   rawMaterialTaxes?: RawMaterialTax[];
+  locations?: RawMaterialLocation[];
 }
 
 export interface ProductRawMaterial {
   productId: string;
   rawMaterialId: string;
+  rawMaterialLocationPivotId: string;
   quantity: number;
   rawMaterial?: RawMaterial;
+  locationPivot?: RawMaterialLocation;
 }
 
 export interface User {
@@ -71,6 +77,7 @@ export interface Product {
   productGroupId?: string;
   priceWithoutTaxesAndFreight?: number;
   priceWithTaxesAndFreight?: number;
+  totalCostWithAllFreights?: number;
   createdAt: string;
   updatedAt: string;
 
@@ -91,6 +98,7 @@ export interface CreateProductDTO {
   freightIds?: string[];
   rawMaterials: Array<{
     rawMaterialId: string;
+    rawMaterialLocationPivotId: string;
     quantity: number;
   }>;
 }

@@ -1,6 +1,6 @@
 // src/components/features/products/ProductForm.tsx
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import type { Product } from "@/types/products";
 
@@ -19,6 +19,7 @@ import { useRawMaterialsQuery } from "@/api/rawMaterials";
 import { useFixedCostsQuery, useFixedCostByIdQuery } from "@/api/fixedCosts";
 import { useProductGroupsQuery } from "@/api/productgroups";
 import { useFreightsQuery } from "@/api/freights";
+import { toast } from "react-hot-toast";
 
 interface ProductFormProps {
   product?: Product | null;
@@ -82,6 +83,7 @@ export function ProductForm({
           freightIds: product.freights?.map((f) => f.id) || [],
           rawMaterials: product.productRawMaterials.map((rm) => ({
             rawMaterialId: rm.rawMaterialId,
+            rawMaterialLocationPivotId: rm.rawMaterialLocationPivotId,
             quantity: rm.quantity,
           })),
         }
@@ -134,6 +136,14 @@ export function ProductForm({
   const selectedProductGroupId = watch("productGroupId");
   const selectedFreightIds = watch("freightIds") || [];
 
+  const usedPivotIds = useMemo(() => {
+    return new Set(
+      (rawMaterials || [])
+        .map((rm: any) => rm.rawMaterialLocationPivotId)
+        .filter(Boolean)
+    );
+  }, [rawMaterials]);
+
   // --- CORREÇÃO PRINCIPAL AQUI ---
   // Buscamos o custo fixo específico selecionado para garantir o cálculo correto
   // mesmo que ele não esteja na primeira página da lista do Select.
@@ -141,53 +151,78 @@ export function ProductForm({
     selectedFixedCostId || null
   );
 
+  const getRawMaterialRecord = (rawMaterialId: string) => {
+    const fromApi = rawMaterialsData?.data?.find((r) => r.id === rawMaterialId);
+    if (fromApi) return fromApi;
+
+    return product?.productRawMaterials?.find(
+      (rm) => rm.rawMaterialId === rawMaterialId
+    )?.rawMaterial;
+  };
+
+  const getPivotOptions = (rawMaterialId: string) => {
+    const fromApi = rawMaterialsData?.data?.find((r) => r.id === rawMaterialId);
+    if (fromApi?.locations?.length) {
+      return fromApi.locations;
+    }
+
+    const fallbackOptions = product?.productRawMaterials
+      ?.filter((rm) => rm.rawMaterialId === rawMaterialId)
+      ?.map((rm) => rm.locationPivot)
+      .filter(Boolean) as any[] | undefined;
+
+    return fallbackOptions && fallbackOptions.length > 0
+      ? (fallbackOptions as any[])
+      : undefined;
+  };
+
+  const resolvePivot = (rawMaterialId: string, pivotId?: string) => {
+    const options = getPivotOptions(rawMaterialId) || [];
+    if (pivotId) {
+      const match = options.find((loc: any) => loc.id === pivotId);
+      if (match) return match;
+    }
+
+    if (pivotId) {
+      const fallback = product?.productRawMaterials?.find(
+        (rm) =>
+          rm.rawMaterialId === rawMaterialId &&
+          rm.rawMaterialLocationPivotId === pivotId
+      );
+      if (fallback?.locationPivot) {
+        return fallback.locationPivot as any;
+      }
+    }
+
+    return options[0];
+  };
+
   // --- CÁLCULO CONSOLIDADO ---
   const calculatePrices = () => {
-    let totalRawMaterials = 0;
-    // Separar impostos para evitar dupla contagem e permitir subtração de recuperáveis
-    let nonRecoverableMpTaxes = 0; // impostos não recuperáveis das 
-    let recoverableCreditsTotal = 0; // impostos recuperáveis das  (créditos)
-    let freightTaxesTotal = 0; // impostos dos fretes (MP + produto)
-    let totalRawMaterialFreightService = 0; // serviço de frete das MPs (sem impostos)
+    let baseSubtotal = 0;
+    let nonRecoverableMpTaxes = 0;
+    let recoverableCreditsTotal = 0;
+    let mpFreightServiceTotal = 0;
+    let mpFreightTaxesTotal = 0;
 
-    // 1. Calcular custos das 
-    rawMaterials.forEach((rm: any, idx: number) => {
-      let rawMat = rawMaterialsData?.data?.find(
-        (r) => r.id === rm.rawMaterialId
+    rawMaterials.forEach((rm: any) => {
+      const pivot = resolvePivot(
+        rm.rawMaterialId,
+        rm.rawMaterialLocationPivotId
       );
+      if (!pivot) return;
 
-      if (!rawMat && product) {
-        const originalRm = product.productRawMaterials?.find(
-          (prm) => prm.rawMaterialId === rm.rawMaterialId
-        );
-        if (originalRm) {
-          rawMat = originalRm.rawMaterial;
-        }
-      }
+      const quantity = toNumber(rm.quantity);
+      const brl = toNumber(pivot.priceConvertedBrl);
+      const acquisition = toNumber(pivot.acquisitionPrice);
+      const baseUnit = brl > 0 ? brl : acquisition;
+      const additionalUnit = toNumber(pivot.additionalCost ?? 0);
+      const subtotal = (baseUnit + additionalUnit) * quantity;
+      baseSubtotal += subtotal;
 
-      if (!rawMat) return;
-
-      const quantity = Number(rm.quantity) || 0;
-      // Seleciona localidade da matéria-prima conforme filtros
-      const selectedLocId = rawMaterials[idx]?.selectedLocationId;
-      const matchedLoc = (rawMat.locations || []).find((loc: any) => loc.id === selectedLocId) || rawMat.locations?.[0];
-
-      const brl = toNumber(matchedLoc?.priceConvertedBrl);
-      const acq = toNumber(matchedLoc?.acquisitionPrice);
-      const unitBasePrice = brl > 0 ? brl : acq;
-      const additionalCost = toNumber(matchedLoc?.additionalCost ?? 0);
-      const unitPrice = unitBasePrice + additionalCost;
-      const materialCost = unitPrice * quantity;
-
-      totalRawMaterials += materialCost;
-
-      // Impostos da matéria-prima
-      const taxes = (matchedLoc?.locationTaxes || []).map((t: any) => ({
-        rate: toNumber(t.rate),
-        recoverable: t.recoverable,
-      }));
-      taxes.forEach((tax: any) => {
-        const taxValue = (materialCost * Number(tax.rate)) / 100;
+      (pivot.locationTaxes || []).forEach((tax: any) => {
+        const rate = toNumber(tax.rate ?? tax.tax?.defaultRate ?? 0);
+        const taxValue = (subtotal * rate) / 100;
         if (tax.recoverable) {
           recoverableCreditsTotal += taxValue;
         } else {
@@ -195,62 +230,53 @@ export function ProductForm({
         }
       });
 
-      // Fretes da matéria-prima
-      const freights = matchedLoc?.freights || [];
-      freights.forEach((freight: any) => {
-        const freightCost = toNumber(freight.unitPrice);
-        const freightServiceCost = freightCost * quantity;
-        totalRawMaterialFreightService += freightServiceCost;
-
-        // IMPOSTOS DO FRETE DA MATÉRIA-PRIMA
-        const freightTaxes = freight.freightTaxes || [];
-        freightTaxes.forEach((fTax: any) => {
-          const taxValue = (freightServiceCost * toNumber(fTax.rate)) / 100;
-          freightTaxesTotal += taxValue;
+      (pivot.freights || []).forEach((freight: any) => {
+        const serviceCost = toNumber(freight.unitPrice) * quantity;
+        mpFreightServiceTotal += serviceCost;
+        (freight.freightTaxes || []).forEach((fTax: any) => {
+          const taxValue = (serviceCost * toNumber(fTax.rate)) / 100;
+          mpFreightTaxesTotal += taxValue;
         });
       });
     });
 
-    // 2. Fretes do produto
     let productFreightServiceCost = 0;
-    let productFreightTaxesTotal = 0; // impostos dos fretes do produto
+    let productFreightTaxes = 0;
 
     selectedFreightIds.forEach((freightId: string) => {
-      let freight = freightsData?.data?.find((f) => f.id === freightId);
+      const freight =
+        freightsData?.data?.find((f) => f.id === freightId) ||
+        product?.freights?.find((f) => f.id === freightId);
 
-      if (!freight && product) {
-        freight = product.freights?.find((f) => f.id === freightId);
-      }
+      if (!freight) return;
 
-      if (freight) {
-        const freightCost = toNumber(freight.unitPrice);
-        productFreightServiceCost += freightCost;
-
-        // CRÍTICO: IMPOSTOS DO FRETE DO PRODUTO
-        const freightTaxes = freight.freightTaxes || [];
-        freightTaxes.forEach((fTax: any) => {
-          const taxValue = (freightCost * toNumber(fTax.rate)) / 100;
-          freightTaxesTotal += taxValue;
-          productFreightTaxesTotal += taxValue; // Para debug
-        });
-      }
+      const serviceCost = toNumber(freight.unitPrice);
+      productFreightServiceCost += serviceCost;
+      (freight.freightTaxes || []).forEach((fTax: any) => {
+        const taxValue = (serviceCost * toNumber(fTax.rate)) / 100;
+        productFreightTaxes += taxValue;
+      });
     });
 
-    const totalFreightService =
-      totalRawMaterialFreightService + productFreightServiceCost;
+    const productsFinalCost =
+      baseSubtotal +
+      nonRecoverableMpTaxes +
+      mpFreightServiceTotal +
+      mpFreightTaxesTotal;
 
-    // 3. Cálculos finais
-    const priceBase = totalRawMaterials;
-    // Alinhar com backend: Base + impostos não recuperáveis (MP) + frete (serviço + impostos) - créditos recuperáveis
-    // NOVA REGRA: NÃO somar impostos não recuperáveis de MP ao preço final
-    // Fórmula: Base + Frete (serviço + impostos) - Créditos Recuperáveis
+    const structureFreightTotal =
+      productFreightServiceCost + productFreightTaxes;
+
+    const fixedCostTotal = toNumber(selectedFixedCostData?.totalCost ?? 0);
+
     const priceWithTaxesAndFreight =
-      priceBase + totalFreightService + freightTaxesTotal - recoverableCreditsTotal;
+      productsFinalCost + structureFreightTotal + fixedCostTotal;
 
-    // Overhead do grupo (se selecionado)
     let groupOverhead = 0;
     if (selectedProductGroupId) {
-      const pg = productGroupsData?.data?.find((p: any) => p.id === selectedProductGroupId);
+      const pg = productGroupsData?.data?.find(
+        (p: any) => p.id === selectedProductGroupId
+      );
       if (pg?.overheadPerUnit) {
         groupOverhead = Number(pg.overheadPerUnit) || 0;
       }
@@ -258,20 +284,19 @@ export function ProductForm({
       groupOverhead = Number(product.productGroup.overheadPerUnit) || 0;
     }
 
-    // 4. Custo fixo (overhead agora é por Grupo; não somar aqui)
-    const fixedCostOverhead = 0; // Mantido 0; overhead agora vem do grupo
-
-    // 5. Preço final
     const finalPrice = priceWithTaxesAndFreight + groupOverhead;
 
     return {
-      priceBase,
+      baseSubtotal,
       nonRecoverableMpTaxes,
       recoverableCreditsTotal,
-      totalFreight: totalFreightService + freightTaxesTotal,
-      groupOverhead,
+      mpFreightServiceTotal,
+      mpFreightTaxesTotal,
+      productsFinalCost,
+      structureFreightTotal,
+      fixedCostTotal,
       priceWithTaxesAndFreight,
-      fixedCostOverhead,
+      groupOverhead,
       finalPrice,
     };
   };
@@ -279,12 +304,28 @@ export function ProductForm({
   const prices = calculatePrices();
 
   const addRawMaterial = (rawMaterialId: string) => {
-    const exists = rawMaterials.some(
-      (rm: any) => rm.rawMaterialId === rawMaterialId
-    );
-    if (!exists) {
-      append({ rawMaterialId, quantity: 1 });
+    const options = getPivotOptions(rawMaterialId) || [];
+    if (!options.length) {
+      toast.error("Esta matéria-prima não possui localizações cadastradas.");
+      return;
     }
+
+    const availableLocation = options.find(
+      (loc: any) => !usedPivotIds.has(loc.id)
+    );
+
+    if (!availableLocation) {
+      toast.error(
+        "Todas as localizações desta matéria-prima já foram utilizadas na estrutura."
+      );
+      return;
+    }
+
+    append({
+      rawMaterialId,
+      rawMaterialLocationPivotId: availableLocation.id,
+      quantity: 1,
+    });
     setRawMaterialSearch("");
   };
 
@@ -320,6 +361,21 @@ export function ProductForm({
       productGroupId: data.productGroupId || undefined,
       freightIds: data.freightIds || [],
     };
+
+    const pivotSet = new Set<string>();
+    for (const item of cleanedData.rawMaterials) {
+      if (!item.rawMaterialLocationPivotId) {
+        toast.error("Selecione a localização de cada matéria-prima.");
+        return;
+      }
+      if (pivotSet.has(item.rawMaterialLocationPivotId)) {
+        toast.error(
+          "A mesma combinação de produto e localização foi informada mais de uma vez."
+        );
+        return;
+      }
+      pivotSet.add(item.rawMaterialLocationPivotId);
+    }
     onSubmit(cleanedData);
   };
 
@@ -493,7 +549,7 @@ export function ProductForm({
                     key={selectedFixedCostData.id}
                     value={selectedFixedCostData.id}
                   >
-                    {selectedFixedCostData.description} - {" "}
+                    {selectedFixedCostData.description} -{" "}
                     {selectedFixedCostData.code || "S/C"}
                   </option>
                 )}
@@ -505,7 +561,9 @@ export function ProductForm({
       {/* SEÇÃO 2: PRODUTOS */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-700">Produtos <span className="text-red-500">*</span></h3>
+          <h3 className="text-sm font-semibold text-gray-700">
+            Produtos <span className="text-red-500">*</span>
+          </h3>
           <Text className="text-xs text-gray-500">Mínimo: 1 item</Text>
         </div>
 
@@ -513,14 +571,23 @@ export function ProductForm({
           <Autocomplete
             options={
               rawMaterialsData?.data
-                ?.filter(
-                  (rm) =>
-                    !rawMaterials.some((r: any) => r.rawMaterialId === rm.id)
+                ?.filter((rm) =>
+                  (rm.locations || []).some(
+                    (loc: any) => !usedPivotIds.has(loc.id)
+                  )
                 )
                 .map((rm) => ({
                   value: rm.id,
                   label: `${rm.code} - ${rm.name}`,
-                  description: `${formatCurrency((toNumber(rm.locations?.[0]?.priceConvertedBrl ?? rm.locations?.[0]?.acquisitionPrice ?? 0)) + (toNumber(rm.locations?.[0]?.additionalCost ?? 0)))} - ${rm.measurementUnit} • ${rm.locations?.[0]?.city || '-'} / ${rm.locations?.[0]?.stateUf || '-'}`,
+                  description: `${formatCurrency(
+                    toNumber(
+                      rm.locations?.[0]?.priceConvertedBrl ??
+                        rm.locations?.[0]?.acquisitionPrice ??
+                        0
+                    ) + toNumber(rm.locations?.[0]?.additionalCost ?? 0)
+                  )} - ${rm.measurementUnit} • ${
+                    rm.locations?.[0]?.city || "-"
+                  } / ${rm.locations?.[0]?.stateUf || "-"}`,
                 })) || []
             }
             value=""
@@ -535,17 +602,29 @@ export function ProductForm({
 
         {fields.length === 0 ? (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-            <Text className="text-gray-500 text-sm">Nenhum produto adicionado. Busque e adicione pelo menos um.</Text>
+            <Text className="text-gray-500 text-sm">
+              Nenhum produto adicionado. Busque e adicione pelo menos um.
+            </Text>
           </div>
         ) : (
           <div className="space-y-3">
             {fields.map((field, index) => {
-              const rawMat = rawMaterialsData?.data?.find(
-                (r) => r.id === rawMaterials[index]?.rawMaterialId
+              const rawMaterialId = rawMaterials[index]?.rawMaterialId;
+              const rawMat = rawMaterialId
+                ? getRawMaterialRecord(rawMaterialId)
+                : undefined;
+              const selectedPivotId =
+                rawMaterials[index]?.rawMaterialLocationPivotId;
+              const matchedPivot = rawMaterialId
+                ? resolvePivot(rawMaterialId, selectedPivotId)
+                : undefined;
+              const pivotOptions = rawMaterialId
+                ? getPivotOptions(rawMaterialId) || []
+                : [];
+              const totalFreightUnit = (matchedPivot?.freights || []).reduce(
+                (acc: number, f: any) => acc + toNumber(f.unitPrice),
+                0
               );
-              const selectedLocId = (rawMaterials[index] as any)?.selectedLocationId;
-              const matchedLoc = (rawMat?.locations || []).find((l: any) => l.id === selectedLocId) || rawMat?.locations?.[0];
-              const totalFreightUnit = (matchedLoc?.freights || []).reduce((acc: number, f: any) => acc + toNumber(f.unitPrice), 0);
 
               return (
                 <div
@@ -565,27 +644,58 @@ export function ProductForm({
                     </div>
 
                     {/* Localidade por produto */}
-                    {rawMat?.locations?.length ? (
+                    {pivotOptions.length > 0 ? (
                       <div className="mb-2">
-                        <Label>Localidade</Label>
+                        <Label>Localização</Label>
                         <Select
-                          value={selectedLocId || matchedLoc?.id || ""}
-                          onChange={(e) => setValue(`rawMaterials.${index}.selectedLocationId`, e.target.value)}
+                          value={selectedPivotId || matchedPivot?.id || ""}
+                          onChange={(e) =>
+                            setValue(
+                              `rawMaterials.${index}.rawMaterialLocationPivotId`,
+                              e.target.value
+                            )
+                          }
                         >
-                          {rawMat.locations.map((loc: any) => (
+                          {pivotOptions.map((loc: any) => (
                             <option key={loc.id} value={loc.id}>
-                              {loc.city}/{loc.stateUf} • {formatCurrency(((toNumber(loc.priceConvertedBrl) > 0 ? toNumber(loc.priceConvertedBrl) : toNumber(loc.acquisitionPrice))) + (toNumber(loc.additionalCost ?? 0)))}
+                              {loc.location?.city || "-"}/
+                              {loc.location?.stateUf || "-"} •{" "}
+                              {formatCurrency(
+                                (toNumber(loc.priceConvertedBrl) > 0
+                                  ? toNumber(loc.priceConvertedBrl)
+                                  : toNumber(loc.acquisitionPrice)) +
+                                  toNumber(loc.additionalCost ?? 0)
+                              )}
                             </option>
                           ))}
                         </Select>
                       </div>
-                    ) : null}
+                    ) : (
+                      <div className="text-xs text-red-600 mb-2">
+                        Nenhuma localização disponível para esta matéria-prima.
+                      </div>
+                    )}
 
                     <div className="text-xs text-gray-500 space-y-1">
+                      {matchedPivot?.location && (
+                        <div>
+                          Local:{" "}
+                          <span className="font-medium">
+                            {matchedPivot.location.name || ""} •{" "}
+                            {matchedPivot.location.city}/
+                            {matchedPivot.location.stateUf}
+                          </span>
+                        </div>
+                      )}
                       <div>
-                        Preço unitário: {" "}
+                        Preço unitário:{" "}
                         <span className="font-medium">
-                          {formatCurrency(((toNumber(matchedLoc?.priceConvertedBrl) > 0 ? toNumber(matchedLoc?.priceConvertedBrl) : toNumber(matchedLoc?.acquisitionPrice)) + (toNumber(matchedLoc?.additionalCost ?? 0))))}
+                          {formatCurrency(
+                            (toNumber(matchedPivot?.priceConvertedBrl) > 0
+                              ? toNumber(matchedPivot?.priceConvertedBrl)
+                              : toNumber(matchedPivot?.acquisitionPrice)) +
+                              toNumber(matchedPivot?.additionalCost ?? 0)
+                          )}
                         </span>
                       </div>
                       <div>
@@ -594,21 +704,24 @@ export function ProductForm({
                           {rawMat?.measurementUnit || "-"}
                         </span>
                       </div>
-                      {Array.isArray(matchedLoc?.locationTaxes) && matchedLoc.locationTaxes.length > 0 && (
-                        <div>
-                          Impostos (Localidade): {" "}
-                          <span className="font-medium">
-                            {matchedLoc.locationTaxes
-                              .map((t: any) => {
-                                const nm = t?.tax?.name || "Imposto";
-                                const rate = toNumber(t?.rate);
-                                const rec = t?.recoverable ? "recuperável" : "não recuperável";
-                                return `${nm} ${rate}% (${rec})`;
-                              })
-                              .join(", ")}
-                          </span>
-                        </div>
-                      )}
+                      {Array.isArray(matchedPivot?.locationTaxes) &&
+                        matchedPivot.locationTaxes.length > 0 && (
+                          <div>
+                            Impostos (Localidade):{" "}
+                            <span className="font-medium">
+                              {matchedPivot.locationTaxes
+                                .map((t: any) => {
+                                  const nm = t?.tax?.name || "Imposto";
+                                  const rate = toNumber(t?.rate);
+                                  const rec = t?.recoverable
+                                    ? "recuperável"
+                                    : "não recuperável";
+                                  return `${nm} ${rate}% (${rec})`;
+                                })
+                                .join(", ")}
+                            </span>
+                          </div>
+                        )}
                       {totalFreightUnit > 0 && (
                         <div>
                           Frete (Total):{" "}
@@ -645,7 +758,13 @@ export function ProductForm({
                       Subtotal:
                     </Text>
                     <Text className="font-semibold text-gray-900">
-                      {formatCurrency((((toNumber(matchedLoc?.priceConvertedBrl) > 0 ? toNumber(matchedLoc?.priceConvertedBrl) : toNumber(matchedLoc?.acquisitionPrice)) + (toNumber(matchedLoc?.additionalCost ?? 0)))) * (toNumber(rawMaterials[index]?.quantity)))}
+                      {formatCurrency(
+                        ((toNumber(matchedPivot?.priceConvertedBrl) > 0
+                          ? toNumber(matchedPivot?.priceConvertedBrl)
+                          : toNumber(matchedPivot?.acquisitionPrice)) +
+                          toNumber(matchedPivot?.additionalCost ?? 0)) *
+                          toNumber(rawMaterials[index]?.quantity)
+                      )}
                     </Text>
                   </div>
 
@@ -664,7 +783,9 @@ export function ProductForm({
         )}
 
         {fields.length === 0 && (
-          <Text className="text-xs text-red-600 mt-2">Adicione pelo menos um produto para criar a estrutura.</Text>
+          <Text className="text-xs text-red-600 mt-2">
+            Adicione pelo menos um produto para criar a estrutura.
+          </Text>
         )}
       </div>
 
@@ -742,43 +863,52 @@ export function ProductForm({
 
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <Text className="text-gray-700">Custo de :</Text>
+            <Text className="text-gray-700">Custo base (produtos):</Text>
             <Text className="font-semibold text-gray-900">
-              {formatCurrency(prices.priceBase)}
+              {formatCurrency(prices.baseSubtotal)}
             </Text>
           </div>
 
           <div className="flex justify-between">
-            <Text className="text-gray-700">Impostos Não Recuperáveis (MP):</Text>
+            <Text className="text-gray-700">
+              Impostos Não Recuperáveis (MP):
+            </Text>
             <Text className="font-semibold text-gray-900">
               {formatCurrency(prices.nonRecoverableMpTaxes)}
             </Text>
           </div>
 
           <div className="flex justify-between">
-            <Text className="text-gray-700">Fretes (Total):</Text>
+            <Text className="text-gray-700">Fretes das matérias-primas:</Text>
             <Text className="font-semibold text-gray-900">
-              {formatCurrency(prices.totalFreight)}
+              {formatCurrency(
+                prices.mpFreightServiceTotal + prices.mpFreightTaxesTotal
+              )}
+            </Text>
+          </div>
+
+          <div className="flex justify-between">
+            <Text className="text-gray-700">Fretes da estrutura:</Text>
+            <Text className="font-semibold text-gray-900">
+              {formatCurrency(prices.structureFreightTotal)}
+            </Text>
+          </div>
+
+          <div className="flex justify-between">
+            <Text className="text-gray-700">Custo Fixo:</Text>
+            <Text className="font-semibold text-gray-900">
+              {formatCurrency(prices.fixedCostTotal)}
             </Text>
           </div>
 
           <div className="flex justify-between pt-2 border-t border-blue-300">
             <Text className="text-gray-700 font-medium">
-              Preço sem Custo Fixo:
+              Preço total sem overhead:
             </Text>
             <Text className="font-semibold text-blue-700">
               {formatCurrency(prices.priceWithTaxesAndFreight)}
             </Text>
           </div>
-
-          {prices.fixedCostOverhead > 0 && (
-            <div className="flex justify-between">
-              <Text className="text-gray-700">Custo Fixo (Overhead):</Text>
-              <Text className="font-semibold text-gray-900">
-                {formatCurrency(prices.fixedCostOverhead)}
-              </Text>
-            </div>
-          )}
 
           <div className="flex justify-between">
             <Text className="text-gray-700">Impostos Recuperáveis (MP):</Text>
@@ -817,11 +947,22 @@ export function ProductForm({
         <div className="bg-white rounded p-3 mt-3 text-xs text-gray-600">
           <p className="font-medium mb-1">ℹ️ Como o preço é calculado:</p>
           <ul className="list-disc list-inside space-y-1 text-gray-600">
-            <li>Preço Base: soma (Produto × quantidade)</li>
-            <li>Fretes: soma fretes das produto + fretes da estrutura (+ impostos de frete)</li>
-            <li>Impostos Recuperáveis: subtraídos do preço final</li>
-            <li>Impostos Não Recuperáveis (MP): exibidos, porém não adicionados</li>
-            <li><strong>Preço Final: Base + Frete (serviço + impostos) − Impostos Recuperáveis + Overhead do Grupo</strong></li>
+            <li>
+              Custo base = (Preço por localização + custo adicional) ×
+              quantidade
+            </li>
+            <li>
+              Custo final do produto = Custo base + impostos não recuperáveis
+              (MP) + fretes da matéria-prima (serviço + impostos)
+            </li>
+            <li>
+              Estrutura = Σ(Produtos) + fretes da estrutura (serviço + impostos)
+              + custo fixo
+            </li>
+            <li>Créditos recuperáveis são apenas informados (não somados)</li>
+            <li>
+              <strong>Preço Final = Estrutura + Overhead do Grupo</strong>
+            </li>
           </ul>
         </div>
       </div>

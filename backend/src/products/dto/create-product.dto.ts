@@ -17,6 +17,12 @@ export class RawMaterialItemDto {
   @IsNotEmpty({ message: 'ID da matéria-prima é obrigatório' })
   rawMaterialId: string;
 
+  @IsUUID('4', {
+    message: 'ID da localização da matéria-prima deve ser um UUID válido',
+  })
+  @IsNotEmpty({ message: 'A localização da matéria-prima é obrigatória' })
+  rawMaterialLocationPivotId: string;
+
   @IsNumber({}, { message: 'Quantidade deve ser um número' })
   @Min(0.001, { message: 'Quantidade deve ser maior que 0' })
   @Type(() => Number)

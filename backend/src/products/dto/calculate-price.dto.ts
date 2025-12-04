@@ -13,6 +13,11 @@ class RawMaterialCalculationDto {
   @IsUUID('4', { message: 'ID da matéria-prima deve ser um UUID válido' })
   rawMaterialId: string;
 
+  @IsUUID('4', {
+    message: 'ID da localização da matéria-prima deve ser um UUID válido',
+  })
+  rawMaterialLocationPivotId: string;
+
   @IsNumber({}, { message: 'Quantidade deve ser um número' })
   @Min(0.001, { message: 'Quantidade deve ser maior que 0' })
   @Type(() => Number)

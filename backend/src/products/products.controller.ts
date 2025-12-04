@@ -53,6 +53,8 @@ export class ProductsController {
     @Query('productGroupId') productGroupId?: string,
     @Query('sortBy', new DefaultValuePipe('code')) sortBy?: string,
     @Query('sortOrder', new DefaultValuePipe('asc')) sortOrder?: 'asc' | 'desc',
+    @Query('stateUf') stateUf?: string,
+    @Query('city') city?: string,
   ) {
     return this.productsService.findAll({
       page,
@@ -61,6 +63,8 @@ export class ProductsController {
       productGroupId,
       sortBy,
       sortOrder,
+      stateUf,
+      city,
     });
   }
 

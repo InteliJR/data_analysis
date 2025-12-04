@@ -1,7 +1,6 @@
 // src/components/features/products/ProductsTable.tsx
 
 import type { Product } from "@/types/products";
-import { useState, useMemo } from "react";
 import { Text } from "@/components/common/Text";
 import { IconButton } from "@/components/common/IconButton";
 import { FiEdit2, FiTrash2, FiChevronUp } from "react-icons/fi";
@@ -24,137 +23,6 @@ export function ProductsTable({
   sortBy,
   sortOrder,
 }: ProductsTableProps) {
-  // Converte strings como "1.234,56" para número 1234.56
-  const toNumber = (val: any): number => {
-    if (val === null || val === undefined) return 0;
-    if (typeof val === "number") return isFinite(val) ? val : 0;
-    if (typeof val === "string") {
-      const s = val.trim();
-      if (s === "") return 0;
-      if (s.includes(".") && s.includes(",")) {
-        const cleaned = s.replace(/\./g, "").replace(/,/g, ".");
-        const n = Number(cleaned);
-        return isNaN(n) ? 0 : n;
-      }
-      if (s.includes(",")) {
-        const cleaned = s.replace(/,/g, ".");
-        const n = Number(cleaned);
-        return isNaN(n) ? 0 : n;
-      }
-      const n = Number(s);
-      return isNaN(n) ? 0 : n;
-    }
-    const n = Number(val);
-    return isNaN(n) ? 0 : n;
-  };
-  // Guarda a cidade selecionada por estrutura (linha)
-  const [selectedCityById, setSelectedCityById] = useState<Record<string, string | "">>({});
-
-  const makeCityLabel = (city?: string, uf?: string) =>
-    city && uf ? `${city} - ${uf}` : city || "";
-
-  const getUniqueCityOptions = (product: Product): string[] => {
-    const set = new Set<string>();
-    product.productRawMaterials?.forEach((rm) => {
-      const locations = (rm.rawMaterial as any)?.locations || [];
-      locations.forEach((loc: any) => {
-        const label = makeCityLabel(loc?.city, loc?.stateUf);
-        if (label) set.add(label);
-      });
-    });
-    return Array.from(set);
-  };
-
-  const filterItemsByCity = (product: Product): typeof product.productRawMaterials => {
-    const selected = selectedCityById[product.id] || "";
-    if (!selected) return product.productRawMaterials || [];
-    return (product.productRawMaterials || []).filter((rm) => {
-      const locations = (rm.rawMaterial as any)?.locations || [];
-      return locations.some((loc: any) => makeCityLabel(loc?.city, loc?.stateUf) === selected);
-    });
-  };
-
-  const computeFilteredBase = (product: Product): number => {
-    const selected = selectedCityById[product.id] || "";
-    const items = selected ? filterItemsByCity(product) : (product.productRawMaterials || []);
-    let total = 0;
-    items.forEach((rm) => {
-      const qty = toNumber(rm.quantity);
-      const rawMat: any = rm.rawMaterial || {};
-      const locations = rawMat.locations || [];
-      const matched = selected
-        ? locations.find((loc: any) => makeCityLabel(loc?.city, loc?.stateUf) === selected) || locations[0]
-        : locations[0];
-      const brl = matched ? toNumber(matched.priceConvertedBrl) : toNumber(rawMat.priceConvertedBrl);
-      const acq = matched ? toNumber(matched.acquisitionPrice) : toNumber(rawMat.acquisitionPrice);
-      const baseSel = brl > 0 ? brl : acq;
-      const baseUnit = baseSel + (matched ? toNumber(matched.additionalCost ?? 0) : 0);
-      total += baseUnit * qty;
-    });
-    return total;
-  };
-
-  const computeFilteredTaxesAndFreight = (product: Product): { base: number; withTaxesAndFreight: number } => {
-    const selected = selectedCityById[product.id] || "";
-    const items = selected ? filterItemsByCity(product) : (product.productRawMaterials || []);
-    // Recalcula sempre como no formulário, considerando apenas o filtro de localidade selecionado.
-    let baseTotal = 0;
-    let rawMaterialFreightService = 0;
-    let productFreightService = 0;
-    let recoverableCreditsTotal = 0;
-    let freightTaxesTotal = 0;
-
-    items.forEach((rm) => {
-      const qty = toNumber(rm.quantity);
-      const rawMat: any = rm.rawMaterial || {};
-      const locations = rawMat.locations || [];
-      const matched = selected
-        ? locations.find((loc: any) => makeCityLabel(loc?.city, loc?.stateUf) === selected) || locations[0]
-        : locations[0];
-
-      const brl2 = matched ? toNumber(matched.priceConvertedBrl) : toNumber(rawMat.priceConvertedBrl);
-      const acq2 = matched ? toNumber(matched.acquisitionPrice) : toNumber(rawMat.acquisitionPrice);
-      const baseSel2 = brl2 > 0 ? brl2 : acq2;
-      const unitBase = baseSel2 + (matched ? toNumber(matched.additionalCost ?? 0) : 0);
-      baseTotal += unitBase * qty;
-
-      // Impostos da MP (localidade): somar somente créditos recuperáveis para subtrair depois
-      const locTaxes: any[] = matched?.locationTaxes || [];
-      locTaxes.forEach((t: any) => {
-        const rate = toNumber(t?.rate || 0) / 100;
-        if (t?.recoverable) recoverableCreditsTotal += unitBase * rate * qty;
-      });
-
-      // Fretes da MP: somar serviço e impostos do frete (sempre somados)
-      const freights: any[] = matched?.freights || [];
-      freights.forEach((f: any) => {
-        const fUnit = toNumber(f.unitPrice || 0);
-        const serviceCost = fUnit * qty;
-        rawMaterialFreightService += serviceCost;
-        (f.freightTaxes || []).forEach((ft: any) => {
-          const rate = toNumber(ft?.rate || 0) / 100;
-          freightTaxesTotal += serviceCost * rate;
-        });
-      });
-    });
-
-    // Fretes do Produto (fora da MP): somar serviço e impostos
-    const productFreights: any[] = (product as any)?.freights || [];
-    productFreights.forEach((f: any) => {
-      const fUnit = toNumber(f?.unitPrice || 0);
-      productFreightService += fUnit;
-      (f?.freightTaxes || []).forEach((ft: any) => {
-        const rate = toNumber(ft?.rate || 0) / 100;
-        freightTaxesTotal += fUnit * rate;
-      });
-    });
-
-    const totalFreightService = rawMaterialFreightService + productFreightService;
-    // Fórmula (igual ao formulário): Base + Frete (serviço) + Impostos do Frete - Créditos Recuperáveis (MP)
-    const withTaxesAndFreight = baseTotal + totalFreightService + freightTaxesTotal - recoverableCreditsTotal;
-    return { base: baseTotal, withTaxesAndFreight };
-  };
-
   const SortIcon = ({ column }: { column: string }) => {
     const isActive = sortBy === column;
 
@@ -199,13 +67,6 @@ export function ProductsTable({
   const truncateWide =
     "max-w-[200px] truncate overflow-hidden text-ellipsis whitespace-nowrap";
 
-  // Preço final = preço com impostos/frete + overhead (do grupo)
-  const calculateFinalPrice = (product: Product) => {
-    const priceWithTaxesAndFreight = Number(product.priceWithTaxesAndFreight) || 0;
-    const overhead = Number(product.productGroup?.overheadPerUnit ?? 0);
-    return priceWithTaxesAndFreight + overhead;
-  };
-
   return (
     <div className="bg-white shadow-sm rounded-lg overflow-hidden mb-8">
       <div className="overflow-x-auto">
@@ -232,8 +93,16 @@ export function ProductsTable({
                 label="Preço s/ Overhead"
                 width="160px"
               />
-              <SortableHeader column="overhead" label="Overhead" width="120px" />
-              <SortableHeader column="finalPrice" label="Preço Final" width="140px" />
+              <SortableHeader
+                column="overhead"
+                label="Overhead"
+                width="120px"
+              />
+              <SortableHeader
+                column="finalPrice"
+                label="Preço Final"
+                width="140px"
+              />
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[100px]">
                 Ações
               </th>
@@ -242,14 +111,36 @@ export function ProductsTable({
 
           <tbody>
             {products.map((product) => {
-              const { base: computedBase, withTaxesAndFreight: computedFull } = computeFilteredTaxesAndFreight(product);
-              const overhead = Number(product.productGroup?.overheadPerUnit ?? 0);
-              const priceFinal = calculateFinalPrice(product);
+              const overhead = Number(
+                product.productGroup?.overheadPerUnit ?? 0
+              );
+              const priceWithoutTaxes =
+                Number(product.priceWithoutTaxesAndFreight ?? 0) || 0;
+              const priceWithTaxes =
+                Number(
+                  product.priceWithTaxesAndFreight ??
+                    product.totalCostWithAllFreights ??
+                    0
+                ) || 0;
+              const finalPrice = priceWithTaxes + overhead;
+              const rawMaterials = product.productRawMaterials || [];
 
-              const cityOptions = getUniqueCityOptions(product);
-              const selectedCity = selectedCityById[product.id] || "";
-              const filteredItems = filterItemsByCity(product);
-              const { base: filteredBase, withTaxesAndFreight: filteredFull } = { base: computedBase, withTaxesAndFreight: computedFull };
+              const rawMaterialNames = rawMaterials
+                .map((rm) => rm.rawMaterial?.name)
+                .filter(Boolean) as string[];
+
+              const locationLabels = Array.from(
+                new Set(
+                  rawMaterials
+                    .map((rm) => {
+                      const city = rm.locationPivot?.location?.city;
+                      const uf = rm.locationPivot?.location?.stateUf;
+                      if (!city && !uf) return undefined;
+                      return city && uf ? `${city} - ${uf}` : city || uf;
+                    })
+                    .filter(Boolean) as string[]
+                )
+              );
 
               return (
                 <tr
@@ -306,82 +197,63 @@ export function ProductsTable({
                   {/* Produtos */}
                   <td className="px-4 py-3">
                     <div>
-                      {/* Filtro por cidade na linha */}
-                      {cityOptions.length > 0 && (
-                        <div className="mb-2">
-                          <select
-                            aria-label="Filtrar por cidade (linha)"
-                            className="border border-gray-300 rounded px-2 py-1 text-xs text-gray-700"
-                            value={selectedCity}
-                            onChange={(e) =>
-                              setSelectedCityById((prev) => ({ ...prev, [product.id]: e.target.value }))
-                            }
-                          >
-                            <option value="">Todas as cidades</option>
-                            {cityOptions.map((city) => (
-                              <option key={city} value={city}>
-                                {city}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
                       <Text
                         variant="caption"
                         className="font-semibold text-gray-900"
                       >
-                        {filteredItems?.length || 0}{" "}
-                        {filteredItems?.length === 1
-                          ? "item"
-                          : "itens"}
+                        {rawMaterials.length || 0}{" "}
+                        {rawMaterials.length === 1 ? "item" : "itens"}
                       </Text>
-                      {filteredItems && filteredItems.length > 0 && (
-                          <div
-                            className="text-xs text-gray-500 mt-1 max-w-[130px] truncate"
-                            title={filteredItems
-                              .map((rm) => rm.rawMaterial?.name)
-                              .join(", ")}
-                          >
-                            {filteredItems
-                              .slice(0, 2)
-                              .map((rm) => rm.rawMaterial?.name)
-                              .join(", ")}
-                            {filteredItems.length > 2 && ` +${filteredItems.length - 2}`}
-                          </div>
-                        )}
+                      {rawMaterials.length > 0 && (
+                        <div
+                          className="text-xs text-gray-500 mt-1 max-w-[130px] truncate"
+                          title={rawMaterialNames.join(", ")}
+                        >
+                          {rawMaterialNames.slice(0, 2).join(", ")}
+                          {rawMaterialNames.length > 2 &&
+                            ` +${rawMaterialNames.length - 2}`}
+                        </div>
+                      )}
+                      {locationLabels.length > 0 && (
+                        <div
+                          className="text-[10px] text-gray-500 mt-1 max-w-[140px] truncate"
+                          title={locationLabels.join(", ")}
+                        >
+                          {locationLabels.slice(0, 2).join(", ")}
+                          {locationLabels.length > 2 &&
+                            ` +${locationLabels.length - 2}`}
+                        </div>
+                      )}
                     </div>
                   </td>
 
                   {/* Preço Base */}
                   <td className="px-4 py-3">
-                    {(filteredBase) > 0 ? (
+                    {priceWithoutTaxes > 0 ? (
                       <Text
                         variant="caption"
                         className="font-semibold text-gray-900"
                       >
-                        {formatCurrency(filteredBase)}
+                        {formatCurrency(priceWithoutTaxes)}
                       </Text>
                     ) : (
                       <span className="text-gray-400 text-sm">-</span>
-                    )}
-                    {selectedCity && (
-                      <div className="text-[10px] text-gray-500">filtrado por cidade</div>
                     )}
                   </td>
 
                   {/* Preço s/ Overhead */}
                   <td className="px-4 py-3">
-                    {(filteredFull) > 0 ? (
+                    {priceWithTaxes > 0 ? (
                       <div>
                         <Text
                           variant="caption"
                           className="font-semibold text-gray-900"
                         >
-                          {formatCurrency(filteredFull)}
+                          {formatCurrency(priceWithTaxes)}
                         </Text>
                         {(() => {
-                          const baseShow = filteredBase;
-                          const fullShow = filteredFull;
+                          const baseShow = priceWithoutTaxes;
+                          const fullShow = priceWithTaxes;
                           return baseShow > 0 && fullShow > baseShow;
                         })() && (
                           <Text
@@ -390,15 +262,15 @@ export function ProductsTable({
                           >
                             (+
                             {(() => {
-                              const baseShow = filteredBase;
-                              const fullShow = filteredFull;
-                              return (((fullShow - baseShow) / baseShow) * 100).toFixed(1);
+                              const baseShow = priceWithoutTaxes;
+                              const fullShow = priceWithTaxes;
+                              return (
+                                ((fullShow - baseShow) / baseShow) *
+                                100
+                              ).toFixed(1);
                             })()}
                             %)
                           </Text>
-                        )}
-                        {selectedCity && (
-                          <div className="text-[10px] text-gray-500">filtrado por cidade</div>
                         )}
                       </div>
                     ) : (
@@ -409,7 +281,10 @@ export function ProductsTable({
                   {/* Overhead (Grupo) */}
                   <td className="px-4 py-3">
                     {overhead > 0 ? (
-                      <Text variant="caption" className="font-semibold text-gray-900">
+                      <Text
+                        variant="caption"
+                        className="font-semibold text-gray-900"
+                      >
                         {formatCurrency(overhead)}
                       </Text>
                     ) : (
@@ -420,8 +295,7 @@ export function ProductsTable({
                   {/* Preço Final (com Overhead) */}
                   <td className="px-4 py-3">
                     {(() => {
-                      const fullShow = filteredFull;
-                      const finalShow = fullShow + overhead;
+                      const finalShow = finalPrice;
                       return finalShow > 0;
                     })() ? (
                       <div>
@@ -429,11 +303,11 @@ export function ProductsTable({
                           variant="caption"
                           className="font-bold text-green-700"
                         >
-                          {formatCurrency(filteredFull + overhead)}
+                          {formatCurrency(finalPrice)}
                         </Text>
                         {(() => {
-                          const baseShow = filteredBase;
-                          const finalShow = filteredFull + overhead;
+                          const baseShow = priceWithoutTaxes;
+                          const finalShow = finalPrice;
                           return baseShow > 0 && finalShow > baseShow;
                         })() && (
                           <Text
@@ -442,15 +316,15 @@ export function ProductsTable({
                           >
                             (+
                             {(() => {
-                              const baseShow = filteredBase;
-                              const finalShow = filteredFull + overhead;
-                              return (((finalShow - baseShow) / baseShow) * 100).toFixed(1);
+                              const baseShow = priceWithoutTaxes;
+                              const finalShow = finalPrice;
+                              return (
+                                ((finalShow - baseShow) / baseShow) *
+                                100
+                              ).toFixed(1);
                             })()}
                             %)
                           </Text>
-                        )}
-                        {selectedCity && (
-                          <div className="text-[10px] text-gray-500">filtrado por cidade</div>
                         )}
                       </div>
                     ) : (
