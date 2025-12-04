@@ -2,7 +2,39 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
-import type { Freight } from "@/types";
+import type { Freight } from "@/types/freights";
+
+const normalizeFreight = (raw: any): Freight => {
+  const freightTaxes = (raw?.freightTaxes ?? []).map((tax: any) => ({
+    ...tax,
+    rate: Number(tax?.rate ?? 0),
+  }));
+
+  const counts = raw?._count
+    ? {
+        rawMaterialLocations: Number(raw._count.rawMaterialLocations ?? 0),
+        products: Number(raw._count.products ?? 0),
+      }
+    : undefined;
+
+  return {
+    id: raw.id,
+    name: raw.name,
+    description: raw.description ?? undefined,
+    unitPrice: Number(raw.unitPrice ?? 0),
+    currency: raw.currency,
+    originUf: raw.originUf,
+    originCity: raw.originCity,
+    destinationUf: raw.destinationUf,
+    destinationCity: raw.destinationCity,
+    cargoType: raw.cargoType,
+    operationType: raw.operationType,
+    createdAt: raw.createdAt,
+    updatedAt: raw.updatedAt,
+    freightTaxes,
+    _count: counts,
+  };
+};
 
 // ========================================
 // Tipagens de Requisição e Resposta
@@ -71,13 +103,16 @@ export async function getFreights(
   query: FindAllFreightsQuery
 ): Promise<PaginatedFreightsResponse> {
   const { data } = await apiClient.get("/freights", { params: query });
-  return data;
+  return {
+    ...data,
+    data: (data?.data ?? []).map(normalizeFreight),
+  };
 }
 
 // GET /freights/:id
 export async function getFreightById(id: string): Promise<Freight> {
   const { data } = await apiClient.get(`/freights/${id}`);
-  return data;
+  return normalizeFreight(data);
 }
 
 // POST /freights
@@ -85,7 +120,7 @@ export async function createFreight(
   payload: CreateFreightDTO
 ): Promise<Freight> {
   const { data } = await apiClient.post("/freights", payload);
-  return data;
+  return normalizeFreight(data);
 }
 
 // PATCH /freights/:id
@@ -97,7 +132,7 @@ export async function updateFreight({
   payload: UpdateFreightDTO;
 }): Promise<Freight> {
   const { data } = await apiClient.patch(`/freights/${id}`, payload);
-  return data;
+  return normalizeFreight(data);
 }
 
 // DELETE /freights/:id

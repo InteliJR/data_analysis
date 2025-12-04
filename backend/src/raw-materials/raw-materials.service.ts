@@ -80,7 +80,7 @@ export class RawMaterialsService {
       });
 
       await this.persistLocationPivots(tx, rawMaterial.id, createRawMaterialDto.locations, userId);
-      await this.createChangeLog(rawMaterial.id, 'created', null, 'Matéria-prima criada', userId);
+      await this.createChangeLog(rawMaterial.id, 'created', null, 'Matéria-prima criada', userId, tx);
 
       return rawMaterial;
     });
@@ -396,7 +396,7 @@ export class RawMaterialsService {
         include: this.defaultInclude.locations.include,
       });
 
-      await this.logLocationSnapshot(rawMaterialId, location, pivot, 'created', userId);
+      await this.logLocationSnapshot(rawMaterialId, location, pivot, 'created', userId, tx);
     }
   }
 
@@ -421,6 +421,7 @@ export class RawMaterialsService {
           this.describePivot(pivot),
           null,
           userId,
+          tx,
         );
       }
     }
@@ -459,7 +460,7 @@ export class RawMaterialsService {
         include: this.defaultInclude.locations.include,
       });
 
-      await this.logPivotDifferences(existing.id, existingPivot, updatedPivot, userId);
+      await this.logPivotDifferences(existing.id, existingPivot, updatedPivot, userId, tx);
     }
   }
 
@@ -520,8 +521,16 @@ export class RawMaterialsService {
     return loc.priceConvertedBrl;
   }
 
-  private async createChangeLog(rawMaterialId: string, field: string, oldValue: string | null, newValue: string | null, userId: string) {
-    await this.prisma.rawMaterialChangeLog.create({
+  private async createChangeLog(
+    rawMaterialId: string,
+    field: string,
+    oldValue: string | null,
+    newValue: string | null,
+    userId: string,
+    tx?: PrismaTx,
+  ) {
+    const client = tx ?? this.prisma;
+    await client.rawMaterialChangeLog.create({
       data: {
         rawMaterialId,
         field,
@@ -552,17 +561,24 @@ export class RawMaterialsService {
     }
   }
 
-  private async logPivotDifferences(rawMaterialId: string, before: PivotWithRelations, after: PivotWithRelations, userId: string) {
+  private async logPivotDifferences(
+    rawMaterialId: string,
+    before: PivotWithRelations,
+    after: PivotWithRelations,
+    userId: string,
+    tx?: PrismaTx,
+  ) {
     const fieldsToCompare: Array<keyof PivotWithRelations> = ['acquisitionPrice', 'currency', 'priceConvertedBrl', 'additionalCost'];
     for (const field of fieldsToCompare) {
       if (String(before[field] ?? '') !== String(after[field] ?? '')) {
         await this.logLocationFieldChange(
           rawMaterialId,
           after.location,
-          field,
+          field as string,
           String(before[field] ?? ''),
           String(after[field] ?? ''),
           userId,
+          tx,
         );
       }
     }
@@ -570,7 +586,7 @@ export class RawMaterialsService {
     const previousFreights = before.freights.map((f) => f.name).sort().join(', ');
     const nextFreights = after.freights.map((f) => f.name).sort().join(', ');
     if (previousFreights !== nextFreights) {
-      await this.logLocationFieldChange(rawMaterialId, after.location, 'freights', previousFreights, nextFreights, userId);
+      await this.logLocationFieldChange(rawMaterialId, after.location, 'freights', previousFreights, nextFreights, userId, tx);
     }
 
     const previousTaxes = before.locationTaxes
@@ -582,7 +598,7 @@ export class RawMaterialsService {
       .sort()
       .join(' | ');
     if (previousTaxes !== nextTaxes) {
-      await this.logLocationFieldChange(rawMaterialId, after.location, 'taxes', previousTaxes, nextTaxes, userId);
+      await this.logLocationFieldChange(rawMaterialId, after.location, 'taxes', previousTaxes, nextTaxes, userId, tx);
     }
   }
 
@@ -592,9 +608,10 @@ export class RawMaterialsService {
     pivot: PivotWithRelations,
     action: string,
     userId: string,
+    tx?: PrismaTx,
   ) {
     const description = this.describePivot(pivot);
-    await this.logLocationFieldChange(rawMaterialId, location, action, null, description, userId);
+    await this.logLocationFieldChange(rawMaterialId, location, action, null, description, userId, tx);
   }
 
   private async logLocationFieldChange(
@@ -604,9 +621,10 @@ export class RawMaterialsService {
     oldValue: string | null,
     newValue: string | null,
     userId: string,
+    tx?: PrismaTx,
   ) {
     const label = this.getLocationLabel(location);
-    await this.createChangeLog(rawMaterialId, `location:${label}:${field}`, oldValue, newValue, userId);
+    await this.createChangeLog(rawMaterialId, `location:${label}:${field}`, oldValue, newValue, userId, tx);
   }
 
   private describePivot(pivot: PivotWithRelations) {

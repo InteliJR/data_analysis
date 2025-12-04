@@ -9,7 +9,7 @@ import {
   BRAZIL_STATES,
   STATE_NAMES,
   CITIES_BY_STATE,
-} from "@/constants/brazil-locations";
+} from "@/lib/brazil-locations";
 import { useCreateLocationMutation } from "@/api/locations";
 import type { CreateLocationPayload } from "@/api/locations";
 

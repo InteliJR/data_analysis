@@ -2,6 +2,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
 import type { Location } from "@/types/RawMaterials";
 
+const MAX_LOCATIONS_PAGE_SIZE = 100;
+
 export interface LocationsQuery {
   page?: number;
   limit?: number;
@@ -30,7 +32,16 @@ export interface CreateLocationPayload {
 export async function getLocations(
   query: LocationsQuery = {}
 ): Promise<PaginatedLocationsResponse> {
-  const { data } = await apiClient.get("/locations", { params: query });
+  const sanitizedQuery: LocationsQuery = {
+    ...query,
+    ...(query.limit
+      ? { limit: Math.min(query.limit, MAX_LOCATIONS_PAGE_SIZE) }
+      : {}),
+  };
+
+  const { data } = await apiClient.get("/locations", {
+    params: sanitizedQuery,
+  });
   return data;
 }
 

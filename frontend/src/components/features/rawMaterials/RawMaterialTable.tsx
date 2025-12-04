@@ -1,8 +1,15 @@
 // src/components/features/rawMaterials/RawMaterialTable.tsx
 
-import type { RawMaterial } from "@/types/rawMaterial";
+import { useMemo } from "react";
+import type { RawMaterial } from "@/types/RawMaterials";
 import { RawMaterialTableRow } from "./RawMaterialTableRow";
 import { FiChevronUp } from "react-icons/fi";
+
+type LocationColumn = {
+  id: string;
+  title: string;
+  subtitle?: string;
+};
 
 interface RawMaterialTableProps {
   rawMaterials: RawMaterial[];
@@ -21,6 +28,32 @@ export function RawMaterialTable({
   sortBy,
   sortOrder,
 }: RawMaterialTableProps) {
+  const locationColumns = useMemo<LocationColumn[]>(() => {
+    const locationsMap = new Map<string, LocationColumn>();
+
+    rawMaterials.forEach((material) => {
+      material.locations?.forEach((pivot) => {
+        const location = pivot.location;
+        if (!location || locationsMap.has(location.id)) return;
+
+        const title = location.name?.trim()
+          ? location.name.trim()
+          : `${location.city}/${location.stateUf}`;
+        const subtitle = location.name?.trim()
+          ? `${location.city}/${location.stateUf}`
+          : undefined;
+
+        locationsMap.set(location.id, {
+          id: location.id,
+          title,
+          subtitle,
+        });
+      });
+    });
+
+    return Array.from(locationsMap.values());
+  }, [rawMaterials]);
+
   const SortIcon = ({ column }: { column: string }) => {
     const isActive = sortBy === column;
 
@@ -78,20 +111,27 @@ export function RawMaterialTable({
                 label="Prazo Pgto"
                 width="120px"
               />
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[160px]">
-                Localidades
-              </th>
-              <SortableHeader
-                column="acquisitionPrice"
-                label="Preços"
-                width="160px"
-              />
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[140px]">
-                Frete
-              </th>
-              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[160px]">
-                Impostos
-              </th>
+              {locationColumns.length > 0 ? (
+                locationColumns.map((location) => (
+                  <th
+                    key={location.id}
+                    className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[180px]"
+                  >
+                    <div className="flex flex-col">
+                      <span>{location.title}</span>
+                      {location.subtitle && (
+                        <span className="text-xs text-gray-500 font-normal">
+                          {location.subtitle}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                ))
+              ) : (
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[200px]">
+                  Preços por localidade
+                </th>
+              )}
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[100px]">
                 Ações
               </th>
@@ -105,6 +145,7 @@ export function RawMaterialTable({
                 rawMaterial={rawMaterial}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                locationColumns={locationColumns}
               />
             ))}
           </tbody>

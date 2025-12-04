@@ -154,6 +154,27 @@ export default function RawMaterials() {
     }
   };
 
+  const hasRawMaterials = data?.data && data.data.length > 0;
+  const locationColumns = useMemo(() => {
+    if (!data?.data) return [];
+    const map = new Map<string, { id: string; label: string }>();
+    data.data.forEach((rawMaterial) => {
+      rawMaterial.locations?.forEach(
+        (pivot: NonNullable<RawMaterial["locations"]>[number]) => {
+        const label =
+          pivot.location?.name ||
+          [pivot.location?.city, pivot.location?.stateUf]
+            .filter(Boolean)
+            .join("/");
+        if (!map.has(pivot.locationId)) {
+          map.set(pivot.locationId, { id: pivot.locationId, label });
+        }
+        }
+      );
+    });
+    return Array.from(map.values());
+  }, [data?.data]);
+
   // Render
   if (isLoading) {
     return (
@@ -191,25 +212,6 @@ export default function RawMaterials() {
       </>
     );
   }
-
-  const hasRawMaterials = data?.data && data.data.length > 0;
-  const locationColumns = useMemo(() => {
-    if (!data?.data) return [];
-    const map = new Map<string, { id: string; label: string }>();
-    data.data.forEach((rawMaterial) => {
-      rawMaterial.locations?.forEach((pivot) => {
-        const label =
-          pivot.location?.name ||
-          [pivot.location?.city, pivot.location?.stateUf]
-            .filter(Boolean)
-            .join("/");
-        if (!map.has(pivot.locationId)) {
-          map.set(pivot.locationId, { id: pivot.locationId, label });
-        }
-      });
-    });
-    return Array.from(map.values());
-  }, [data?.data]);
 
   return (
     <>
