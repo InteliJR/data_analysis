@@ -12,6 +12,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CalculatePriceDto } from './dto/calculate-price.dto';
 import { ExportProductsDto } from './dto/export-products.dto';
+import { CreateProductFullDto } from './dto/create-product-full.dto';
 
 const RAW_MATERIAL_WITH_LOCATIONS_INCLUDE = {
   locations: {
@@ -172,6 +173,258 @@ export class ProductsService {
       const message = error?.message || 'Erro desconhecido';
       throw new BadRequestException(`Erro ao criar produto: ${message}`);
     }
+  }
+
+  async createFull(dto: CreateProductFullDto, userId: string) {
+    // 1) Dentro da transação: criar/atualizar MPs, pivots e criar Produto com preços nulos
+    const productId = await this.prisma.$transaction(async (tx) => {
+      // Verificar produto duplicado por code
+      const existingProduct = await tx.product.findUnique({ where: { code: dto.code } });
+      if (existingProduct) {
+        throw new ConflictException('Já existe um produto com este código');
+      }
+
+      // Validar FixedCost e ProductGroup se fornecidos
+      if (dto.fixedCostId) {
+        const fixed = await tx.fixedCost.findUnique({ where: { id: dto.fixedCostId } });
+        if (!fixed) throw new NotFoundException('Custo fixo não encontrado');
+      }
+      if (dto.productGroupId) {
+        const group = await tx.productGroup.findUnique({ where: { id: dto.productGroupId } });
+        if (!group) throw new NotFoundException('Grupo de produto não encontrado');
+      }
+
+      // Validar fretes do produto
+      if (dto.freightIds?.length) {
+        const found = await tx.freight.findMany({ where: { id: { in: dto.freightIds } } });
+        if (found.length !== dto.freightIds.length) {
+          throw new BadRequestException('Um ou mais fretes (produto) não encontrados');
+        }
+      }
+
+      // Criação/atualização de MPs por code
+      const rawMaterialIdByCode = new Map<string, string>();
+
+      for (const rm of dto.rawMaterials) {
+        const rawMaterial = await tx.rawMaterial.upsert({
+          where: { code: rm.code },
+          create: {
+            code: rm.code,
+            name: rm.name,
+            description: rm.description,
+            measurementUnit: rm.measurementUnit as any,
+            inputGroup: rm.inputGroup,
+            paymentTerm: rm.paymentTerm,
+          },
+          update: {
+            name: rm.name,
+            description: rm.description,
+            measurementUnit: rm.measurementUnit as any,
+            inputGroup: rm.inputGroup,
+            paymentTerm: rm.paymentTerm,
+          },
+        });
+
+        rawMaterialIdByCode.set(rm.code, rawMaterial.id);
+
+        // Processar locations/pivot
+        for (const loc of rm.locations) {
+          // Resolver location: id existente ou criação com dados embutidos
+          let locationId: string | undefined = loc.locationId;
+          if (!locationId && loc.location) {
+            const country = loc.location.country ?? 'BR';
+            // Tentar encontrar uma existente pelos campos básicos
+            const existingLoc = await tx.location.findFirst({
+              where: {
+                name: loc.location.name,
+                stateUf: loc.location.stateUf,
+                city: loc.location.city,
+                country,
+              },
+            });
+            if (existingLoc) {
+              locationId = existingLoc.id;
+            } else {
+              const createdLoc = await tx.location.create({
+                data: {
+                  name: loc.location.name,
+                  stateUf: loc.location.stateUf,
+                  city: loc.location.city,
+                  country,
+                },
+              });
+              locationId = createdLoc.id;
+            }
+          }
+
+          if (!locationId) {
+            throw new BadRequestException('Informe locationId ou location (embutido) para cada item de locations');
+          }
+
+          const locExists = await tx.location.findUnique({ where: { id: locationId } });
+          if (!locExists) throw new NotFoundException(`Localidade não encontrada: ${locationId}`);
+
+          const pivot = await tx.rawMaterialLocationPivot.upsert({
+            where: {
+              rawMaterialId_locationId: {
+                rawMaterialId: rawMaterial.id,
+                locationId: locationId,
+              },
+            },
+            create: {
+              rawMaterialId: rawMaterial.id,
+              locationId: locationId,
+              acquisitionPrice: new Prisma.Decimal(loc.acquisitionPrice),
+              currency: loc.currency as any,
+              priceConvertedBrl: loc.priceConvertedBrl != null ? new Prisma.Decimal(loc.priceConvertedBrl) : undefined,
+              additionalCost: new Prisma.Decimal(loc.additionalCost ?? 0),
+            },
+            update: {
+              acquisitionPrice: new Prisma.Decimal(loc.acquisitionPrice),
+              currency: loc.currency as any,
+              priceConvertedBrl: loc.priceConvertedBrl != null ? new Prisma.Decimal(loc.priceConvertedBrl) : undefined,
+              additionalCost: new Prisma.Decimal(loc.additionalCost ?? 0),
+            },
+          });
+
+          // Conectar fretes à pivot
+          if (loc.freightIds?.length) {
+            const freights = await tx.freight.findMany({ where: { id: { in: loc.freightIds } } });
+            if (freights.length !== loc.freightIds.length) {
+              throw new BadRequestException('Um ou mais fretes (pivot) não encontrados');
+            }
+            await tx.rawMaterialLocationPivot.update({
+              where: { id: pivot.id },
+              data: {
+                freights: {
+                  set: [],
+                  connect: loc.freightIds.map((id) => ({ id })),
+                },
+              },
+            });
+          }
+
+          // Sincronizar impostos da pivot
+          if (loc.taxes?.length) {
+            for (const t of loc.taxes) {
+              let taxId = t.taxId;
+              if (!taxId && t.name) {
+                const tax = await tx.rawMaterialTax.upsert({
+                  where: { name: t.name },
+                  create: {
+                    name: t.name,
+                    defaultRate: new Prisma.Decimal(t.rate),
+                    recoverable: t.recoverable,
+                  },
+                  update: {},
+                });
+                taxId = tax.id;
+              }
+
+              if (!taxId) {
+                throw new BadRequestException('Imposto inválido: forneça taxId ou name');
+              }
+
+              // upsert na pivot de impostos
+              await tx.rawMaterialLocationTax.upsert({
+                where: {
+                  rawMaterialLocationPivotId_taxId: {
+                    rawMaterialLocationPivotId: pivot.id,
+                    taxId: taxId,
+                  },
+                },
+                create: {
+                  rawMaterialLocationPivotId: pivot.id,
+                  taxId: taxId,
+                  rate: new Prisma.Decimal(t.rate),
+                  recoverable: t.recoverable,
+                },
+                update: {
+                  rate: new Prisma.Decimal(t.rate),
+                  recoverable: t.recoverable,
+                },
+              });
+            }
+          }
+        }
+      }
+
+      // Montar composição por código
+      const composition = dto.composition.map((c) => {
+        const id = rawMaterialIdByCode.get(c.rawMaterialCode);
+        if (!id) {
+          throw new BadRequestException(`Matéria-prima não encontrada pelo código: ${c.rawMaterialCode}`);
+        }
+        return { rawMaterialId: id, quantity: c.quantity };
+      });
+
+      // Validar fretes do produto (já feitos antes) e calcular preços
+      const product = await tx.product.create({
+        data: {
+          code: dto.code,
+          name: dto.name,
+          description: dto.description,
+          creatorId: userId,
+          fixedCostId: dto.fixedCostId,
+          productGroupId: dto.productGroupId,
+          // valores calculados preenchidos posteriormente fora da transação
+          priceWithoutTaxesAndFreight: null,
+          totalCostWithAllFreights: null,
+          productRawMaterials: {
+            create: composition.map((rm) => ({ rawMaterialId: rm.rawMaterialId, quantity: rm.quantity })),
+          },
+          ...(dto.freightIds?.length ? { freights: { connect: dto.freightIds.map((id) => ({ id })) } } : {}),
+        },
+        select: { id: true },
+      });
+      return product.id;
+    });
+
+    // 2) Fora da transação: resolver IDs das MPs por código
+    const compResolved: { rawMaterialId: string; quantity: number }[] = [];
+    for (const c of dto.composition) {
+      const rm = await this.prisma.rawMaterial.findUnique({ where: { code: c.rawMaterialCode } });
+      if (!rm) throw new BadRequestException(`Matéria-prima não encontrada pelo código: ${c.rawMaterialCode}`);
+      compResolved.push({ rawMaterialId: rm.id, quantity: c.quantity });
+    }
+
+    // Calcular preços e atualizar o produto
+    const calculations = await this.calculateProductPrice({
+      rawMaterials: compResolved,
+      fixedCostId: dto.fixedCostId,
+      freightIds: dto.freightIds,
+    });
+
+    await this.prisma.product.update({
+      where: { id: productId },
+      data: {
+        priceWithoutTaxesAndFreight: calculations.calculations.priceWithoutTaxesAndFreight,
+        totalCostWithAllFreights: calculations.calculations.priceWithTaxesAndFreight,
+      },
+    });
+
+    // 3) Retornar produto completo
+    const productFull = await this.prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        creator: { select: { id: true, name: true, email: true } },
+        fixedCost: true,
+        productGroup: true,
+        productRawMaterials: {
+          include: {
+            rawMaterial: { include: RAW_MATERIAL_WITH_LOCATIONS_INCLUDE },
+          },
+        },
+        freights: { include: { freightTaxes: true } },
+      },
+    });
+
+    const normalized = this.withLegacyPriceField(productFull!);
+    return {
+      ...normalized,
+      calculations: calculations.calculations,
+      breakdown: calculations.breakdown,
+    };
   }
 
   async findAll(query?: {
