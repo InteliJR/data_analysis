@@ -93,16 +93,12 @@ export function ProductsTable({
                 label="Preço s/ Overhead"
                 width="160px"
               />
-              <SortableHeader
-                column="overhead"
-                label="Overhead"
-                width="120px"
-              />
-              <SortableHeader
-                column="finalPrice"
-                label="Preço Final"
-                width="140px"
-              />
+              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[120px]">
+                Overhead
+              </th>
+              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[140px]">
+                Preço Final
+              </th>
               <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[100px]">
                 Ações
               </th>

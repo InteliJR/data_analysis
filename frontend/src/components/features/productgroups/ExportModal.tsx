@@ -1,136 +1,145 @@
-import { useState, useEffect } from 'react';
-import { Modal } from '@/components/common/Modal';
-import { Input } from '@/components/common/Input';
-import { Select } from '@/components/common/Select';
-import { Button } from '@/components/common/Button';
-import { Checkbox } from '@/components/common/Checkbox';
-import type { FindAllProductGroupsQuery } from '@/api/productgroups';
+import { useState, useEffect } from "react";
+import { toast } from "react-hot-toast";
+import { Modal } from "@/components/common/Modal";
+import { Input } from "@/components/common/Input";
+import { Select } from "@/components/common/Select";
+import { Button } from "@/components/common/Button";
+import { Checkbox } from "@/components/common/Checkbox";
+
+export type ColumnOption = {
+  key: string;
+  label: string;
+};
 
 interface ExportModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onExport: (filters: Partial<FindAllProductGroupsQuery>) => void;
-  currentFilters: FindAllProductGroupsQuery;
+  onConfirm: (options: {
+    limit: number;
+    columns: string[];
+    sortBy: string;
+    sortOrder: "asc" | "desc";
+  }) => void;
+  defaultColumns: ColumnOption[];
 }
+
+const SORT_OPTIONS = [
+  { value: "name", label: "Nome" },
+  { value: "volumePercentageByQuantity", label: "% Volume (Quantidade)" },
+  { value: "volumePercentageByValue", label: "% Volume (Valor)" },
+  { value: "averagePrice", label: "Preço Médio" },
+  { value: "totalValue", label: "Valor Total" },
+  { value: "overheadPerUnit", label: "Overhead/Unidade" },
+  { value: "productsCount", label: "Qtd. Produtos" },
+];
 
 export function ExportModal({
   isOpen,
   onClose,
-  onExport,
-  currentFilters,
+  onConfirm,
+  defaultColumns,
 }: ExportModalProps) {
-  const [search, setSearch] = useState(currentFilters.search || '');
-  const [sortBy, setSortBy] = useState(currentFilters.sortBy || '');
-  const [sortOrder, setSortOrder] = useState(currentFilters.sortOrder || 'asc');
-  const [limit, setLimit] = useState('');
-  const [useCurrentFilters, setUseCurrentFilters] = useState(true);
+  const [limit, setLimit] = useState(500);
+  const [sortBy, setSortBy] = useState<string>(SORT_OPTIONS[0].value);
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [selectedColumns, setSelectedColumns] = useState<string[]>(
+    defaultColumns.map((col) => col.key)
+  );
 
   useEffect(() => {
     if (isOpen) {
-      if (useCurrentFilters) {
-        setSearch(currentFilters.search || '');
-        setSortBy(currentFilters.sortBy || '');
-        setSortOrder(currentFilters.sortOrder || 'asc');
-      }
+      setLimit(500);
+      setSortBy(SORT_OPTIONS[0].value);
+      setSortOrder("asc");
+      setSelectedColumns(defaultColumns.map((col) => col.key));
     }
-  }, [isOpen, currentFilters, useCurrentFilters]);
+  }, [isOpen, defaultColumns]);
 
-  const handleExport = () => {
-    const exportFilters: Partial<FindAllProductGroupsQuery> = {};
-
-    if (useCurrentFilters) {
-      if (currentFilters.search) exportFilters.search = currentFilters.search;
-      if (currentFilters.sortBy) exportFilters.sortBy = currentFilters.sortBy;
-      if (currentFilters.sortOrder) exportFilters.sortOrder = currentFilters.sortOrder;
-    } else {
-      if (search) exportFilters.search = search;
-      if (sortBy) exportFilters.sortBy = sortBy as FindAllProductGroupsQuery['sortBy'];
-      if (sortOrder) exportFilters.sortOrder = sortOrder as 'asc' | 'desc';
-    }
-
-    if (limit) exportFilters.limit = parseInt(limit);
-
-    onExport(exportFilters);
-    onClose();
+  const handleColumnChange = (key: string, checked: boolean) => {
+    setSelectedColumns((prev) =>
+      checked ? [...prev, key] : prev.filter((col) => col !== key)
+    );
   };
 
-  const footer = (
-    <div className="flex justify-end gap-3">
-      <Button variant="secondary" onClick={onClose}>
-        Cancelar
-      </Button>
-      <Button onClick={handleExport}>
-        Exportar CSV
-      </Button>
-    </div>
-  );
+  const handleSubmit = () => {
+    if (selectedColumns.length === 0) {
+      toast.error("Selecione pelo menos uma coluna para exportar.");
+      return;
+    }
+
+    onConfirm({
+      limit,
+      columns: selectedColumns,
+      sortBy,
+      sortOrder,
+    });
+  };
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title="Exportar Grupos"
-      footer={footer}
-    >
-      <div className="space-y-4">
-        <Checkbox
-          label="Usar filtros atuais"
-          checked={useCurrentFilters}
-          onChange={(e) => setUseCurrentFilters(e.target.checked)}
-        />
-
-        {!useCurrentFilters && (
-          <>
-            <Input
-              label="Buscar por nome"
-              placeholder="Digite o nome do grupo..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-
-            <Select
-              label="Ordenar por"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="">Nenhum</option>
-              <option value="name">Nome</option>
-              <option value="volumePercentageByQuantity">% Volume (Quantidade)</option>
-              <option value="volumePercentageByValue">% Volume (Valor)</option>
-              <option value="averagePrice">Preço Médio</option>
-            </Select>
-
-            {sortBy && (
-              <Select
-                label="Ordem"
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-              >
-                <option value="asc">Crescente</option>
-                <option value="desc">Decrescente</option>
-              </Select>
-            )}
-          </>
-        )}
-
+    <Modal isOpen={isOpen} onClose={onClose} title="Configurar Exportação CSV">
+      <div className="space-y-6">
         <Input
-          label="Limite de registros"
+          id="export-limit"
+          label="Limite de linhas"
           type="number"
-          placeholder="Deixe em branco para exportar todos"
-          value={limit}
-          onChange={(e) => setLimit(e.target.value)}
           min="1"
+          value={limit}
+          onChange={(e) => setLimit(Math.max(1, Number(e.target.value)))}
         />
 
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-sm text-blue-800">
-            <strong>Dica:</strong> O arquivo CSV será gerado com base nos filtros selecionados.
-            {useCurrentFilters && currentFilters.search && (
-              <span className="block mt-1">
-                Filtro ativo: "{currentFilters.search}"
-              </span>
-            )}
+        <div className="grid grid-cols-2 gap-4">
+          <Select
+            id="export-sort-by"
+            label="Ordenar por"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+          >
+            {SORT_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </Select>
+
+          <Select
+            id="export-sort-order"
+            label="Ordem"
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
+          >
+            <option value="asc">Crescente (A-Z, 0-9)</option>
+            <option value="desc">Decrescente (Z-A, 9-0)</option>
+          </Select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Colunas para incluir
+          </label>
+          <div className="grid grid-cols-2 gap-3 rounded-lg border border-gray-200 p-4 max-h-80 overflow-y-auto">
+            {defaultColumns.map((col) => (
+              <Checkbox
+                key={col.key}
+                id={`column-${col.key}`}
+                label={col.label}
+                checked={selectedColumns.includes(col.key)}
+                onChange={(e) => handleColumnChange(col.key, e.target.checked)}
+              />
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            {selectedColumns.length} de {defaultColumns.length} colunas
+            selecionadas
           </p>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <Button type="button" variant="secondary" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button type="button" variant="primary" onClick={handleSubmit}>
+            Gerar CSV
+          </Button>
         </div>
       </div>
     </Modal>

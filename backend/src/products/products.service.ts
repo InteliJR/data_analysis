@@ -221,7 +221,23 @@ export class ProductsService {
           ? 'totalCostWithAllFreights'
           : rawSortBy;
 
-      let orderBy: any = {};
+      const sortableFields = new Set([
+        'id',
+        'code',
+        'name',
+        'description',
+        'creatorId',
+        'priceWithoutTaxesAndFreight',
+        'totalCostWithAllFreights',
+        'fixedCostId',
+        'productGroupId',
+        'createdAt',
+        'updatedAt',
+      ]);
+
+      let orderBy: Prisma.ProductOrderByWithRelationInput | Prisma.ProductOrderByWithRelationInput[] = {
+        code: sortOrder,
+      };
 
       if (rawSortBy === 'productGroup') {
         orderBy = { productGroup: { name: sortOrder } };
@@ -229,8 +245,15 @@ export class ProductsService {
         orderBy = { fixedCost: { description: sortOrder } };
       } else if (rawSortBy === 'creator') {
         orderBy = { creator: { name: sortOrder } };
-      } else {
-        orderBy = { [normalizedSortBy]: sortOrder };
+      } else if (rawSortBy === 'overhead') {
+        orderBy = { productGroup: { overheadPerUnit: sortOrder } };
+      } else if (rawSortBy === 'finalPrice') {
+        orderBy = [
+          { totalCostWithAllFreights: sortOrder },
+          { productGroup: { overheadPerUnit: sortOrder } },
+        ];
+      } else if (sortableFields.has(normalizedSortBy)) {
+        orderBy = { [normalizedSortBy]: sortOrder } as Prisma.ProductOrderByWithRelationInput;
       }
 
       const where: any = {};

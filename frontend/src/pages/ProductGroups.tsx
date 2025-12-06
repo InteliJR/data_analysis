@@ -22,6 +22,22 @@ import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Pagination } from "@/components/common/Pagination";
+import { triggerCsvDownload } from "@/lib/utils";
+
+const PRODUCT_GROUP_EXPORT_COLUMNS = [
+  { key: "name", label: "Nome" },
+  { key: "description", label: "Descrição" },
+  { key: "productsCount", label: "Qtd. Produtos" },
+  { key: "overheadPerUnit", label: "Overhead/Unidade" },
+  { key: "porcentage", label: "% Grupo" },
+  { key: "volumevendasconsiderar", label: "Volume Considerar" },
+  { key: "volumePercentageByQuantity", label: "% Volume (Quantidade)" },
+  { key: "volumePercentageByValue", label: "% Volume (Valor)" },
+  { key: "averagePrice", label: "Preço Médio" },
+  { key: "totalValue", label: "Valor Total" },
+  { key: "createdAt", label: "Criado em" },
+  { key: "updatedAt", label: "Atualizado em" },
+];
 
 import type {
   ProductGroup,
@@ -47,7 +63,10 @@ export default function ProductGroups() {
   const exportMutation = useExportProductGroupsMutation();
 
   // Fetch fixed costs to compute considered total for overhead calculation
-  const fixedCostsQueryParams: FindAllFixedCostsQuery = { page: 1, limit: 1000 };
+  const fixedCostsQueryParams: FindAllFixedCostsQuery = {
+    page: 1,
+    limit: 1000,
+  };
   const { data: fixedCostsData } = useFixedCostsQuery(fixedCostsQueryParams);
 
   // Handlers
@@ -93,7 +112,7 @@ export default function ProductGroups() {
     const payload: typeof data = { ...data } as any;
     // Remove client-side computed fields (backend computes overheadPerUnit)
     // Ensure numeric fields are integers or undefined
-    if ('porcentage' in payload) {
+    if ("porcentage" in payload) {
       const v = (payload as any).porcentage;
       if (v === undefined || v === null || !Number.isFinite(v)) {
         delete (payload as any).porcentage;
@@ -101,7 +120,7 @@ export default function ProductGroups() {
         (payload as any).porcentage = Math.trunc(v);
       }
     }
-    if ('volumevendasconsiderar' in payload) {
+    if ("volumevendasconsiderar" in payload) {
       const v = (payload as any).volumevendasconsiderar;
       if (v === undefined || v === null || !Number.isFinite(v)) {
         delete (payload as any).volumevendasconsiderar;
@@ -120,7 +139,9 @@ export default function ProductGroups() {
             setSelectedGroup(null);
           },
           onError: (error: any) => {
-            const errorMessage = error?.response?.data?.message || "Erro ao atualizar grupo. Tente novamente.";
+            const errorMessage =
+              error?.response?.data?.message ||
+              "Erro ao atualizar grupo. Tente novamente.";
             toast.error(errorMessage);
           },
         }
@@ -132,7 +153,9 @@ export default function ProductGroups() {
           setIsModalOpen(false);
         },
         onError: (error: any) => {
-          const errorMessage = error?.response?.data?.message || "Erro ao criar grupo. Tente novamente.";
+          const errorMessage =
+            error?.response?.data?.message ||
+            "Erro ao criar grupo. Tente novamente.";
           toast.error(errorMessage);
         },
       });
@@ -148,33 +171,35 @@ export default function ProductGroups() {
           setSelectedGroup(null);
         },
         onError: (error: any) => {
-          const errorMessage = error?.response?.data?.message || "Erro ao excluir grupo. Tente novamente.";
+          const errorMessage =
+            error?.response?.data?.message ||
+            "Erro ao excluir grupo. Tente novamente.";
           toast.error(errorMessage);
         },
       });
     }
   };
 
-  const handleExport = (exportFilters: Partial<FindAllProductGroupsQuery>) => {
+  const handleExport = (options: {
+    limit: number;
+    columns: string[];
+    sortBy: string;
+    sortOrder: "asc" | "desc";
+  }) => {
     const payload: ExportProductGroupsPayload = {
-      search: exportFilters.search,
-      sortBy: exportFilters.sortBy,
-      sortOrder: exportFilters.sortOrder,
-      limit: exportFilters.limit,
+      search: filters.search,
+      limit: options.limit,
+      sortBy: options.sortBy,
+      sortOrder: options.sortOrder,
+      columns: options.columns,
     };
 
     exportMutation.mutate(payload, {
       onSuccess: (blob) => {
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `grupos-produtos-${
+        const filename = `grupos-produtos-${
           new Date().toISOString().split("T")[0]
         }.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        triggerCsvDownload(blob, filename);
         toast.success("Exportação concluída!");
       },
       onError: () => {
@@ -204,7 +229,7 @@ export default function ProductGroups() {
   }
 
   return (
-    <div >
+    <div>
       <div className="mb-6">
         <Heading as="h1">Grupos de Estruturas</Heading>
       </div>
@@ -214,6 +239,7 @@ export default function ProductGroups() {
         onFilterChange={handleFilterChange}
         onExport={handleExport}
         currentFilters={filters}
+        exportColumns={PRODUCT_GROUP_EXPORT_COLUMNS}
       />
 
       {isLoading ? (

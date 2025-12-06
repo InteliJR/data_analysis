@@ -14,6 +14,7 @@ import { Autocomplete } from "@/components/common/Autocomplete";
 
 import { FiTrash2, FiUser, FiCalendar, FiClock } from "react-icons/fi";
 import { formatCurrency } from "@/lib/utils";
+import { calculateFreightCostWithTaxes } from "@/lib/costs";
 
 import { useRawMaterialsQuery } from "@/api/rawMaterials";
 import { useFixedCostsQuery, useFixedCostByIdQuery } from "@/api/fixedCosts";
@@ -143,6 +144,13 @@ export function ProductForm({
         .filter(Boolean)
     );
   }, [rawMaterials]);
+
+  const getFreightCostBreakdown = (freight: any) => {
+    const baseCost = toNumber(freight?.unitPrice);
+    const totalCost = calculateFreightCostWithTaxes(freight);
+    const taxesCost = Math.max(totalCost - baseCost, 0);
+    return { baseCost, taxesCost, totalCost };
+  };
 
   // --- CORREÇÃO PRINCIPAL AQUI ---
   // Buscamos o custo fixo específico selecionado para garantir o cálculo correto
@@ -621,9 +629,19 @@ export function ProductForm({
               const pivotOptions = rawMaterialId
                 ? getPivotOptions(rawMaterialId) || []
                 : [];
-              const totalFreightUnit = (matchedPivot?.freights || []).reduce(
-                (acc: number, f: any) => acc + toNumber(f.unitPrice),
-                0
+              const pivotFreightTotals = (matchedPivot?.freights || []).reduce(
+                (
+                  acc: { base: number; taxes: number; total: number },
+                  freight: any
+                ) => {
+                  const breakdown = getFreightCostBreakdown(freight);
+                  return {
+                    base: acc.base + breakdown.baseCost,
+                    taxes: acc.taxes + breakdown.taxesCost,
+                    total: acc.total + breakdown.totalCost,
+                  };
+                },
+                { base: 0, taxes: 0, total: 0 }
               );
 
               return (
@@ -722,11 +740,15 @@ export function ProductForm({
                             </span>
                           </div>
                         )}
-                      {totalFreightUnit > 0 && (
+                      {pivotFreightTotals.total > 0 && (
                         <div>
                           Frete (Total):{" "}
                           <span className="font-medium">
-                            {formatCurrency(totalFreightUnit)}
+                            {formatCurrency(pivotFreightTotals.total)}
+                          </span>
+                          <span className="block text-[11px] text-gray-400">
+                            Serviço {formatCurrency(pivotFreightTotals.base)} +
+                            Impostos {formatCurrency(pivotFreightTotals.taxes)}
                           </span>
                         </div>
                       )}
@@ -800,13 +822,19 @@ export function ProductForm({
             options={
               freightsData?.data
                 ?.filter((f) => !selectedFreightIds.includes(f.id))
-                .map((f) => ({
-                  value: f.id,
-                  label: f.name,
-                  description: `${formatCurrency(Number(f.unitPrice) || 0)} - ${
-                    f.originCity
-                  }/${f.originUf} → ${f.destinationCity}/${f.destinationUf}`,
-                })) || []
+                .map((f) => {
+                  const breakdown = getFreightCostBreakdown(f);
+                  const breakdownLabel = `${formatCurrency(
+                    breakdown.totalCost
+                  )} (serviço ${formatCurrency(
+                    breakdown.baseCost
+                  )} + impostos ${formatCurrency(breakdown.taxesCost)})`;
+                  return {
+                    value: f.id,
+                    label: f.name,
+                    description: `${breakdownLabel} - ${f.originCity}/${f.originUf} → ${f.destinationCity}/${f.destinationUf}`,
+                  };
+                }) || []
             }
             value=""
             searchValue={freightSearch}
@@ -824,6 +852,7 @@ export function ProductForm({
                 (f) => f.id === freightId
               );
               if (!freight) return null;
+              const breakdown = getFreightCostBreakdown(freight);
 
               return (
                 <div
@@ -837,7 +866,11 @@ export function ProductForm({
                     <Text className="text-xs text-gray-500">
                       {freight.originCity}/{freight.originUf} →{" "}
                       {freight.destinationCity}/{freight.destinationUf} •{" "}
-                      {formatCurrency(Number(freight.unitPrice) || 0)}
+                      {formatCurrency(breakdown.totalCost)}
+                      <span className="block text-[11px] text-gray-400">
+                        Serviço {formatCurrency(breakdown.baseCost)} + Impostos{" "}
+                        {formatCurrency(breakdown.taxesCost)}
+                      </span>
                     </Text>
                   </div>
                   <SecondaryButton

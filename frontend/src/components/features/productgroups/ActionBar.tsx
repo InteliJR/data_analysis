@@ -1,15 +1,21 @@
 import { useState } from "react";
 import { Plus, Download, Search } from "lucide-react";
 import { SecondaryButton } from "@/components/common/SecondaryButton";
-import { ExportModal } from "./ExportModal";
+import { ExportModal, type ColumnOption } from "./ExportModal";
 import { useDebounce } from "@/hooks/useDebounce";
 import type { FindAllProductGroupsQuery } from "@/api/productgroups";
 
 interface ActionBarProps {
   onNewGroup: () => void;
   onFilterChange: (filters: Partial<FindAllProductGroupsQuery>) => void;
-  onExport: (filters: Partial<FindAllProductGroupsQuery>) => void;
+  onExport: (options: {
+    limit: number;
+    columns: string[];
+    sortBy: string;
+    sortOrder: "asc" | "desc";
+  }) => void;
   currentFilters: FindAllProductGroupsQuery;
+  exportColumns: ColumnOption[];
 }
 
 export function ActionBar({
@@ -17,6 +23,7 @@ export function ActionBar({
   onFilterChange,
   onExport,
   currentFilters,
+  exportColumns,
 }: ActionBarProps) {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [searchValue, setSearchValue] = useState(currentFilters.search || "");
@@ -78,8 +85,11 @@ export function ActionBar({
       <ExportModal
         isOpen={isExportModalOpen}
         onClose={() => setIsExportModalOpen(false)}
-        onExport={onExport}
-        currentFilters={currentFilters}
+        onConfirm={(options) => {
+          onExport(options);
+          setIsExportModalOpen(false);
+        }}
+        defaultColumns={exportColumns}
       />
     </>
   );

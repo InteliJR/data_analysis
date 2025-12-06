@@ -164,43 +164,8 @@ export function RawMaterialForm({
 
   const locations = (watch("locations") || []) as RawMaterialLocationDTO[];
 
-  const firstLoc = (locations[0] || {}) as RawMaterialLocationDTO;
-  const acquisitionPrice = Number(firstLoc?.acquisitionPrice || 0);
-  const additionalCost = Number(firstLoc?.additionalCost || 0);
-  const selectedFreightIds = (firstLoc?.freightIds || []) as string[];
-  const rawMaterialTaxes = (firstLoc?.taxes || []) as any[];
-
-  const totalBeforeTaxes = acquisitionPrice + additionalCost;
-
-  const totalFreightCost = (selectedFreightIds || []).reduce(
-    (sum, freightId) => {
-      const freight = freightsData?.data?.find((f) => f.id === freightId);
-      return sum + calculateFreightCostWithTaxes(freight);
-    },
-    0
-  );
-
-  const recoverableTaxes = rawMaterialTaxes.reduce((sum, tax) => {
-    if (tax.recoverable) {
-      const rate = Number(tax.rate) || 0;
-      return sum + totalBeforeTaxes * (rate / 100);
-    }
-    return sum;
-  }, 0);
-
-  const nonRecoverableTaxes = rawMaterialTaxes.reduce((sum, tax) => {
-    if (!tax.recoverable) {
-      const rate = Number(tax.rate) || 0;
-      return sum + totalBeforeTaxes * (rate / 100);
-    }
-    return sum;
-  }, 0);
-
-  // Final cost must include non-recoverable taxes and freights.
-  // Recoverable taxes do not increase the company's cost (they are recoverable),
-  // so they must NOT be subtracted from the cost. Instead, only non-recoverable
-  // taxes are added to the base cost.
-  const totalCost = totalBeforeTaxes + totalFreightCost + nonRecoverableTaxes;
+  const firstLocation = locations[0];
+  const acquisitionPrice = Number(firstLocation?.acquisitionPrice || 0);
 
   const openTaxDraft = (locIndex: number) => {
     setTaxDraft({
@@ -944,7 +909,15 @@ export function RawMaterialForm({
                       </div>
                       <div>
                         <Text className="text-gray-600">
-                          Créditos Recuperáveis:
+                          Impostos Não Recuperáveis:
+                        </Text>
+                        <Text className="font-semibold text-red-600">
+                          {formatCurrency(locNonRecoverableTaxes)}
+                        </Text>
+                      </div>
+                      <div>
+                        <Text className="text-gray-600">
+                          Impostos Recuperáveis:
                         </Text>
                         <Text className="font-semibold text-green-700">
                           {formatCurrency(locRecoverableTaxes)}
@@ -968,49 +941,6 @@ export function RawMaterialForm({
       </div>
 
       {/* Seções antigas de Fretes e Impostos substituídas por controles por localização */}
-
-      {/* PREVIEW (usa primeira localização como referência rápida) */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
-        <Text className="font-semibold text-blue-900">Preview de Custos</Text>
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div>
-            <Text className="text-gray-600">Preço Base:</Text>
-            <Text className="font-semibold">
-              {formatCurrency(acquisitionPrice)}
-            </Text>
-          </div>
-          <div>
-            <Text className="text-gray-600">Custo Adicional:</Text>
-            <Text className="font-semibold">
-              {formatCurrency(additionalCost)}
-            </Text>
-          </div>
-          <div>
-            <Text className="text-gray-600">Total de Fretes:</Text>
-            <Text className="font-semibold text-purple-600">
-              {formatCurrency(totalFreightCost)}
-            </Text>
-          </div>
-          <div>
-            <Text className="text-gray-600">Impostos Recuperáveis:</Text>
-            <Text className="font-semibold text-green-600">
-              {formatCurrency(recoverableTaxes)}
-            </Text>
-          </div>
-          <div>
-            <Text className="text-gray-600">Impostos Não Recuperáveis:</Text>
-            <Text className="font-semibold text-red-600">
-              {formatCurrency(nonRecoverableTaxes)}
-            </Text>
-          </div>
-          <div className="col-span-2 pt-2 border-t border-blue-300">
-            <Text className="text-gray-600">Custo Total Final:</Text>
-            <Text className="font-bold text-lg text-blue-900">
-              {formatCurrency(totalCost)}
-            </Text>
-          </div>
-        </div>
-      </div>
 
       {acquisitionPrice <= 0 && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-1 px-2">

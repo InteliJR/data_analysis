@@ -24,6 +24,104 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
+import { ProductGroupEntity } from './entities/product-group.entity';
+
+type ColumnKey =
+  | 'name'
+  | 'description'
+  | 'productsCount'
+  | 'overheadPerUnit'
+  | 'porcentage'
+  | 'volumevendasconsiderar'
+  | 'volumePercentageByQuantity'
+  | 'volumePercentageByValue'
+  | 'averagePrice'
+  | 'totalValue'
+  | 'createdAt'
+  | 'updatedAt';
+
+const PRODUCT_GROUP_COLUMN_DEFINITIONS: Record<ColumnKey, {
+  header: string;
+  getValue: (item: ProductGroupEntity) => string;
+}> = {
+  name: {
+    header: 'Nome',
+    getValue: (item) => item.name,
+  },
+  description: {
+    header: 'Descrição',
+    getValue: (item) => item.description ?? '',
+  },
+  productsCount: {
+    header: 'Qtd. Produtos',
+    getValue: (item) => String(item.productsCount ?? 0),
+  },
+  overheadPerUnit: {
+    header: 'Overhead/Unidade',
+    getValue: (item) => formatCurrency(item.overheadPerUnit ?? 0),
+  },
+  porcentage: {
+    header: '% Grupo',
+    getValue: (item) =>
+      item.porcentage !== null && item.porcentage !== undefined
+        ? `${item.porcentage}%`
+        : '',
+  },
+  volumevendasconsiderar: {
+    header: 'Volume Considerar',
+    getValue: (item) =>
+      item.volumevendasconsiderar !== null &&
+      item.volumevendasconsiderar !== undefined
+        ? String(item.volumevendasconsiderar)
+        : '',
+  },
+  volumePercentageByQuantity: {
+    header: 'Vol. % (Quantidade)',
+    getValue: (item) => `${item.volumePercentageByQuantity}%`,
+  },
+  volumePercentageByValue: {
+    header: 'Vol. % (Valor)',
+    getValue: (item) => `${item.volumePercentageByValue}%`,
+  },
+  averagePrice: {
+    header: 'Preço Médio',
+    getValue: (item) => formatCurrency(item.averagePrice ?? 0),
+  },
+  totalValue: {
+    header: 'Valor Total',
+    getValue: (item) => formatCurrency(item.totalValue ?? 0),
+  },
+  createdAt: {
+    header: 'Criado em',
+    getValue: (item) => formatDate(item.createdAt),
+  },
+  updatedAt: {
+    header: 'Atualizado em',
+    getValue: (item) => formatDate(item.updatedAt),
+  },
+};
+
+const DEFAULT_PRODUCT_GROUP_EXPORT_COLUMNS: ColumnKey[] = [
+  'name',
+  'description',
+  'productsCount',
+  'overheadPerUnit',
+  'porcentage',
+  'volumevendasconsiderar',
+  'volumePercentageByQuantity',
+  'volumePercentageByValue',
+  'averagePrice',
+  'totalValue',
+];
+
+function formatCurrency(value: number): string {
+  return `R$ ${value.toFixed(2)}`;
+}
+
+function formatDate(date: Date | string): string {
+  const parsed = date instanceof Date ? date : new Date(date);
+  return parsed.toISOString();
+}
 
 @Controller('product-groups')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -73,30 +171,27 @@ export class ProductGroupsController {
   ) {
     const data = await this.productGroupsService.findAllForExport(exportDto);
 
-    // Criar CSV simples
-    const headers = [
-      'Nome',
-      'Descrição',
-      'Qtd. Produtos',
-      'Overhead/Unidade',
-      '% Grupo',
-      'Volume Considerar',
-      'Vol. % (Quantidade)',
-      'Vol. % (Valor)',
-      'Preço Médio',
-    ];
+    const requestedColumns = exportDto.columns?.length
+      ? (exportDto.columns as ColumnKey[])
+      : DEFAULT_PRODUCT_GROUP_EXPORT_COLUMNS;
 
-    const rows = data.map((item) => [
-      item.name,
-      item.description || '',
-      item.productsCount,
-      `R$ ${(item.overheadPerUnit ?? 0).toFixed(2)}`,
-      item.porcentage != null ? `${item.porcentage}%` : '',
-      item.volumevendasconsiderar != null ? `${item.volumevendasconsiderar}` : '',
-      `${item.volumePercentageByQuantity}%`,
-      `${item.volumePercentageByValue}%`,
-      `R$ ${item.averagePrice.toFixed(2)}`,
-    ]);
+    let columns = requestedColumns.filter(
+      (column) => column in PRODUCT_GROUP_COLUMN_DEFINITIONS,
+    ) as ColumnKey[];
+
+    if (columns.length === 0) {
+      columns = DEFAULT_PRODUCT_GROUP_EXPORT_COLUMNS;
+    }
+
+    const headers = columns.map(
+      (column) => PRODUCT_GROUP_COLUMN_DEFINITIONS[column].header,
+    );
+
+    const rows = data.map((item) =>
+      columns.map((column) =>
+        PRODUCT_GROUP_COLUMN_DEFINITIONS[column].getValue(item),
+      ),
+    );
 
     // Gerar CSV
     const csvContent = [
