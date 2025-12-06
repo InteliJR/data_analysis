@@ -18,6 +18,7 @@ import {
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
+import { CreateProductFullDto } from './dto/create-product-full.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { CalculatePriceDto } from './dto/calculate-price.dto';
 import { ExportProductsDto } from './dto/export-products.dto';
@@ -43,6 +44,17 @@ export class ProductsController {
     }
 
     return this.productsService.create(createProductDto, userId);
+  }
+
+  @Post('full-create')
+  @HttpCode(HttpStatus.CREATED)
+  @Roles(UserRole.ADMIN, UserRole.COMERCIAL)
+  createFull(@Body() dto: CreateProductFullDto, @Req() req: any) {
+    const userId = req.user?.sub || req.user?.userId || req.user?.id;
+    if (!userId) {
+      throw new BadRequestException('Usuário não identificado no token');
+    }
+    return this.productsService.createFull(dto, userId);
   }
 
   @Get()

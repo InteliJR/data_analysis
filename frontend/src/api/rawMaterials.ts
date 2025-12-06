@@ -1,8 +1,13 @@
 // src/api/rawMaterials.ts
 
-import { useMutation, useQuery, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
-import { apiClient } from './client';
-import type { RawMaterial, RawMaterialChangeLog } from '@/types/rawMaterial';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useInfiniteQuery,
+} from "@tanstack/react-query";
+import { apiClient } from "./client";
+import type { RawMaterial, RawMaterialChangeLog } from "@/types/rawMaterial";
 
 // ========================================
 // Tipagens de Requisição e Resposta
@@ -10,22 +15,20 @@ import type { RawMaterial, RawMaterialChangeLog } from '@/types/rawMaterial';
 
 export interface LocationTaxDTO {
   taxId?: string; // preferível quando existir no catálogo
-  name?: string;  // alternativa para criar
+  name?: string; // alternativa para criar
   rate: number;
   recoverable: boolean;
 }
 
 export interface RawMaterialLocationDTO {
   id?: string;
-  country?: string;
-  stateUf: string;
-  city: string;
+  locationId: string;
   acquisitionPrice: number;
-  currency: 'BRL' | 'USD' | 'EUR';
-  priceConvertedBrl: number;
-  additionalCost: number;
-  freightIds: string[];
-  taxes: LocationTaxDTO[];
+  currency: "BRL" | "USD" | "EUR";
+  priceConvertedBrl?: number;
+  additionalCost?: number;
+  freightIds?: string[];
+  taxes?: LocationTaxDTO[];
 }
 
 export interface CreateRawMaterialDTO {
@@ -57,14 +60,16 @@ export interface FindAllRawMaterialsQuery {
   measurementUnit?: string;
   inputGroup?: string;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
+  stateUf?: string;
+  city?: string;
 }
 
 export interface ExportRawMaterialsPayload {
-  format: 'csv';
+  format: "csv";
   limit?: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
   filters?: {
     search?: string;
     measurementUnit?: string;
@@ -92,15 +97,15 @@ export interface PaginatedChangeLogsResponse {
 // Funções de API
 // ========================================
 
-const RAW_MATERIALS_QUERY_KEY = 'rawMaterials';
-const CHANGE_LOGS_QUERY_KEY = 'changeLogs';
-const RECENT_CHANGES_QUERY_KEY = 'recentChanges';
+const RAW_MATERIALS_QUERY_KEY = "rawMaterials";
+const CHANGE_LOGS_QUERY_KEY = "changeLogs";
+const RECENT_CHANGES_QUERY_KEY = "recentChanges";
 
 // GET /raw-materials
 export async function getRawMaterials(
-  query: FindAllRawMaterialsQuery,
+  query: FindAllRawMaterialsQuery
 ): Promise<PaginatedRawMaterialsResponse> {
-  const { data } = await apiClient.get('/raw-materials', { params: query });
+  const { data } = await apiClient.get("/raw-materials", { params: query });
   return data;
 }
 
@@ -111,8 +116,10 @@ export async function getRawMaterialById(id: string): Promise<RawMaterial> {
 }
 
 // POST /raw-materials
-export async function createRawMaterial(payload: CreateRawMaterialDTO): Promise<RawMaterial> {
-  const { data } = await apiClient.post('/raw-materials', payload);
+export async function createRawMaterial(
+  payload: CreateRawMaterialDTO
+): Promise<RawMaterial> {
+  const { data } = await apiClient.post("/raw-materials", payload);
   return data;
 }
 
@@ -134,9 +141,11 @@ export async function deleteRawMaterial(id: string): Promise<void> {
 }
 
 // POST /raw-materials/export
-export async function exportRawMaterials(payload: ExportRawMaterialsPayload): Promise<Blob> {
-  const { data } = await apiClient.post('/raw-materials/export', payload, {
-    responseType: 'blob',
+export async function exportRawMaterials(
+  payload: ExportRawMaterialsPayload
+): Promise<Blob> {
+  const { data } = await apiClient.post("/raw-materials/export", payload, {
+    responseType: "blob",
   });
   return data;
 }
@@ -144,15 +153,21 @@ export async function exportRawMaterials(payload: ExportRawMaterialsPayload): Pr
 // GET /raw-materials/:id/change-logs
 export async function getChangeLogsByRawMaterial(
   id: string,
-  query: ChangeLogQuery,
+  query: ChangeLogQuery
 ): Promise<PaginatedChangeLogsResponse> {
-  const { data } = await apiClient.get(`/raw-materials/${id}/change-logs`, { params: query });
+  const { data } = await apiClient.get(`/raw-materials/${id}/change-logs`, {
+    params: query,
+  });
   return data;
 }
 
 // GET /raw-materials/recent-changes
-export async function getRecentChanges(limit: number = 10): Promise<RawMaterialChangeLog[]> {
-  const { data } = await apiClient.get('/raw-materials/recent-changes', { params: { limit } });
+export async function getRecentChanges(
+  limit: number = 10
+): Promise<RawMaterialChangeLog[]> {
+  const { data } = await apiClient.get("/raw-materials/recent-changes", {
+    params: { limit },
+  });
   return data;
 }
 

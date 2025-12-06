@@ -15,6 +15,7 @@ import { FixedCostsModule } from './fixed-costs/fixed-costs.module';
 import { CommonModule } from './common/common.module';
 import { ExportModule } from './export/export.module';
 import { ProductGroupsModule } from './product-groups/product-groups.module';
+import { LocationsModule } from './locations/locations.module';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { ProductGroupsModule } from './product-groups/product-groups.module';
     CommonModule,
     ExportModule,
     ProductGroupsModule,
+    LocationsModule,
   ],
   controllers: [AppController],
   providers: [

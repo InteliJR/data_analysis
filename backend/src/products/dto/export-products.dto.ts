@@ -41,6 +41,7 @@ export class ExportProductsDto {
       'productGroup', // Relação
       'priceWithoutTaxesAndFreight', // Campo
       'priceWithTaxesAndFreight', // Campo
+      'totalCostWithAllFreights', // Campo novo
       'fixedCost', // Relação
     ],
     {

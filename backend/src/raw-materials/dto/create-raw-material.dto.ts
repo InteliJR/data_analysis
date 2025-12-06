@@ -15,6 +15,7 @@ import {
   ValidateNested,
   IsUUID,
   IsBoolean,
+  ArrayMinSize,
 } from 'class-validator';
 // CORREÇÃO: Importar Type
 import { Type } from 'class-transformer';
@@ -68,19 +69,8 @@ export class RawMaterialLocationDto {
   @IsUUID()
   id?: string;
 
-  @IsOptional()
-  @IsString()
-  country?: string = 'BR';
-
-  @IsString()
-  @MinLength(2)
-  @MaxLength(2)
-  stateUf: string;
-
-  @IsString()
-  @MinLength(2)
-  @MaxLength(120)
-  city: string;
+  @IsUUID()
+  locationId: string;
 
   @IsNumber()
   @Type(() => Number)
@@ -90,24 +80,28 @@ export class RawMaterialLocationDto {
   @IsEnum(Currency)
   currency: Currency;
 
+  @IsOptional()
   @IsNumber()
   @Type(() => Number)
   @Min(0)
-  priceConvertedBrl: number;
+  priceConvertedBrl?: number;
 
+  @IsOptional()
   @IsNumber()
   @Type(() => Number)
   @Min(0)
-  additionalCost: number;
+  additionalCost?: number;
 
+  @IsOptional()
   @IsArray()
   @IsUUID('4', { each: true })
-  freightIds: string[];
+  freightIds?: string[];
 
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => LocationTaxDto)
-  taxes: LocationTaxDto[];
+  taxes?: LocationTaxDto[];
 }
 
 export class CreateRawMaterialDto {
@@ -146,6 +140,7 @@ export class CreateRawMaterialDto {
 
   // Preços/impostos/fretes por localidade
   @IsArray()
+  @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => RawMaterialLocationDto)
   locations: RawMaterialLocationDto[];

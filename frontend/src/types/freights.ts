@@ -3,11 +3,11 @@ export type FreightOperationType = 'INTERNAL' | 'EXTERNAL';
 
 export interface FreightTax {
   id: string;
-  freightId: string;
+  freightId?: string;
   name: string;
   rate: number;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Freight {
@@ -25,6 +25,10 @@ export interface Freight {
   createdAt: string;
   updatedAt: string;
   freightTaxes: FreightTax[];
+  _count?: {
+    rawMaterialLocations: number;
+    products: number;
+  };
 }
 
 export interface FreightFormData {

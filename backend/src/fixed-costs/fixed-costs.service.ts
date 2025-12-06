@@ -127,7 +127,7 @@ export class FixedCostsService {
               code: true,
               name: true,
               priceWithoutTaxesAndFreight: true,
-              priceWithTaxesAndFreight: true,
+              totalCostWithAllFreights: true,
             },
           },
         }),
@@ -287,7 +287,7 @@ export class FixedCostsService {
           id: true,
           code: true,
           name: true,
-          priceWithTaxesAndFreight: true,
+          totalCostWithAllFreights: true,
           fixedCostId: true,
         },
       });
@@ -301,7 +301,7 @@ export class FixedCostsService {
           id: true,
           code: true,
           name: true,
-          priceWithTaxesAndFreight: true,
+          totalCostWithAllFreights: true,
           fixedCostId: true,
         },
       });
@@ -315,7 +315,9 @@ export class FixedCostsService {
       productsToAffect.length > 0 ? overheadTotal / productsToAffect.length : 0;
 
     const affectedProducts = productsToAffect.map((product) => {
-      const priceBeforeOverhead = product.priceWithTaxesAndFreight || 0;
+      const priceBeforeOverhead =
+        product.totalCostWithAllFreights?.toNumber?.() ??
+        Number(product.totalCostWithAllFreights ?? 0);
       const overheadApplied = perProductOverhead;
       const priceAfterOverhead = priceBeforeOverhead + overheadApplied;
 
@@ -323,7 +325,7 @@ export class FixedCostsService {
         id: product.id,
         code: product.code,
         name: product.name,
-        priceBeforeOverhead: priceBeforeOverhead.toNumber(),
+        priceBeforeOverhead: Number(priceBeforeOverhead.toFixed(2)),
         overheadApplied: Number(overheadApplied.toFixed(2)),
         priceAfterOverhead: Number(priceAfterOverhead.toFixed(2)),
         updated: false,

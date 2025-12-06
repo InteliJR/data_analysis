@@ -1,9 +1,12 @@
 // src/components/features/rawMaterials/RawMaterialForm.tsx
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import type { RawMaterial } from "@/types/rawMaterial";
-import type { CreateRawMaterialDTO, RawMaterialLocationDTO } from "@/api/rawMaterials";
+import type {
+  CreateRawMaterialDTO,
+  RawMaterialLocationDTO,
+} from "@/api/rawMaterials";
 import { toast } from "react-hot-toast";
 
 import { Input } from "@/components/common/Input";
@@ -13,14 +16,14 @@ import { Textarea } from "@/components/common/Textarea";
 import { CurrencyInput } from "@/components/common/CurrencyInput";
 import { SecondaryButton } from "@/components/common/SecondaryButton";
 import { Text } from "@/components/common/Text";
-import { Checkbox } from "@/components/common/Checkbox";
 import { Autocomplete } from "@/components/common/Autocomplete";
 
-import { FiPlus, FiTrash2 } from "react-icons/fi";
+import { FiPlus, FiTrash2, FiMapPin } from "react-icons/fi";
 import { formatCurrency } from "@/lib/utils";
 
 import { useFreightsQuery } from "@/api/freights";
 import { useRawMaterialTaxesQuery } from "@/api/taxes";
+import { useLocationsQuery } from "@/api/locations";
 import { useDebounce } from "@/hooks/useDebounce";
 
 const MEASUREMENT_UNITS = [
@@ -35,10 +38,18 @@ const MEASUREMENT_UNITS = [
   { value: "PC", label: "Peça (pc)" },
 ];
 
+type TaxDraft = {
+  locationIndex: number;
+  name: string;
+  rate: number;
+  recoverable: boolean;
+};
+
 interface RawMaterialFormProps {
   rawMaterial?: RawMaterial | null;
   onSubmit: (data: CreateRawMaterialDTO) => void;
   isLoading?: boolean;
+  onOpenLocationModal?: () => void;
 }
 
 const validateNotEmpty = (value: string | undefined): boolean => {
@@ -49,9 +60,11 @@ export function RawMaterialForm({
   rawMaterial,
   onSubmit,
   isLoading,
+  onOpenLocationModal,
 }: RawMaterialFormProps) {
   const [freightSearch, setFreightSearch] = useState("");
   const [taxSearch, setTaxSearch] = useState("");
+  const [taxDraft, setTaxDraft] = useState<TaxDraft | null>(null);
 
   const {
     register,
@@ -71,9 +84,8 @@ export function RawMaterialForm({
           paymentTerm: Number(rawMaterial.paymentTerm),
           locations:
             rawMaterial.locations?.map((loc) => ({
-              country: loc.country || "BR",
-              stateUf: loc.stateUf,
-              city: loc.city,
+              id: loc.id,
+              locationId: loc.locationId,
               acquisitionPrice: Number(loc.acquisitionPrice || 0),
               currency: (loc.currency as any) || "BRL",
               priceConvertedBrl: Number(loc.priceConvertedBrl || 0),
@@ -94,19 +106,7 @@ export function RawMaterialForm({
           measurementUnit: "KG",
           inputGroup: "",
           paymentTerm: 30,
-          locations: [
-            {
-              country: "BR",
-              stateUf: "SP",
-              city: "",
-              acquisitionPrice: 0,
-              currency: "BRL",
-              priceConvertedBrl: 0,
-              additionalCost: 0,
-              freightIds: [],
-              taxes: [],
-            },
-          ],
+          locations: [],
         },
   });
 
@@ -115,6 +115,31 @@ export function RawMaterialForm({
     append: appendLocation,
     remove: removeLocation,
   } = useFieldArray({ control, name: "locations" });
+
+  const { data: locationsResponse, isLoading: isLoadingLocations } =
+    useLocationsQuery({
+      page: 1,
+      limit: 200,
+    });
+
+  const availableLocations = useMemo(() => {
+    const fetched = locationsResponse?.data ?? [];
+    const fromRawMaterial = rawMaterial?.locations
+      ?.map((loc) => loc.location)
+      .filter((loc): loc is NonNullable<typeof loc> => Boolean(loc)) ?? [];
+
+    const map = new Map<string, (typeof fetched)[number]>();
+    fetched.forEach((location) => {
+      map.set(location.id, location);
+    });
+    fromRawMaterial.forEach((location) => {
+      if (!map.has(location.id)) {
+        map.set(location.id, location);
+      }
+    });
+
+    return Array.from(map.values());
+  }, [locationsResponse?.data, rawMaterial?.locations]);
 
   // Queries
   const { data: freightsData, isLoading: isLoadingFreights } = useFreightsQuery(
@@ -140,16 +165,18 @@ export function RawMaterialForm({
   const firstLoc = (locations[0] || {}) as RawMaterialLocationDTO;
   const acquisitionPrice = Number(firstLoc?.acquisitionPrice || 0);
   const additionalCost = Number(firstLoc?.additionalCost || 0);
-  const currency = (firstLoc?.currency as any) || "BRL";
   const selectedFreightIds = (firstLoc?.freightIds || []) as string[];
   const rawMaterialTaxes = (firstLoc?.taxes || []) as any[];
 
   const totalBeforeTaxes = acquisitionPrice + additionalCost;
 
-  const totalFreightCost = (selectedFreightIds || []).reduce((sum, freightId) => {
-    const freight = freightsData?.data?.find((f) => f.id === freightId);
-    return sum + (freight ? Number(freight.unitPrice || 0) : 0);
-  }, 0);
+  const totalFreightCost = (selectedFreightIds || []).reduce(
+    (sum, freightId) => {
+      const freight = freightsData?.data?.find((f) => f.id === freightId);
+      return sum + (freight ? Number(freight.unitPrice || 0) : 0);
+    },
+    0
+  );
 
   const recoverableTaxes = rawMaterialTaxes.reduce((sum, tax) => {
     if (tax.recoverable) {
@@ -169,10 +196,40 @@ export function RawMaterialForm({
 
   const totalCost = totalBeforeTaxes + totalFreightCost - recoverableTaxes;
 
-  const addTax = (locIndex: number) => {
-    const current = (locations[locIndex]?.taxes || []) as any[];
-    const next = [...current, { rate: 0, recoverable: false }];
-    setValue(`locations.${locIndex}.taxes` as any, next, { shouldDirty: true });
+  const openTaxDraft = (locIndex: number) => {
+    setTaxDraft({ locationIndex: locIndex, name: "", rate: 0, recoverable: false });
+  };
+
+  const cancelTaxDraft = () => setTaxDraft(null);
+
+  const handleSaveTaxDraft = () => {
+    if (!taxDraft) return;
+    const name = taxDraft.name.trim();
+    if (!name) {
+      toast.error("Informe o nome do imposto");
+      return;
+    }
+    if (Number.isNaN(taxDraft.rate) || taxDraft.rate < 0 || taxDraft.rate > 100) {
+      toast.error("Informe uma taxa entre 0% e 100%");
+      return;
+    }
+
+    const current = (locations[taxDraft.locationIndex]?.taxes || []) as RawMaterialLocationDTO["taxes"];
+    const next = [
+      ...(current ?? []),
+      {
+        name,
+        rate: Number(taxDraft.rate),
+        recoverable: taxDraft.recoverable,
+      },
+    ];
+
+    setValue(`locations.${taxDraft.locationIndex}.taxes` as any, next, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    setTaxDraft(null);
+    toast.success(`Imposto "${name}" adicionado`);
   };
 
   const addExistingTax = (taxId: string, locIndex: number) => {
@@ -186,12 +243,40 @@ export function RawMaterialForm({
       }
       const next = [
         ...current,
-        { taxId: tax.id, rate: Number(tax.rate), recoverable: tax.recoverable },
+        {
+          taxId: tax.id,
+          name: tax.name,
+          rate: Number(tax.rate),
+          recoverable: tax.recoverable,
+        },
       ];
-      setValue(`locations.${locIndex}.taxes` as any, next, { shouldDirty: true });
+      setValue(`locations.${locIndex}.taxes` as any, next, {
+        shouldDirty: true,
+      });
       toast.success(`Imposto "${tax.name}" adicionado`);
     }
     setTaxSearch("");
+    if (taxDraft?.locationIndex === locIndex) {
+      setTaxDraft(null);
+    }
+  };
+
+  const removeTaxFromLocation = (locIndex: number, taxIndex: number) => {
+    const current = (locations[locIndex]?.taxes || []) as RawMaterialLocationDTO["taxes"];
+    const next = (current ?? []).filter((_, index) => index !== taxIndex);
+    setValue(`locations.${locIndex}.taxes` as any, next, { shouldDirty: true });
+  };
+
+  const handleRemoveLocation = (index: number) => {
+    removeLocation(index);
+    setTaxDraft((prev) => {
+      if (!prev) return prev;
+      if (prev.locationIndex === index) return null;
+      if (prev.locationIndex > index) {
+        return { ...prev, locationIndex: prev.locationIndex - 1 };
+      }
+      return prev;
+    });
   };
 
   const toggleFreight = (freightId: string, locIndex: number) => {
@@ -199,26 +284,21 @@ export function RawMaterialForm({
     const next = current.includes(freightId)
       ? current.filter((id) => id !== freightId)
       : [...current, freightId];
-    setValue(`locations.${locIndex}.freightIds` as any, next, { shouldDirty: true });
+    setValue(`locations.${locIndex}.freightIds` as any, next, {
+      shouldDirty: true,
+    });
   };
 
   const handleFormSubmit = (data: CreateRawMaterialDTO) => {
-    const cleanedData: CreateRawMaterialDTO = {
-      code: data.code.trim().toUpperCase(),
-      name: data.name.trim(),
-      description: data.description?.trim() || "",
-      measurementUnit: data.measurementUnit,
-      inputGroup: data.inputGroup?.trim() || "",
-      paymentTerm: Number(data.paymentTerm),
-      locations: (data.locations || []).map((loc) => ({
-        country: (loc.country || "BR").trim(),
-        stateUf: loc.stateUf.trim().toUpperCase(),
-        city: loc.city.trim(),
+    const cleanedLocations = (data.locations || [])
+      .filter((loc) => !!loc.locationId)
+      .map((loc) => ({
+        id: loc.id,
+        locationId: loc.locationId,
         acquisitionPrice: Number(loc.acquisitionPrice || 0),
         currency: loc.currency,
-        // Se a moeda for BRL, definimos o convertido em BRL automaticamente pelo valor de aquisição
         priceConvertedBrl:
-          (loc.currency === "BRL")
+          loc.currency === "BRL"
             ? Number(loc.acquisitionPrice || 0)
             : Number(loc.priceConvertedBrl || 0),
         additionalCost: Number(loc.additionalCost || 0),
@@ -229,7 +309,21 @@ export function RawMaterialForm({
           rate: Number(t.rate || 0),
           recoverable: !!t.recoverable,
         })),
-      })),
+      }));
+
+    if (cleanedLocations.length === 0) {
+      toast.error("Adicione pelo menos uma localidade");
+      return;
+    }
+
+    const cleanedData: CreateRawMaterialDTO = {
+      code: data.code.trim().toUpperCase(),
+      name: data.name.trim(),
+      description: data.description?.trim() || "",
+      measurementUnit: data.measurementUnit,
+      inputGroup: data.inputGroup?.trim() || "",
+      paymentTerm: Number(data.paymentTerm),
+      locations: cleanedLocations,
     };
     onSubmit(cleanedData);
   };
@@ -385,32 +479,48 @@ export function RawMaterialForm({
       <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-gray-700">Localidades</h3>
-          <SecondaryButton
-            type="button"
-            variant="secondary"
-            leftIcon={FiPlus}
-            onClick={() =>
-              appendLocation({
-                country: "BR",
-                stateUf: "SP",
-                city: "",
-                acquisitionPrice: 0,
-                currency: "BRL",
-                priceConvertedBrl: 0,
-                additionalCost: 0,
-                freightIds: [],
-                taxes: [],
-              })
-            }
-            className="cursor-pointer"
-          >
-            Adicionar Localidade
-          </SecondaryButton>
+          <div className="flex gap-2">
+            {onOpenLocationModal && (
+              <SecondaryButton
+                type="button"
+                variant="ghost"
+                leftIcon={FiMapPin}
+                onClick={onOpenLocationModal}
+                className="cursor-pointer"
+              >
+                Nova Localidade
+              </SecondaryButton>
+            )}
+            <SecondaryButton
+              type="button"
+              variant="secondary"
+              leftIcon={FiPlus}
+              onClick={() =>
+                appendLocation({
+                  locationId: "",
+                  acquisitionPrice: 0,
+                  currency: "BRL",
+                  priceConvertedBrl: 0,
+                  additionalCost: 0,
+                  freightIds: [],
+                  taxes: [],
+                })
+              }
+              className="cursor-pointer"
+            >
+              Adicionar Localidade
+            </SecondaryButton>
+          </div>
         </div>
 
         {locationFields.length === 0 ? (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-            <Text className="text-gray-500 text-sm">Nenhuma localidade adicionada.</Text>
+            <Text className="text-gray-500 text-sm">
+              Nenhuma localidade adicionada.
+            </Text>
+            <Text className="text-xs text-gray-400">
+              Clique em "Adicionar Localidade" para definir preços por unidade.
+            </Text>
           </div>
         ) : (
           <div className="space-y-6">
@@ -422,25 +532,35 @@ export function RawMaterialForm({
               const locAdd = Number(locValue?.additionalCost || 0);
               const locFreightIds = (locValue?.freightIds || []) as string[];
               const locTaxes = (locValue?.taxes || []) as any[];
+              const selectedLocation = availableLocations.find(
+                (location) => location.id === locValue.locationId
+              );
+              const hasDraftHere = taxDraft?.locationIndex === idx;
               const locTotalBeforeTaxes = locAcq + locAdd;
               const locRecoverableTaxes = locTaxes
                 .filter((t) => t.recoverable)
-                .reduce((s, t) => s + locTotalBeforeTaxes * (Number(t.rate) / 100), 0);
+                .reduce(
+                  (s, t) => s + locTotalBeforeTaxes * (Number(t.rate) / 100),
+                  0
+                );
               const locFreightTotal = locFreightIds.reduce((s, id) => {
                 const f = freightsData?.data?.find((fr) => fr.id === id);
                 return s + (f ? Number(f.unitPrice || 0) : 0);
               }, 0);
-              const locFinal = locTotalBeforeTaxes + locFreightTotal - locRecoverableTaxes;
+              const locFinal =
+                locTotalBeforeTaxes + locFreightTotal - locRecoverableTaxes;
 
               return (
                 <div key={field.id} className="border rounded-lg p-4">
                   <div className="flex justify-between items-center mb-3">
-                    <Text className="font-semibold text-gray-800">Localidade #{idx + 1}</Text>
+                    <Text className="font-semibold text-gray-800">
+                      Localidade #{idx + 1}
+                    </Text>
                     <SecondaryButton
                       type="button"
                       variant="ghost"
                       leftIcon={FiTrash2}
-                      onClick={() => removeLocation(idx)}
+                      onClick={() => handleRemoveLocation(idx)}
                       className="cursor-pointer text-red-600 hover:bg-red-50"
                     >
                       Remover
@@ -448,22 +568,63 @@ export function RawMaterialForm({
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <Label>UF</Label>
-                      <Input
-                        placeholder="SP"
-                        maxLength={2}
-                        {...register(`${locPrefix}.stateUf` as any, { required: 'UF é obrigatória' })}
-                        error={(errors as any)?.locations?.[idx]?.stateUf?.message}
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <Label>Cidade</Label>
-                      <Input
-                        placeholder="São Paulo"
-                        {...register(`${locPrefix}.city` as any, { required: 'Cidade é obrigatória' })}
-                        error={(errors as any)?.locations?.[idx]?.city?.message}
-                      />
+                    <div className="sm:col-span-3">
+                      <Label>
+                        Localidade <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        {...register(`${locPrefix}.locationId` as any, {
+                          validate: (value) => {
+                            if (!value) {
+                              return "Selecione uma localidade";
+                            }
+                            const duplicated = locations.some(
+                              (loc, locIndex) =>
+                                locIndex !== idx &&
+                                loc.locationId === value
+                            );
+                            return duplicated
+                              ? "Esta localidade já foi adicionada"
+                              : true;
+                          },
+                        })}
+                        value={locValue.locationId || ""}
+                        onChange={(event) =>
+                          setValue(
+                            `${locPrefix}.locationId` as any,
+                            event.target.value,
+                            { shouldValidate: true }
+                          )
+                        }
+                        disabled={
+                          isLoadingLocations || availableLocations.length === 0
+                        }
+                        error={
+                          (errors as any)?.locations?.[idx]?.locationId
+                            ?.message
+                        }
+                      >
+                        <option value="">
+                          {isLoadingLocations
+                            ? "Carregando localidades..."
+                            : "Selecione uma localidade"}
+                        </option>
+                        {availableLocations.map((location) => (
+                          <option key={location.id} value={location.id}>
+                            {location.name} • {location.city}/{location.stateUf}
+                          </option>
+                        ))}
+                      </Select>
+                      {selectedLocation ? (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {selectedLocation.name} • {selectedLocation.city}/
+                          {selectedLocation.stateUf}
+                        </p>
+                      ) : (
+                        <p className="text-xs text-gray-500 mt-1">
+                          Selecione uma localidade existente ou crie uma nova.
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -479,7 +640,11 @@ export function RawMaterialForm({
                       <CurrencyInput
                         value={locAcq}
                         currency={locCurrency}
-                        onChange={(v) => setValue(`${locPrefix}.acquisitionPrice` as any, v, { shouldValidate: true })}
+                        onChange={(v) =>
+                          setValue(`${locPrefix}.acquisitionPrice` as any, v, {
+                            shouldValidate: true,
+                          })
+                        }
                         placeholder="0,00"
                       />
                     </div>
@@ -490,7 +655,9 @@ export function RawMaterialForm({
                       <CurrencyInput
                         value={locAdd}
                         currency={locCurrency}
-                        onChange={(v) => setValue(`${locPrefix}.additionalCost` as any, v)}
+                        onChange={(v) =>
+                          setValue(`${locPrefix}.additionalCost` as any, v)
+                        }
                         placeholder="0,00"
                       />
                     </div>
@@ -498,7 +665,9 @@ export function RawMaterialForm({
 
                   {/* Fretes da Localidade */}
                   <div className="mt-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Fretes</h4>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                      Fretes
+                    </h4>
                     <Autocomplete
                       options={
                         freightsData?.data
@@ -506,7 +675,13 @@ export function RawMaterialForm({
                           .map((f) => ({
                             value: f.id,
                             label: f.name,
-                            description: `${getCurrencySymbol(f.currency)} ${formatCurrency(Number(f.unitPrice) || 0).replace('R$', '').trim()} - ${f.originCity}/${f.originUf} → ${f.destinationCity}/${f.destinationUf}`,
+                            description: `${getCurrencySymbol(
+                              f.currency
+                            )} ${formatCurrency(Number(f.unitPrice) || 0)
+                              .replace("R$", "")
+                              .trim()} - ${f.originCity}/${f.originUf} → ${
+                              f.destinationCity
+                            }/${f.destinationUf}`,
                           })) || []
                       }
                       value=""
@@ -517,21 +692,38 @@ export function RawMaterialForm({
                         debouncedSetFreightSearch(value);
                       }}
                       placeholder="Buscar e adicionar frete..."
-                      emptyMessage="Nenhum frete encontrado"
                       isLoading={isLoadingFreights}
                     />
 
                     {locFreightIds.length > 0 && (
                       <div className="space-y-2 mt-2">
                         {locFreightIds.map((freightId: string) => {
-                          const freight = freightsData?.data?.find((f) => f.id === freightId);
+                          const freight = freightsData?.data?.find(
+                            (f) => f.id === freightId
+                          );
                           if (!freight) return null;
                           return (
-                            <div key={freightId} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                            <div
+                              key={freightId}
+                              className="flex items-center justify-between bg-gray-50 p-3 rounded-lg"
+                            >
                               <div className="flex-1">
-                                <Text variant="caption" className="font-semibold">{freight.name}</Text>
+                                <Text
+                                  variant="caption"
+                                  className="font-semibold"
+                                >
+                                  {freight.name}
+                                </Text>
                                 <Text className="text-xs text-gray-500">
-                                  {freight.originCity}/{freight.originUf} → {freight.destinationCity}/{freight.destinationUf} • {getCurrencySymbol(freight.currency)} {formatCurrency(Number(freight.unitPrice) || 0).replace('R$', '').trim()}
+                                  {freight.originCity}/{freight.originUf} →{" "}
+                                  {freight.destinationCity}/
+                                  {freight.destinationUf} •{" "}
+                                  {getCurrencySymbol(freight.currency)}{" "}
+                                  {formatCurrency(
+                                    Number(freight.unitPrice) || 0
+                                  )
+                                    .replace("R$", "")
+                                    .trim()}
                                 </Text>
                               </div>
                               <SecondaryButton
@@ -541,7 +733,9 @@ export function RawMaterialForm({
                                 onClick={() => toggleFreight(freightId, idx)}
                                 className="cursor-pointer text-red-600 hover:bg-red-50"
                                 aria-label="Remover frete"
-                              />
+                              >
+                                Remover
+                              </SecondaryButton>
                             </div>
                           );
                         })}
@@ -552,94 +746,187 @@ export function RawMaterialForm({
                   {/* Impostos da Localidade */}
                   <div className="mt-4">
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="text-sm font-semibold text-gray-700">Impostos</h4>
-                      <SecondaryButton type="button" variant="secondary" leftIcon={FiPlus} onClick={() => addTax(idx)} className="cursor-pointer">Novo Imposto</SecondaryButton>
+                      <h4 className="text-sm font-semibold text-gray-700">
+                        Impostos
+                      </h4>
+                      <SecondaryButton
+                        type="button"
+                        variant="secondary"
+                        leftIcon={FiPlus}
+                        onClick={() => openTaxDraft(idx)}
+                        className="cursor-pointer"
+                      >
+                        Novo Imposto
+                      </SecondaryButton>
                     </div>
                     <Autocomplete
                       options={
-                        existingTaxesData?.data
-                          ?.map((t) => ({ value: t.id, label: t.name, description: `${t.rate}% ${t.recoverable ? '(Recuperável)' : '(Não Recuperável)'}` })) || []
+                        existingTaxesData?.data?.map((t) => ({
+                          value: t.id,
+                          label: t.name,
+                          description: `${t.rate}% ${
+                            t.recoverable
+                              ? "(Recuperável)"
+                              : "(Não Recuperável)"
+                          }`,
+                        })) || []
                       }
                       value=""
                       searchValue={taxSearch}
                       onChange={(v) => addExistingTax(v, idx)}
                       onSearchChange={setTaxSearch}
                       placeholder="Buscar e adicionar imposto existente..."
-                      emptyMessage="Nenhum imposto encontrado"
                     />
 
                     {(locTaxes || []).length === 0 ? (
                       <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center mt-2">
-                        <Text className="text-gray-500 text-sm">Nenhum imposto adicionado.</Text>
+                        <Text className="text-gray-500 text-sm">
+                          Nenhum imposto adicionado.
+                        </Text>
                       </div>
                     ) : (
                       <div className="space-y-2 mt-2">
                         {locTaxes.map((tax, tIdx) => (
-                          <div key={`${tax.taxId || tax.name || tIdx}`} className="flex gap-3 items-center bg-gray-50 p-3 rounded-lg">
-                            <div className="flex-1 min-w-[180px]">
-                              <Input
-                                placeholder="Nome do imposto (opcional se taxId)"
-                                {...register(`${locPrefix}.taxes.${tIdx}.name` as any)}
-                              />
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                max="100"
-                                className="w-[70px] text-center"
-                                placeholder="Taxa %"
-                                {...register(`${locPrefix}.taxes.${tIdx}.rate` as any, { valueAsNumber: true })}
-                              />
-                              <p className="font-bold">%</p>
-                            </div>
-                            <div className="flex items-center gap-2 w-[140px]">
-                              <label className="flex items-center gap-2 text-sm font-medium">
-                                <Checkbox {...register(`${locPrefix}.taxes.${tIdx}.recoverable` as any)} />
-                                Recuperável
-                              </label>
+                          <div
+                            key={`${tax.taxId || tax.name || tIdx}`}
+                            className="flex items-center justify-between bg-gray-50 p-3 rounded-lg"
+                          >
+                            <div>
+                              <Text className="font-semibold">
+                                {tax.name || "Imposto sem nome"}
+                              </Text>
+                              <Text className="text-xs text-gray-500">
+                                {Number(tax.rate || 0).toFixed(2)}% • {tax.recoverable ? "Recuperável" : "Não Recuperável"}
+                              </Text>
                             </div>
                             <SecondaryButton
                               type="button"
                               variant="ghost"
                               leftIcon={FiTrash2}
-                              onClick={() => {
-                                const current = (locations[idx]?.taxes || []) as any[];
-                                const next = current.filter((_, i) => i !== tIdx);
-                                setValue(`${locPrefix}.taxes` as any, next, { shouldDirty: true });
-                              }}
+                              onClick={() => removeTaxFromLocation(idx, tIdx)}
                               className="cursor-pointer text-red-600 hover:bg-red-50"
-                            />
+                            >
+                              Remover
+                            </SecondaryButton>
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {hasDraftHere && taxDraft && (
+                      <div className="mt-3 border border-dashed border-blue-300 rounded-lg p-3 space-y-3 bg-white">
+                        <Text className="text-sm font-semibold text-blue-900">
+                          Novo imposto
+                        </Text>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div className="sm:col-span-2">
+                            <Label>Nome</Label>
+                            <Input
+                              value={taxDraft.name}
+                              onChange={(event) =>
+                                setTaxDraft((prev) =>
+                                  prev
+                                    ? { ...prev, name: event.target.value }
+                                    : prev
+                                )
+                              }
+                              placeholder="Ex: ICMS"
+                            />
+                          </div>
+                          <div>
+                            <Label>Taxa (%)</Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.01"
+                              value={taxDraft.rate}
+                              onChange={(event) =>
+                                setTaxDraft((prev) =>
+                                  prev
+                                    ? {
+                                        ...prev,
+                                        rate: Number(event.target.value || 0),
+                                      }
+                                    : prev
+                                )
+                              }
+                            />
+                          </div>
+                        </div>
+                        <label className="flex items-center gap-2 text-sm font-medium">
+                          <input
+                            type="checkbox"
+                            checked={taxDraft.recoverable}
+                            onChange={(event) =>
+                              setTaxDraft((prev) =>
+                                prev
+                                  ? { ...prev, recoverable: event.target.checked }
+                                  : prev
+                              )
+                            }
+                          />
+                          Recuperável
+                        </label>
+                        <div className="flex justify-end gap-2">
+                          <SecondaryButton
+                            type="button"
+                            variant="ghost"
+                            onClick={cancelTaxDraft}
+                          >
+                            Cancelar
+                          </SecondaryButton>
+                          <SecondaryButton
+                            type="button"
+                            variant="secondary"
+                            onClick={handleSaveTaxDraft}
+                          >
+                            Adicionar imposto
+                          </SecondaryButton>
+                        </div>
                       </div>
                     )}
                   </div>
 
                   {/* Preview simples da localidade */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
-                    <Text className="font-semibold text-blue-900">Resumo Localidade #{idx + 1}</Text>
+                    <Text className="font-semibold text-blue-900">
+                      Resumo Localidade #{idx + 1}
+                    </Text>
                     <div className="grid grid-cols-2 gap-2 text-sm mt-2">
                       <div>
                         <Text className="text-gray-600">Preço Base:</Text>
-                        <Text className="font-semibold">{formatCurrency(locAcq)}</Text>
+                        <Text className="font-semibold">
+                          {formatCurrency(locAcq)}
+                        </Text>
                       </div>
                       <div>
                         <Text className="text-gray-600">Custo Adicional:</Text>
-                        <Text className="font-semibold">{formatCurrency(locAdd)}</Text>
+                        <Text className="font-semibold">
+                          {formatCurrency(locAdd)}
+                        </Text>
                       </div>
                       <div>
                         <Text className="text-gray-600">Total Fretes:</Text>
-                        <Text className="font-semibold text-purple-600">{formatCurrency(locFreightTotal)}</Text>
+                        <Text className="font-semibold text-purple-600">
+                          {formatCurrency(locFreightTotal)}
+                        </Text>
                       </div>
                       <div>
-                        <Text className="text-gray-600">Créditos Recuperáveis:</Text>
-                        <Text className="font-semibold text-green-700">{formatCurrency(locRecoverableTaxes)}</Text>
+                        <Text className="text-gray-600">
+                          Créditos Recuperáveis:
+                        </Text>
+                        <Text className="font-semibold text-green-700">
+                          {formatCurrency(locRecoverableTaxes)}
+                        </Text>
                       </div>
                       <div className="col-span-2 pt-2 border-t border-blue-300">
-                        <Text className="text-gray-600">Custo Final (resumo):</Text>
-                        <Text className="font-bold text-lg text-blue-900">{formatCurrency(locFinal)}</Text>
+                        <Text className="text-gray-600">
+                          Custo Final (resumo):
+                        </Text>
+                        <Text className="font-bold text-lg text-blue-900">
+                          {formatCurrency(locFinal)}
+                        </Text>
                       </div>
                     </div>
                   </div>

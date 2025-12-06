@@ -48,25 +48,34 @@ export interface Freight {
 
 export interface RawMaterialLocationTax {
   id?: string;
-  rawMaterialLocationId?: string;
-  taxId?: string; // referência ao catálogo
+  rawMaterialLocationPivotId?: string;
+  taxId?: string;
   rate: number;
   recoverable: boolean;
   tax?: { id: string; name: string };
 }
 
-export interface RawMaterialLocation {
+export interface Location {
   id: string;
-  rawMaterialId: string;
+  name: string;
   country?: string;
   stateUf: string;
   city: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface RawMaterialLocation {
+  id: string;
+  rawMaterialId: string;
+  locationId: string;
   acquisitionPrice: number | string;
   currency: "BRL" | "USD" | "EUR";
-  priceConvertedBrl: number | string;
+  priceConvertedBrl?: number | string;
   additionalCost: number | string;
   createdAt?: string;
   updatedAt?: string;
+  location: Location;
   freights?: Freight[];
   locationTaxes?: RawMaterialLocationTax[];
 }

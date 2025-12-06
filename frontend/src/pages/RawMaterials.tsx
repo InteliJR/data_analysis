@@ -1,6 +1,6 @@
 // src/pages/RawMaterials.tsx
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "react-hot-toast";
 import type { RawMaterial } from "@/types/rawMaterial";
 import { PageHeader } from "@/components/features/rawMaterials/PageHeader";
@@ -11,6 +11,7 @@ import { ConfirmModal } from "@/components/common/ConfirmModal";
 import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { Pagination } from "@/components/common/Pagination";
 import { RecentChangesPreview } from "@/components/features/rawMaterials/RecentChangesPreview";
+import { LocationModal } from "@/components/features/locations/LocationModal";
 import {
   useRawMaterialsQuery,
   useDeleteRawMaterialMutation,
@@ -45,17 +46,22 @@ export default function RawMaterials() {
   // Modais
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
-  const [editingRawMaterial, setEditingRawMaterial] = useState<RawMaterial | null>(null);
-  const [deletingRawMaterialId, setDeletingRawMaterialId] = useState<string | null>(null);
+  const [isLocationModalOpen, setIsLocationModalOpen] = useState(false);
+  const [editingRawMaterial, setEditingRawMaterial] =
+    useState<RawMaterial | null>(null);
+  const [deletingRawMaterialId, setDeletingRawMaterialId] = useState<
+    string | null
+  >(null);
 
   // Queries e Mutations
-  const { data, isLoading, isError, isFetching, refetch } = useRawMaterialsQuery({
-    page,
-    limit,
-    search,
-    sortBy,
-    sortOrder,
-  });
+  const { data, isLoading, isError, isFetching, refetch } =
+    useRawMaterialsQuery({
+      page,
+      limit,
+      search,
+      sortBy,
+      sortOrder,
+    });
 
   const deleteMutation = useDeleteRawMaterialMutation();
   const exportMutation = useExportRawMaterialsMutation();
@@ -137,7 +143,9 @@ export default function RawMaterials() {
         filters: { search },
       });
 
-      const filename = `materias-primas-${new Date().toISOString().split("T")[0]}.csv`;
+      const filename = `materias-primas-${
+        new Date().toISOString().split("T")[0]
+      }.csv`;
       triggerCsvDownload(blob, filename);
       toast.success("CSV exportado com sucesso");
       setIsExportModalOpen(false);
@@ -146,6 +154,27 @@ export default function RawMaterials() {
     }
   };
 
+  const hasRawMaterials = data?.data && data.data.length > 0;
+  const locationColumns = useMemo(() => {
+    if (!data?.data) return [];
+    const map = new Map<string, { id: string; label: string }>();
+    data.data.forEach((rawMaterial) => {
+      rawMaterial.locations?.forEach(
+        (pivot: NonNullable<RawMaterial["locations"]>[number]) => {
+        const label =
+          pivot.location?.name ||
+          [pivot.location?.city, pivot.location?.stateUf]
+            .filter(Boolean)
+            .join("/");
+        if (!map.has(pivot.locationId)) {
+          map.set(pivot.locationId, { id: pivot.locationId, label });
+        }
+        }
+      );
+    });
+    return Array.from(map.values());
+  }, [data?.data]);
+
   // Render
   if (isLoading) {
     return (
@@ -153,6 +182,7 @@ export default function RawMaterials() {
         <PageHeader
           onNewRawMaterialClick={handleOpenCreateModal}
           onExportClick={() => setIsExportModalOpen(true)}
+          onNewLocationClick={() => setIsLocationModalOpen(true)}
           onSearchChange={handleSearchChange}
           searchValue={searchInput}
         />
@@ -167,11 +197,14 @@ export default function RawMaterials() {
         <PageHeader
           onNewRawMaterialClick={handleOpenCreateModal}
           onExportClick={() => setIsExportModalOpen(true)}
+          onNewLocationClick={() => setIsLocationModalOpen(true)}
           onSearchChange={handleSearchChange}
           searchValue={searchInput}
         />
         <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-          <p className="text-red-600 font-semibold">Erro ao carregar produtos</p>
+          <p className="text-red-600 font-semibold">
+            Erro ao carregar produtos
+          </p>
           <p className="text-sm text-gray-500 mt-2">
             Tente recarregar a página ou entre em contato com o suporte
           </p>
@@ -180,13 +213,12 @@ export default function RawMaterials() {
     );
   }
 
-  const hasRawMaterials = data?.data && data.data.length > 0;
-
   return (
     <>
       <PageHeader
         onNewRawMaterialClick={handleOpenCreateModal}
         onExportClick={() => setIsExportModalOpen(true)}
+        onNewLocationClick={() => setIsLocationModalOpen(true)}
         onSearchChange={handleSearchChange}
         searchValue={searchInput}
       />
@@ -219,6 +251,7 @@ export default function RawMaterials() {
             onSort={handleSort}
             sortBy={sortBy}
             sortOrder={sortOrder}
+            locationColumns={locationColumns}
           />
 
           {data.meta && data.meta.totalPages > 1 && (
@@ -232,7 +265,6 @@ export default function RawMaterials() {
           )}
         </>
       ) : null}
-
       {/* Preview das últimas alterações */}
       <RecentChangesPreview />
 
@@ -241,6 +273,7 @@ export default function RawMaterials() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         rawMaterial={editingRawMaterial}
+        onOpenLocationModal={() => setIsLocationModalOpen(true)}
       />
 
       <ConfirmModal
@@ -257,6 +290,12 @@ export default function RawMaterials() {
         onClose={() => setIsExportModalOpen(false)}
         onConfirm={handleExport}
         defaultColumns={EXPORT_COLUMNS}
+      />
+
+      <LocationModal
+        isOpen={isLocationModalOpen}
+        onClose={() => setIsLocationModalOpen(false)}
+        onCreated={() => refetch()}
       />
     </>
   );
