@@ -23,18 +23,18 @@ import { UpdateProductDto } from './dto/update-product.dto';
 import { CalculatePriceDto } from './dto/calculate-price.dto';
 import { ExportProductsDto } from './dto/export-products.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ExternalTokenGuard } from '../common/guards/external-token.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
 import { UserRole } from '@prisma/client';
 
 @Controller('products')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN, UserRole.COMERCIAL)
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.COMERCIAL)
   create(@Body() createProductDto: CreateProductDto, @Req() req: any) {
     const userId = req.user?.sub || req.user?.userId || req.user?.id;
@@ -48,6 +48,8 @@ export class ProductsController {
 
   @Post('full-create')
   @HttpCode(HttpStatus.CREATED)
+  // Permite acesso por token externo (sem exigir JWT). Ainda valida role via RolesGuard.
+  @UseGuards(ExternalTokenGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.COMERCIAL)
   createFull(@Body() dto: CreateProductFullDto, @Req() req: any) {
     const userId = req.user?.sub || req.user?.userId || req.user?.id;
@@ -58,6 +60,7 @@ export class ProductsController {
   }
 
   @Get()
+  @UseGuards(JwtAuthGuard)
   findAll(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page?: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit?: number,
@@ -81,17 +84,20 @@ export class ProductsController {
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard)
   findOne(@Param('id') id: string) {
     return this.productsService.findOne(id);
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.COMERCIAL)
   update(@Param('id') id: string, @Body() updateProductDto: UpdateProductDto) {
     return this.productsService.update(id, updateProductDto);
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.COMERCIAL)
   remove(@Param('id') id: string) {
     return this.productsService.remove(id);
@@ -99,6 +105,7 @@ export class ProductsController {
 
   @Post('calculate-price')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.COMERCIAL)
   calculatePrice(@Body() calculatePriceDto: CalculatePriceDto) {
     return this.productsService.calculateProductPrice(calculatePriceDto);
@@ -106,6 +113,7 @@ export class ProductsController {
 
   @Post('export')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.COMERCIAL)
   @Header('Content-Type', 'text/csv; charset=utf-8')
   @Header(

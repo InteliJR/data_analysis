@@ -404,26 +404,42 @@ export class ProductsService {
       compositionResolved = composition.map((item) => ({ ...item }));
 
       // Validar fretes do produto (já feitos antes) e calcular preços
-      const product = await tx.product.create({
-        data: {
-          code: dto.code,
-          name: dto.name,
-          description: dto.description,
-          creatorId: userId,
-          fixedCostId: dto.fixedCostId,
-          productGroupId: dto.productGroupId,
-          // valores calculados preenchidos posteriormente fora da transação
-          priceWithoutTaxesAndFreight: null,
-          totalCostWithAllFreights: null,
-          productRawMaterials: {
-            create: composition.map((rm) => ({
-              rawMaterialId: rm.rawMaterialId,
-              rawMaterialLocationPivotId: rm.rawMaterialLocationPivotId,
-              quantity: rm.quantity,
-            })),
-          },
-          ...(dto.freightIds?.length ? { freights: { connect: dto.freightIds.map((id) => ({ id })) } } : {}),
+      // Determinar creator obrigatório (schema exige)
+      let creatorIdToUse: string | null = null;
+      if (userId && userId !== 'system-external-user') {
+        creatorIdToUse = userId;
+      } else {
+        const anyUser = await tx.user.findFirst({ select: { id: true }, where: { isActive: true } });
+        if (!anyUser) {
+          throw new NotFoundException('Nenhum usuário ativo encontrado para associar como criador do produto');
+        }
+        creatorIdToUse = anyUser.id;
+      }
+
+      const data: Prisma.ProductCreateInput = {
+        code: dto.code,
+        name: dto.name,
+        description: dto.description,
+        // valores calculados preenchidos posteriormente fora da transação
+        priceWithoutTaxesAndFreight: null,
+        totalCostWithAllFreights: null,
+        productRawMaterials: {
+          create: composition.map((rm) => ({ rawMaterialId: rm.rawMaterialId, quantity: rm.quantity })),
         },
+        creator: { connect: { id: creatorIdToUse! } },
+      };
+      if (dto.fixedCostId) {
+        data.fixedCost = { connect: { id: dto.fixedCostId } };
+      }
+      if (dto.productGroupId) {
+        data.productGroup = { connect: { id: dto.productGroupId } };
+      }
+      if (dto.freightIds?.length) {
+        data.freights = { connect: dto.freightIds.map((id) => ({ id })) };
+      }
+
+      const product = await tx.product.create({
+        data,
         select: { id: true },
       });
       return product.id;
