@@ -1,11 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { apiClient } from './client';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiClient } from "./client";
 import type {
   ExportUsersPayload,
   PaginatedResponse,
   User,
   UserRole,
-} from '@/types/user';
+} from "@/types/user";
 
 // ========================================
 // Tipagens de Requisição e Resposta
@@ -18,7 +18,7 @@ export interface FindAllUsersQuery {
   role?: UserRole;
   isActive?: boolean;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface CreateUserPayload {
@@ -42,8 +42,8 @@ export interface UpdateUserMePayload {
 
 // POST /users/export
 export async function exportUsers(payload: ExportUsersPayload): Promise<Blob> {
-  const { data } = await apiClient.post('/users/export', payload, {
-    responseType: 'blob', // <-- ESSENCIAL para download de arquivo
+  const { data } = await apiClient.post("/users/export", payload, {
+    responseType: "blob", // <-- ESSENCIAL para download de arquivo
   });
   return data;
 }
@@ -52,19 +52,19 @@ export async function exportUsers(payload: ExportUsersPayload): Promise<Blob> {
 // Funções de API
 // ========================================
 
-const USERS_QUERY_KEY = 'users';
+const USERS_QUERY_KEY = "users";
 
 // GET /users
 export async function getUsers(
-  query: FindAllUsersQuery,
+  query: FindAllUsersQuery
 ): Promise<PaginatedResponse<User>> {
-  const { data } = await apiClient.get('/users', { params: query });
+  const { data } = await apiClient.get("/users", { params: query });
   return data;
 }
 
 // POST /users
 export async function createUser(payload: CreateUserPayload): Promise<User> {
-  const { data } = await apiClient.post('/users', payload);
+  const { data } = await apiClient.post("/users", payload);
   return data;
 }
 
@@ -81,8 +81,10 @@ export async function updateUserByAdmin({
 }
 
 // PATCH /users/me
-export async function updateUserMe(payload: UpdateUserMePayload): Promise<User> {
-  const { data } = await apiClient.patch('/users/me', payload);
+export async function updateUserMe(
+  payload: UpdateUserMePayload
+): Promise<User> {
+  const { data } = await apiClient.patch("/users/me", payload);
   return data;
 }
 
@@ -130,7 +132,7 @@ export function useUpdateMeMutation() {
   return useMutation({
     mutationFn: updateUserMe,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['me'] }); // Invalida a query do usuário logado
+      queryClient.invalidateQueries({ queryKey: ["me"] }); // Invalida a query do usuário logado
     },
   });
 }

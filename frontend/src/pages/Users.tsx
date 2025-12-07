@@ -32,7 +32,7 @@ export default function Users() {
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const handleExportClick = () => {
-    setIsExportModalOpen(true); 
+    setIsExportModalOpen(true);
   };
 
   const handleConfirmExport = async (options: {
@@ -40,12 +40,12 @@ export default function Users() {
     columns: string[];
   }) => {
     setIsExportModalOpen(false); // Fecha o modal
-    toast.loading('Gerando CSV...', { id: 'export-toast' });
+    toast.loading("Gerando CSV...", { id: "export-toast" });
 
     try {
       // Pega os filtros atuais da página
-      const filters = query; 
-      
+      const filters = query;
+
       const payload = {
         ...filters,
         ...options,
@@ -54,14 +54,13 @@ export default function Users() {
       const blob = await exportMutation.mutateAsync(payload);
 
       // Dispara o download
-      triggerCsvDownload(blob, 'usuarios.csv');
-      toast.success('Download do CSV iniciado.', { id: 'export-toast' });
-
+      triggerCsvDownload(blob, "usuarios.csv");
+      toast.success("Download do CSV iniciado.", { id: "export-toast" });
     } catch (error) {
-      toast.error('Erro ao gerar CSV.', { id: 'export-toast' });
+      toast.error("Erro ao gerar CSV.", { id: "export-toast" });
     }
   };
-  
+
   // Query de Usuários
   const query = useMemo(
     () => ({
@@ -177,7 +176,7 @@ export default function Users() {
         onSearchChange={setSearch}
         onRoleFilterChange={setRoleFilter}
         onStatusFilterChange={setIsActiveFilter}
-        onExport={handleExportClick} 
+        onExport={handleExportClick}
         isExporting={exportMutation.isPending}
       />
 
@@ -241,12 +240,12 @@ export default function Users() {
         onClose={() => setIsExportModalOpen(false)}
         onConfirm={handleConfirmExport}
         defaultColumns={[
-          { key: 'name', label: 'Nome' },
-          { key: 'email', label: 'Email' },
-          { key: 'role', label: 'Função' },
-          { key: 'isActive', label: 'Status' },
+          { key: "name", label: "Nome" },
+          { key: "email", label: "Email" },
+          { key: "role", label: "Função" },
+          { key: "isActive", label: "Status" },
           // Adicione mais colunas se desejar
-          { key: 'createdAt', label: 'Data de Criação' },
+          { key: "createdAt", label: "Data de Criação" },
         ]}
       />
     </>

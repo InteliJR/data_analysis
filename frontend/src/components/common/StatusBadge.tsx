@@ -1,7 +1,7 @@
-import type { UserStatusText } from '@/types/user';
-import { twMerge } from 'tailwind-merge';
+import type { UserStatusText } from "@/types/user";
+import { twMerge } from "tailwind-merge";
 
-type StatusBadgeVariant = 'success' | 'default' | 'warning' | 'danger';
+type StatusBadgeVariant = "success" | "default" | "warning" | "danger";
 
 interface StatusBadgeProps {
   status: UserStatusText | string;
@@ -9,20 +9,21 @@ interface StatusBadgeProps {
 }
 
 export function StatusBadge({ status, variant }: StatusBadgeProps) {
-  const baseStyle = 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium';
+  const baseStyle =
+    "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
 
   const variantClasses: Record<StatusBadgeVariant, string> = {
-    success: 'bg-green-100 text-green-800',
-    default: 'bg-gray-100 text-gray-800',
-    warning: 'bg-yellow-100 text-yellow-800',
-    danger: 'bg-red-100 text-red-800',
+    success: "bg-green-100 text-green-800",
+    default: "bg-gray-100 text-gray-800",
+    warning: "bg-yellow-100 text-yellow-800",
+    danger: "bg-red-100 text-red-800",
   };
 
   const resolvedVariant: StatusBadgeVariant = variant
     ? variant
-    : status === 'Ativo'
-      ? 'success'
-      : 'danger';
+    : status === "Ativo"
+    ? "success"
+    : "danger";
 
   const combinedClasses = twMerge(baseStyle, variantClasses[resolvedVariant]);
 

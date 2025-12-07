@@ -48,10 +48,7 @@ const validateNotEmpty = (value: string | undefined): boolean => {
   return !!value && value.trim().length > 0;
 };
 
-export function ProductForm({
-  product,
-  onSubmit,
-}: ProductFormProps) {
+export function ProductForm({ product, onSubmit }: ProductFormProps) {
   // Converte strings como "1.234,56" para número 1234.56
   const toNumber = (val: any): number => {
     if (val === null || val === undefined) return 0;
@@ -554,7 +551,9 @@ export function ProductForm({
               id="fixedCostId"
               label="Custo Fixo (Opcional)"
               value={selectedFixedCostId}
-              onChange={(e) => setValue("fixedCostId", e.target.value || undefined)}
+              onChange={(e) =>
+                setValue("fixedCostId", e.target.value || undefined)
+              }
             >
               <option value="">Selecione um custo fixo</option>
 
@@ -612,9 +611,7 @@ export function ProductForm({
                     ) + toNumber(rm.locations?.[0]?.additionalCost ?? 0)
                   )} - ${rm.measurementUnit} • ${
                     rm.locations?.[0]?.location?.city || "-"
-                  } / ${
-                    rm.locations?.[0]?.location?.stateUf || "-"
-                  }`,
+                  } / ${rm.locations?.[0]?.location?.stateUf || "-"}`,
                 })) || []
             }
             value=""
@@ -984,16 +981,18 @@ export function ProductForm({
             </Text>
           </div>
 
-          {prices.finalPrice > prices.baseSubtotal && prices.baseSubtotal > 0 && (
-            <div className="text-xs text-gray-600 text-right">
-              +
-              {(
-                ((prices.finalPrice - prices.baseSubtotal) / prices.baseSubtotal) *
-                100
-              ).toFixed(1)}
-              % de impostos, frete e custos fixos
-            </div>
-          )}
+          {prices.finalPrice > prices.baseSubtotal &&
+            prices.baseSubtotal > 0 && (
+              <div className="text-xs text-gray-600 text-right">
+                +
+                {(
+                  ((prices.finalPrice - prices.baseSubtotal) /
+                    prices.baseSubtotal) *
+                  100
+                ).toFixed(1)}
+                % de impostos, frete e custos fixos
+              </div>
+            )}
         </div>
 
         <div className="bg-white rounded p-3 mt-3 text-xs text-gray-600">

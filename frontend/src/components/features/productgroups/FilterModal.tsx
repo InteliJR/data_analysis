@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
-import { Modal } from '@/components/common/Modal';
-import { Input } from '@/components/common/Input';
-import { Select } from '@/components/common/Select';
-import { Button } from '@/components/common/Button';
-import type { FindAllProductGroupsQuery } from '@/api/productgroups';
+import { useState, useEffect } from "react";
+import { Modal } from "@/components/common/Modal";
+import { Input } from "@/components/common/Input";
+import { Select } from "@/components/common/Select";
+import { Button } from "@/components/common/Button";
+import type { FindAllProductGroupsQuery } from "@/api/productgroups";
 
 interface FilterModalProps {
   isOpen: boolean;
@@ -18,31 +18,31 @@ export function FilterModal({
   onApply,
   currentFilters,
 }: FilterModalProps) {
-  const [search, setSearch] = useState(currentFilters.search || '');
-  const [sortBy, setSortBy] = useState(currentFilters.sortBy || '');
-  const [sortOrder, setSortOrder] = useState(currentFilters.sortOrder || 'asc');
+  const [search, setSearch] = useState(currentFilters.search || "");
+  const [sortBy, setSortBy] = useState(currentFilters.sortBy || "");
+  const [sortOrder, setSortOrder] = useState(currentFilters.sortOrder || "asc");
 
   useEffect(() => {
     if (isOpen) {
-      setSearch(currentFilters.search || '');
-      setSortBy(currentFilters.sortBy || '');
-      setSortOrder(currentFilters.sortOrder || 'asc');
+      setSearch(currentFilters.search || "");
+      setSortBy(currentFilters.sortBy || "");
+      setSortOrder(currentFilters.sortOrder || "asc");
     }
   }, [isOpen, currentFilters]);
 
   const handleApply = () => {
     onApply({
       search: search || undefined,
-      sortBy: sortBy as FindAllProductGroupsQuery['sortBy'] || undefined,
-      sortOrder: sortOrder as 'asc' | 'desc',
+      sortBy: (sortBy as FindAllProductGroupsQuery["sortBy"]) || undefined,
+      sortOrder: sortOrder as "asc" | "desc",
     });
     onClose();
   };
 
   const handleClear = () => {
-    setSearch('');
-    setSortBy('');
-    setSortOrder('asc');
+    setSearch("");
+    setSortBy("");
+    setSortOrder("asc");
     onApply({});
     onClose();
   };
@@ -52,9 +52,7 @@ export function FilterModal({
       <Button variant="secondary" onClick={handleClear}>
         Limpar filtros
       </Button>
-      <Button onClick={handleApply}>
-        Aplicar filtros
-      </Button>
+      <Button onClick={handleApply}>Aplicar filtros</Button>
     </div>
   );
 
@@ -80,7 +78,9 @@ export function FilterModal({
         >
           <option value="">Selecione...</option>
           <option value="name">Nome</option>
-          <option value="volumePercentageByQuantity">% Volume (Quantidade)</option>
+          <option value="volumePercentageByQuantity">
+            % Volume (Quantidade)
+          </option>
           <option value="volumePercentageByValue">% Volume (Valor)</option>
           <option value="averagePrice">Preço Médio</option>
         </Select>
@@ -89,7 +89,7 @@ export function FilterModal({
           <Select
             label="Ordem"
             value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+            onChange={(e) => setSortOrder(e.target.value as "asc" | "desc")}
           >
             <option value="asc">Crescente</option>
             <option value="desc">Decrescente</option>

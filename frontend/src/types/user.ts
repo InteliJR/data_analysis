@@ -1,7 +1,7 @@
 // src/types/user.ts
 
-export type UserRole = 'ADMIN' | 'COMERCIAL' | 'LOGISTICA' | 'IMPOSTO';
-export type UserStatusText = 'Ativo' | 'Inativo';
+export type UserRole = "ADMIN" | "COMERCIAL" | "LOGISTICA" | "IMPOSTO";
+export type UserStatusText = "Ativo" | "Inativo";
 
 export interface User {
   id: string;
@@ -30,17 +30,15 @@ export interface ExportUsersPayload {
   role?: UserRole;
   isActive?: boolean;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
   columns?: string[];
 }
 
 // Helpers para conversão de status
 export function getUserStatusText(isActive: boolean): UserStatusText {
-  return isActive ? 'Ativo' : 'Inativo';
+  return isActive ? "Ativo" : "Inativo";
 }
 
-export function getUserStatusVariant(
-  isActive: boolean,
-): 'success' | 'default' {
-  return isActive ? 'success' : 'default';
+export function getUserStatusVariant(isActive: boolean): "success" | "default" {
+  return isActive ? "success" : "default";
 }

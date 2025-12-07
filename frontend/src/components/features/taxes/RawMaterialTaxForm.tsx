@@ -21,10 +21,7 @@ interface RawMaterialTaxFormProps {
   isLoading?: boolean;
 }
 
-export function RawMaterialTaxForm({
-  tax,
-  onSubmit,
-}: RawMaterialTaxFormProps) {
+export function RawMaterialTaxForm({ tax, onSubmit }: RawMaterialTaxFormProps) {
   const [rawMaterialSearch, setRawMaterialSearch] = useState("");
   const [selectedRawMaterialIds, setSelectedRawMaterialIds] = useState<
     string[]

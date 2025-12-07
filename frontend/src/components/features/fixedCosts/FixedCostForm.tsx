@@ -1,12 +1,12 @@
 // src/components/features/fixedCosts/FixedCostForm.tsx
 
-import { useForm } from 'react-hook-form';
-import type { FixedCost, FixedCostFormData } from '@/types/fixed_costs';
-import { Input } from '@/components/common/Input';
-import { Label } from '@/components/common/Label';
-import { CurrencyInput } from '@/components/common/CurrencyInput';
-import { formatCurrency } from '@/lib/utils';
-import { Text } from '@/components/common/Text';
+import { useForm } from "react-hook-form";
+import type { FixedCost, FixedCostFormData } from "@/types/fixed_costs";
+import { Input } from "@/components/common/Input";
+import { Label } from "@/components/common/Label";
+import { CurrencyInput } from "@/components/common/CurrencyInput";
+import { formatCurrency } from "@/lib/utils";
+import { Text } from "@/components/common/Text";
 
 interface FixedCostFormProps {
   cost?: FixedCost | null;
@@ -22,38 +22,45 @@ export function FixedCostForm({ cost, onSubmit }: FixedCostFormProps) {
     setValue,
     formState: { errors },
   } = useForm<FixedCostFormData>({
-    defaultValues: cost ? {
-      description: cost.description,
-      code: cost.code || '',
-      personnelExpenses: cost.personnelExpenses,
-      generalExpenses: cost.generalExpenses,
-      proLabore: cost.proLabore,
-      depreciation: cost.depreciation,
-      considerationPercentage: cost.considerationPercentage,
-    } : {
-      description: '',
-      code: '',
-      personnelExpenses: 0,
-      generalExpenses: 0,
-      proLabore: 0,
-      depreciation: 0,
-      considerationPercentage: 100,
-    },
+    defaultValues: cost
+      ? {
+          description: cost.description,
+          code: cost.code || "",
+          personnelExpenses: cost.personnelExpenses,
+          generalExpenses: cost.generalExpenses,
+          proLabore: cost.proLabore,
+          depreciation: cost.depreciation,
+          considerationPercentage: cost.considerationPercentage,
+        }
+      : {
+          description: "",
+          code: "",
+          personnelExpenses: 0,
+          generalExpenses: 0,
+          proLabore: 0,
+          depreciation: 0,
+          considerationPercentage: 100,
+        },
   });
 
   // Watch dos valores para cálculos em tempo real
-  const personnelExpenses = watch('personnelExpenses') || 0;
-  const generalExpenses = watch('generalExpenses') || 0;
-  const proLabore = watch('proLabore') || 0;
-  const depreciation = watch('depreciation') || 0;
-  const considerationPercentage = watch('considerationPercentage') || 0;
+  const personnelExpenses = watch("personnelExpenses") || 0;
+  const generalExpenses = watch("generalExpenses") || 0;
+  const proLabore = watch("proLabore") || 0;
+  const depreciation = watch("depreciation") || 0;
+  const considerationPercentage = watch("considerationPercentage") || 0;
 
   // Cálculos automáticos
-  const totalCost = personnelExpenses + generalExpenses + proLabore + depreciation;
+  const totalCost =
+    personnelExpenses + generalExpenses + proLabore + depreciation;
   const overheadToConsider = totalCost * (considerationPercentage / 100);
 
   return (
-    <form id="fixed-cost-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <form
+      id="fixed-cost-form"
+      onSubmit={handleSubmit(onSubmit)}
+      className="space-y-6"
+    >
       {/* Seção 1: Informações Básicas */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="sm:col-span-2">
@@ -63,9 +70,9 @@ export function FixedCostForm({ cost, onSubmit }: FixedCostFormProps) {
           <Input
             id="description"
             placeholder="Ex: DESPESAS COM PESSOAL"
-            {...register('description', { 
-              required: 'Descrição é obrigatória',
-              minLength: { value: 3, message: 'Mínimo de 3 caracteres' }
+            {...register("description", {
+              required: "Descrição é obrigatória",
+              minLength: { value: 3, message: "Mínimo de 3 caracteres" },
             })}
             error={errors.description?.message}
           />
@@ -73,11 +80,7 @@ export function FixedCostForm({ cost, onSubmit }: FixedCostFormProps) {
 
         <div className="sm:col-span-1">
           <Label htmlFor="code">Código (Opcional)</Label>
-          <Input
-            id="code"
-            placeholder="Ex: FC-001"
-            {...register('code')}
-          />
+          <Input id="code" placeholder="Ex: FC-001" {...register("code")} />
         </div>
 
         <div className="sm:col-span-1">
@@ -91,15 +94,17 @@ export function FixedCostForm({ cost, onSubmit }: FixedCostFormProps) {
             min="0"
             max="100"
             placeholder="100"
-            {...register('considerationPercentage', {
-              required: 'Percentual é obrigatório',
-              min: { value: 0, message: 'Mínimo: 0%' },
-              max: { value: 100, message: 'Máximo: 100%' },
+            {...register("considerationPercentage", {
+              required: "Percentual é obrigatório",
+              min: { value: 0, message: "Mínimo: 0%" },
+              max: { value: 100, message: "Máximo: 100%" },
               valueAsNumber: true,
             })}
             error={errors.considerationPercentage?.message}
           />
-          <p className="text-xs text-gray-500 mt-1">Percentual entre 0% e 100%</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Percentual entre 0% e 100%
+          </p>
         </div>
       </div>
 
@@ -115,7 +120,7 @@ export function FixedCostForm({ cost, onSubmit }: FixedCostFormProps) {
               id="personnelExpenses"
               currency="BRL"
               value={personnelExpenses}
-              onChange={(value) => setValue('personnelExpenses', value)}
+              onChange={(value) => setValue("personnelExpenses", value)}
               placeholder="R$ 0,00"
             />
           </div>
@@ -128,7 +133,7 @@ export function FixedCostForm({ cost, onSubmit }: FixedCostFormProps) {
               id="generalExpenses"
               currency="BRL"
               value={generalExpenses}
-              onChange={(value) => setValue('generalExpenses', value)}
+              onChange={(value) => setValue("generalExpenses", value)}
               placeholder="R$ 0,00"
             />
           </div>
@@ -139,7 +144,7 @@ export function FixedCostForm({ cost, onSubmit }: FixedCostFormProps) {
               id="proLabore"
               currency="BRL"
               value={proLabore}
-              onChange={(value) => setValue('proLabore', value)}
+              onChange={(value) => setValue("proLabore", value)}
               placeholder="R$ 0,00"
             />
           </div>
@@ -150,7 +155,7 @@ export function FixedCostForm({ cost, onSubmit }: FixedCostFormProps) {
               id="depreciation"
               currency="BRL"
               value={depreciation}
-              onChange={(value) => setValue('depreciation', value)}
+              onChange={(value) => setValue("depreciation", value)}
               placeholder="R$ 0,00"
             />
           </div>
@@ -169,7 +174,9 @@ export function FixedCostForm({ cost, onSubmit }: FixedCostFormProps) {
           </div>
           <div>
             <Text className="text-gray-600">Overhead a Considerar:</Text>
-            <Text className="font-semibold">{formatCurrency(overheadToConsider)}</Text>
+            <Text className="font-semibold">
+              {formatCurrency(overheadToConsider)}
+            </Text>
           </div>
           {/* Overhead por unidade agora é calculado por Grupo de Produto */}
         </div>
