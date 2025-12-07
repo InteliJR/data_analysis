@@ -7,6 +7,7 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FiUser } from "react-icons/fi";
+import { getChangeLogFieldLabel } from "@/lib/changeLogs";
 
 interface ChangeLogHistoryProps {
   rawMaterialId: string;
@@ -46,24 +47,6 @@ export function ChangeLogHistory({ rawMaterialId }: ChangeLogHistoryProps) {
       }
     };
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const getFieldLabel = (field: string): string => {
-    const labels: Record<string, string> = {
-      code: "Código",
-      name: "Nome",
-      description: "Descrição",
-      measurementUnit: "Unidade de Medida",
-      inputGroup: "Grupo de Insumo",
-      paymentTerm: "Prazo de Pagamento",
-      acquisitionPrice: "Preço de Aquisição",
-      currency: "Moeda",
-      priceConvertedBrl: "Preço em BRL",
-      additionalCost: "Custo Adicional",
-      freights: "Fretes",
-      created: "Criação do Registro",
-    };
-    return labels[field] || field;
-  };
 
   if (isLoading) {
     return (
@@ -115,7 +98,7 @@ export function ChangeLogHistory({ rawMaterialId }: ChangeLogHistoryProps) {
             >
               <div className="flex justify-between items-start mb-2">
                 <Text variant="caption" className="font-semibold text-gray-900">
-                  {getFieldLabel(log.field)}
+                  {getChangeLogFieldLabel(log.field)}
                 </Text>
                 <Text variant="small" className="text-gray-500">
                   {format(new Date(log.changedAt), "dd/MM/yyyy 'às' HH:mm", {

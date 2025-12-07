@@ -25,6 +25,7 @@ import { useFreightsQuery } from "@/api/freights";
 import { useRawMaterialTaxesQuery } from "@/api/taxes";
 import { useLocationsQuery } from "@/api/locations";
 import { useDebounce } from "@/hooks/useDebounce";
+import { calculateFreightCostWithTaxes } from "@/lib/costs";
 
 const MEASUREMENT_UNITS = [
   { value: "KG", label: "Quilograma (kg)" },
@@ -124,9 +125,10 @@ export function RawMaterialForm({
 
   const availableLocations = useMemo(() => {
     const fetched = locationsResponse?.data ?? [];
-    const fromRawMaterial = rawMaterial?.locations
-      ?.map((loc) => loc.location)
-      .filter((loc): loc is NonNullable<typeof loc> => Boolean(loc)) ?? [];
+    const fromRawMaterial =
+      rawMaterial?.locations
+        ?.map((loc) => loc.location)
+        .filter((loc): loc is NonNullable<typeof loc> => Boolean(loc)) ?? [];
 
     const map = new Map<string, (typeof fetched)[number]>();
     fetched.forEach((location) => {
@@ -162,42 +164,16 @@ export function RawMaterialForm({
 
   const locations = (watch("locations") || []) as RawMaterialLocationDTO[];
 
-  const firstLoc = (locations[0] || {}) as RawMaterialLocationDTO;
-  const acquisitionPrice = Number(firstLoc?.acquisitionPrice || 0);
-  const additionalCost = Number(firstLoc?.additionalCost || 0);
-  const selectedFreightIds = (firstLoc?.freightIds || []) as string[];
-  const rawMaterialTaxes = (firstLoc?.taxes || []) as any[];
-
-  const totalBeforeTaxes = acquisitionPrice + additionalCost;
-
-  const totalFreightCost = (selectedFreightIds || []).reduce(
-    (sum, freightId) => {
-      const freight = freightsData?.data?.find((f) => f.id === freightId);
-      return sum + (freight ? Number(freight.unitPrice || 0) : 0);
-    },
-    0
-  );
-
-  const recoverableTaxes = rawMaterialTaxes.reduce((sum, tax) => {
-    if (tax.recoverable) {
-      const rate = Number(tax.rate) || 0;
-      return sum + totalBeforeTaxes * (rate / 100);
-    }
-    return sum;
-  }, 0);
-
-  const nonRecoverableTaxes = rawMaterialTaxes.reduce((sum, tax) => {
-    if (!tax.recoverable) {
-      const rate = Number(tax.rate) || 0;
-      return sum + totalBeforeTaxes * (rate / 100);
-    }
-    return sum;
-  }, 0);
-
-  const totalCost = totalBeforeTaxes + totalFreightCost - recoverableTaxes;
+  const firstLocation = locations[0];
+  const acquisitionPrice = Number(firstLocation?.acquisitionPrice || 0);
 
   const openTaxDraft = (locIndex: number) => {
-    setTaxDraft({ locationIndex: locIndex, name: "", rate: 0, recoverable: false });
+    setTaxDraft({
+      locationIndex: locIndex,
+      name: "",
+      rate: 0,
+      recoverable: false,
+    });
   };
 
   const cancelTaxDraft = () => setTaxDraft(null);
@@ -209,12 +185,17 @@ export function RawMaterialForm({
       toast.error("Informe o nome do imposto");
       return;
     }
-    if (Number.isNaN(taxDraft.rate) || taxDraft.rate < 0 || taxDraft.rate > 100) {
+    if (
+      Number.isNaN(taxDraft.rate) ||
+      taxDraft.rate < 0 ||
+      taxDraft.rate > 100
+    ) {
       toast.error("Informe uma taxa entre 0% e 100%");
       return;
     }
 
-    const current = (locations[taxDraft.locationIndex]?.taxes || []) as RawMaterialLocationDTO["taxes"];
+    const current = (locations[taxDraft.locationIndex]?.taxes ||
+      []) as RawMaterialLocationDTO["taxes"];
     const next = [
       ...(current ?? []),
       {
@@ -262,7 +243,8 @@ export function RawMaterialForm({
   };
 
   const removeTaxFromLocation = (locIndex: number, taxIndex: number) => {
-    const current = (locations[locIndex]?.taxes || []) as RawMaterialLocationDTO["taxes"];
+    const current = (locations[locIndex]?.taxes ||
+      []) as RawMaterialLocationDTO["taxes"];
     const next = (current ?? []).filter((_, index) => index !== taxIndex);
     setValue(`locations.${locIndex}.taxes` as any, next, { shouldDirty: true });
   };
@@ -312,7 +294,7 @@ export function RawMaterialForm({
       }));
 
     if (cleanedLocations.length === 0) {
-      toast.error("Adicione pelo menos uma localidade");
+      toast.error("Adicione pelo menos uma localização");
       return;
     }
 
@@ -475,10 +457,10 @@ export function RawMaterialForm({
         />
       </div>
 
-      {/* SEÇÃO 2: LOCALIDADES */}
+      {/* SEÇÃO 2: LOCALIZAÇÕES */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-gray-700">Localidades</h3>
+          <h3 className="text-sm font-semibold text-gray-700">Localizações</h3>
           <div className="flex gap-2">
             {onOpenLocationModal && (
               <SecondaryButton
@@ -488,7 +470,7 @@ export function RawMaterialForm({
                 onClick={onOpenLocationModal}
                 className="cursor-pointer"
               >
-                Nova Localidade
+                Nova Localização
               </SecondaryButton>
             )}
             <SecondaryButton
@@ -508,7 +490,7 @@ export function RawMaterialForm({
               }
               className="cursor-pointer"
             >
-              Adicionar Localidade
+              Adicionar Localização
             </SecondaryButton>
           </div>
         </div>
@@ -516,10 +498,10 @@ export function RawMaterialForm({
         {locationFields.length === 0 ? (
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
             <Text className="text-gray-500 text-sm">
-              Nenhuma localidade adicionada.
+              Nenhuma localização adicionada.
             </Text>
             <Text className="text-xs text-gray-400">
-              Clique em "Adicionar Localidade" para definir preços por unidade.
+              Clique em "Adicionar Localização" para definir preços por unidade.
             </Text>
           </div>
         ) : (
@@ -543,18 +525,24 @@ export function RawMaterialForm({
                   (s, t) => s + locTotalBeforeTaxes * (Number(t.rate) / 100),
                   0
                 );
+              const locNonRecoverableTaxes = locTaxes
+                .filter((t) => !t.recoverable)
+                .reduce(
+                  (s, t) => s + locTotalBeforeTaxes * (Number(t.rate) / 100),
+                  0
+                );
               const locFreightTotal = locFreightIds.reduce((s, id) => {
                 const f = freightsData?.data?.find((fr) => fr.id === id);
-                return s + (f ? Number(f.unitPrice || 0) : 0);
+                return s + calculateFreightCostWithTaxes(f);
               }, 0);
               const locFinal =
-                locTotalBeforeTaxes + locFreightTotal - locRecoverableTaxes;
+                locTotalBeforeTaxes + locFreightTotal + locNonRecoverableTaxes;
 
               return (
                 <div key={field.id} className="border rounded-lg p-4">
                   <div className="flex justify-between items-center mb-3">
                     <Text className="font-semibold text-gray-800">
-                      Localidade #{idx + 1}
+                      Localização #{idx + 1}
                     </Text>
                     <SecondaryButton
                       type="button"
@@ -570,21 +558,20 @@ export function RawMaterialForm({
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div className="sm:col-span-3">
                       <Label>
-                        Localidade <span className="text-red-500">*</span>
+                        Localização <span className="text-red-500">*</span>
                       </Label>
                       <Select
                         {...register(`${locPrefix}.locationId` as any, {
                           validate: (value) => {
                             if (!value) {
-                              return "Selecione uma localidade";
+                              return "Selecione uma localização";
                             }
                             const duplicated = locations.some(
                               (loc, locIndex) =>
-                                locIndex !== idx &&
-                                loc.locationId === value
+                                locIndex !== idx && loc.locationId === value
                             );
                             return duplicated
-                              ? "Esta localidade já foi adicionada"
+                              ? "Esta localização já foi adicionada"
                               : true;
                           },
                         })}
@@ -600,14 +587,13 @@ export function RawMaterialForm({
                           isLoadingLocations || availableLocations.length === 0
                         }
                         error={
-                          (errors as any)?.locations?.[idx]?.locationId
-                            ?.message
+                          (errors as any)?.locations?.[idx]?.locationId?.message
                         }
                       >
                         <option value="">
                           {isLoadingLocations
-                            ? "Carregando localidades..."
-                            : "Selecione uma localidade"}
+                            ? "Carregando localizações..."
+                            : "Selecione uma localização"}
                         </option>
                         {availableLocations.map((location) => (
                           <option key={location.id} value={location.id}>
@@ -622,7 +608,7 @@ export function RawMaterialForm({
                         </p>
                       ) : (
                         <p className="text-xs text-gray-500 mt-1">
-                          Selecione uma localidade existente ou crie uma nova.
+                          Selecione uma localização existente ou crie uma nova.
                         </p>
                       )}
                     </div>
@@ -663,7 +649,7 @@ export function RawMaterialForm({
                     </div>
                   </div>
 
-                  {/* Fretes da Localidade */}
+                  {/* Fretes da Localização */}
                   <div className="mt-4">
                     <h4 className="text-sm font-semibold text-gray-700 mb-2">
                       Fretes
@@ -672,17 +658,20 @@ export function RawMaterialForm({
                       options={
                         freightsData?.data
                           ?.filter((f) => !locFreightIds.includes(f.id))
-                          .map((f) => ({
-                            value: f.id,
-                            label: f.name,
-                            description: `${getCurrencySymbol(
-                              f.currency
-                            )} ${formatCurrency(Number(f.unitPrice) || 0)
-                              .replace("R$", "")
-                              .trim()} - ${f.originCity}/${f.originUf} → ${
-                              f.destinationCity
-                            }/${f.destinationUf}`,
-                          })) || []
+                          .map((f) => {
+                            const cost = calculateFreightCostWithTaxes(f);
+                            return {
+                              value: f.id,
+                              label: f.name,
+                              description: `${getCurrencySymbol(
+                                f.currency
+                              )} ${formatCurrency(cost)
+                                .replace("R$", "")
+                                .trim()} - ${f.originCity}/${f.originUf} → ${
+                                f.destinationCity
+                              }/${f.destinationUf}`,
+                            };
+                          }) || []
                       }
                       value=""
                       searchValue={freightSearch}
@@ -702,6 +691,8 @@ export function RawMaterialForm({
                             (f) => f.id === freightId
                           );
                           if (!freight) return null;
+                          const freightCost =
+                            calculateFreightCostWithTaxes(freight);
                           return (
                             <div
                               key={freightId}
@@ -719,9 +710,7 @@ export function RawMaterialForm({
                                   {freight.destinationCity}/
                                   {freight.destinationUf} •{" "}
                                   {getCurrencySymbol(freight.currency)}{" "}
-                                  {formatCurrency(
-                                    Number(freight.unitPrice) || 0
-                                  )
+                                  {formatCurrency(freightCost)
                                     .replace("R$", "")
                                     .trim()}
                                 </Text>
@@ -743,7 +732,7 @@ export function RawMaterialForm({
                     )}
                   </div>
 
-                  {/* Impostos da Localidade */}
+                  {/* Impostos da Localização */}
                   <div className="mt-4">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="text-sm font-semibold text-gray-700">
@@ -796,7 +785,10 @@ export function RawMaterialForm({
                                 {tax.name || "Imposto sem nome"}
                               </Text>
                               <Text className="text-xs text-gray-500">
-                                {Number(tax.rate || 0).toFixed(2)}% • {tax.recoverable ? "Recuperável" : "Não Recuperável"}
+                                {Number(tax.rate || 0).toFixed(2)}% •{" "}
+                                {tax.recoverable
+                                  ? "Recuperável"
+                                  : "Não Recuperável"}
                               </Text>
                             </div>
                             <SecondaryButton
@@ -861,7 +853,10 @@ export function RawMaterialForm({
                             onChange={(event) =>
                               setTaxDraft((prev) =>
                                 prev
-                                  ? { ...prev, recoverable: event.target.checked }
+                                  ? {
+                                      ...prev,
+                                      recoverable: event.target.checked,
+                                    }
                                   : prev
                               )
                             }
@@ -888,10 +883,10 @@ export function RawMaterialForm({
                     )}
                   </div>
 
-                  {/* Preview simples da localidade */}
+                  {/* Preview simples da localização */}
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
                     <Text className="font-semibold text-blue-900">
-                      Resumo Localidade #{idx + 1}
+                      Resumo Localização #{idx + 1}
                     </Text>
                     <div className="grid grid-cols-2 gap-2 text-sm mt-2">
                       <div>
@@ -914,7 +909,15 @@ export function RawMaterialForm({
                       </div>
                       <div>
                         <Text className="text-gray-600">
-                          Créditos Recuperáveis:
+                          Impostos Não Recuperáveis:
+                        </Text>
+                        <Text className="font-semibold text-red-600">
+                          {formatCurrency(locNonRecoverableTaxes)}
+                        </Text>
+                      </div>
+                      <div>
+                        <Text className="text-gray-600">
+                          Impostos Recuperáveis:
                         </Text>
                         <Text className="font-semibold text-green-700">
                           {formatCurrency(locRecoverableTaxes)}
@@ -937,50 +940,7 @@ export function RawMaterialForm({
         )}
       </div>
 
-      {/* Seções antigas de Fretes e Impostos substituídas por controles por localidade */}
-
-      {/* PREVIEW (usa primeira localidade como referência rápida) */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
-        <Text className="font-semibold text-blue-900">Preview de Custos</Text>
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div>
-            <Text className="text-gray-600">Preço Base:</Text>
-            <Text className="font-semibold">
-              {formatCurrency(acquisitionPrice)}
-            </Text>
-          </div>
-          <div>
-            <Text className="text-gray-600">Custo Adicional:</Text>
-            <Text className="font-semibold">
-              {formatCurrency(additionalCost)}
-            </Text>
-          </div>
-          <div>
-            <Text className="text-gray-600">Total de Fretes:</Text>
-            <Text className="font-semibold text-purple-600">
-              {formatCurrency(totalFreightCost)}
-            </Text>
-          </div>
-          <div>
-            <Text className="text-gray-600">Impostos Recuperáveis:</Text>
-            <Text className="font-semibold text-green-600">
-              {formatCurrency(recoverableTaxes)}
-            </Text>
-          </div>
-          <div>
-            <Text className="text-gray-600">Impostos Não Recuperáveis:</Text>
-            <Text className="font-semibold text-red-600">
-              {formatCurrency(nonRecoverableTaxes)}
-            </Text>
-          </div>
-          <div className="col-span-2 pt-2 border-t border-blue-300">
-            <Text className="text-gray-600">Custo Total Final:</Text>
-            <Text className="font-bold text-lg text-blue-900">
-              {formatCurrency(totalCost)}
-            </Text>
-          </div>
-        </div>
-      </div>
+      {/* Seções antigas de Fretes e Impostos substituídas por controles por localização */}
 
       {acquisitionPrice <= 0 && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-1 px-2">

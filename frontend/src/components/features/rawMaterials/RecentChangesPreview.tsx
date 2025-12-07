@@ -6,27 +6,10 @@ import { LoadingSpinner } from "@/components/common/LoadingSpinner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { FiClock, FiUser, FiPackage } from "react-icons/fi";
+import { getChangeLogFieldLabel } from "@/lib/changeLogs";
 
 export function RecentChangesPreview() {
   const { data: recentChanges, isLoading, isError } = useRecentChangesQuery();
-
-  const getFieldLabel = (field: string): string => {
-    const labels: Record<string, string> = {
-      code: "Código",
-      name: "Nome",
-      description: "Descrição",
-      measurementUnit: "Unidade de Medida",
-      inputGroup: "Grupo de Insumo",
-      paymentTerm: "Prazo de Pagamento",
-      acquisitionPrice: "Preço de Aquisição",
-      currency: "Moeda",
-      priceConvertedBrl: "Preço em BRL",
-      additionalCost: "Custo Adicional",
-      freights: "Fretes",
-      created: "Criação do Registro",
-    };
-    return labels[field] || field;
-  };
 
   if (isLoading) {
     return (
@@ -97,7 +80,7 @@ export function RecentChangesPreview() {
               {/* Campo alterado */}
               <div className="flex items-start justify-between gap-2 mb-1">
                 <Text variant="caption" className="font-semibold text-gray-900">
-                  {getFieldLabel(log.field)}
+                  {getChangeLogFieldLabel(log.field)}
                 </Text>
                 <Text variant="small" className="text-gray-500 flex-shrink-0">
                   {format(new Date(log.changedAt), "dd/MM HH:mm", {

@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateProductGroupDto } from './dto/create-product-group.dto';
 import { UpdateProductGroupDto } from './dto/update-product-group.dto';
 import { QueryProductGroupDto } from './dto/query-product-group.dto';
+import { ExportProductGroupDto } from './dto/export-product-group.dto';
 import { ProductGroupEntity } from './entities/product-group.entity';
 import { Prisma } from '@prisma/client';
 
@@ -184,7 +185,7 @@ export class ProductGroupsService {
     }
   }
 
-  async findAllForExport(query: any) {
+  async findAllForExport(query: ExportProductGroupDto) {
     const { search, sortBy = 'name', sortOrder = 'asc', limit } = query;
 
     const where: Prisma.ProductGroupWhereInput = search
@@ -205,7 +206,6 @@ export class ProductGroupsService {
           },
         },
       },
-      take: limit,
     });
 
     const [globalStats, consideredFixedCostsTotal] = await Promise.all([
@@ -220,7 +220,13 @@ export class ProductGroupsService {
       return entity;
     });
 
-    return this.sortProductGroups(data, sortBy, sortOrder);
+    let sorted = this.sortProductGroups(data, sortBy, sortOrder);
+
+    if (limit) {
+      sorted = sorted.slice(0, limit);
+    }
+
+    return sorted;
   }
 
   // ===== MÉTODOS AUXILIARES =====
@@ -364,6 +370,10 @@ export class ProductGroupsService {
         case 'totalValue': // <--- ADICIONAR CASE
           valueA = a.totalValue;
           valueB = b.totalValue;
+          break;
+        case 'productsCount':
+          valueA = a.productsCount;
+          valueB = b.productsCount;
           break;
         case 'overheadPerUnit':
           valueA = a.overheadPerUnit ?? 0;

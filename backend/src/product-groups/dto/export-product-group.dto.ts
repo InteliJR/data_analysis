@@ -1,6 +1,15 @@
 // src/product-groups/dto/export-product-group.dto.ts
 
-import { IsOptional, IsString, IsIn, IsInt, Min } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsIn,
+  IsInt,
+  Min,
+  IsArray,
+  ArrayNotEmpty,
+  ArrayUnique,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ExportProductGroupDto {
@@ -9,7 +18,15 @@ export class ExportProductGroupDto {
   search?: string;
 
   @IsOptional()
-  @IsIn(['name', 'volumePercentageByQuantity', 'volumePercentageByValue', 'averagePrice'])
+  @IsIn([
+    'name',
+    'volumePercentageByQuantity',
+    'volumePercentageByValue',
+    'averagePrice',
+    'totalValue',
+    'overheadPerUnit',
+    'productsCount',
+  ])
   sortBy?: string = 'name';
 
   @IsOptional()
@@ -21,4 +38,27 @@ export class ExportProductGroupDto {
   @IsInt()
   @Min(1)
   limit?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayNotEmpty()
+  @ArrayUnique()
+  @IsIn(
+    [
+      'name',
+      'description',
+      'productsCount',
+      'overheadPerUnit',
+      'porcentage',
+      'volumevendasconsiderar',
+      'volumePercentageByQuantity',
+      'volumePercentageByValue',
+      'averagePrice',
+      'totalValue',
+      'createdAt',
+      'updatedAt',
+    ],
+    { each: true },
+  )
+  columns?: string[];
 }

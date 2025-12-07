@@ -31,6 +31,19 @@ export function RawMaterialModal({
   const isEditing = !!rawMaterial;
   const title = isEditing ? "Editar Produto" : "Adicionar Produto";
 
+  const formatDateTime = (value?: string | Date | null) => {
+    if (!value) return null;
+    const date = typeof value === "string" ? new Date(value) : value;
+    if (Number.isNaN(date.getTime())) return null;
+    return date.toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
   const handleSubmit = async (data: CreateRawMaterialDTO) => {
     try {
       if (isEditing) {
@@ -88,7 +101,7 @@ export function RawMaterialModal({
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} size="xl">
+    <Modal isOpen={isOpen} onClose={onClose} title={title} size="3xl">
       <div className="space-y-6">
         {/* Formulário */}
         <RawMaterialForm
@@ -97,6 +110,23 @@ export function RawMaterialModal({
           isLoading={isLoading}
           onOpenLocationModal={onOpenLocationModal}
         />
+
+        {isEditing && rawMaterial && (
+          <div className="text-xs text-gray-500 flex flex-wrap gap-4 border rounded-lg px-4 py-3 bg-gray-50">
+            {formatDateTime(rawMaterial.createdAt) && (
+              <span>
+                Criado em:{" "}
+                <strong>{formatDateTime(rawMaterial.createdAt)}</strong>
+              </span>
+            )}
+            {formatDateTime(rawMaterial.updatedAt) && (
+              <span>
+                Atualizado em:{" "}
+                <strong>{formatDateTime(rawMaterial.updatedAt)}</strong>
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Histórico de mudanças (apenas em edição) */}
         {isEditing && (

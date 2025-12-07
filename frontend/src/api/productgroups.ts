@@ -37,6 +37,7 @@ export interface ExportProductGroupsPayload {
   sortBy?: string;
   sortOrder?: "asc" | "desc";
   limit?: number;
+  columns?: string[];
 }
 
 // ========================================

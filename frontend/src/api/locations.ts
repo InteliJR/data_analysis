@@ -29,6 +29,13 @@ export interface CreateLocationPayload {
   country?: string;
 }
 
+export interface UpdateLocationPayload {
+  name?: string;
+  stateUf?: string;
+  city?: string;
+  country?: string;
+}
+
 export async function getLocations(
   query: LocationsQuery = {}
 ): Promise<PaginatedLocationsResponse> {
@@ -52,6 +59,19 @@ export async function createLocation(
   return data;
 }
 
+export async function updateLocation(
+  id: string,
+  payload: UpdateLocationPayload
+): Promise<Location> {
+  const { data } = await apiClient.patch(`/locations/${id}`, payload);
+  return data;
+}
+
+export async function deleteLocation(id: string): Promise<Location> {
+  const { data } = await apiClient.delete(`/locations/${id}`);
+  return data;
+}
+
 const LOCATIONS_QUERY_KEY = "locations";
 
 export function useLocationsQuery(
@@ -70,6 +90,29 @@ export function useCreateLocationMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createLocation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [LOCATIONS_QUERY_KEY] });
+    },
+  });
+}
+
+type UpdateLocationInput = UpdateLocationPayload & { id: string };
+
+export function useUpdateLocationMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...payload }: UpdateLocationInput) =>
+      updateLocation(id, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [LOCATIONS_QUERY_KEY] });
+    },
+  });
+}
+
+export function useDeleteLocationMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deleteLocation(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [LOCATIONS_QUERY_KEY] });
     },

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -51,5 +52,11 @@ export class LocationsController {
   @Roles(UserRole.ADMIN, UserRole.LOGISTICA)
   update(@Param('id') id: string, @Body() dto: UpdateLocationDto, @Request() req) {
     return this.locationsService.update(id, dto, req.user.id);
+  }
+
+  @Delete(':id')
+  @Roles(UserRole.ADMIN, UserRole.LOGISTICA)
+  remove(@Param('id') id: string, @Request() req) {
+    return this.locationsService.remove(id, req.user.id);
   }
 }

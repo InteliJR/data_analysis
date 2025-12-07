@@ -220,6 +220,8 @@ model RawMaterialLocationPivot {
   // Fretes aplicáveis para levar esta MP para esta Localidade
   freights Freight[]
 
+  productRawMaterials ProductRawMaterial[]
+
   @@unique([rawMaterialId, locationId]) // Impede duplicar a mesma MP na mesma Location
   @@index([rawMaterialId])
   @@index([locationId])
@@ -340,16 +342,20 @@ model Product {
 }
 
 model ProductRawMaterial {
-  productId     String
-  rawMaterialId String
-  quantity      Decimal  @db.Decimal(10, 2)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  productId                  String
+  rawMaterialId              String
+  rawMaterialLocationPivotId String
+  quantity                   Decimal  @db.Decimal(10, 2)
+  createdAt                  DateTime @default(now())
+  updatedAt                  DateTime @updatedAt
 
-  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
-  rawMaterial RawMaterial @relation(fields: [rawMaterialId], references: [id], onDelete: Restrict)
+  product     Product                 @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rawMaterial RawMaterial             @relation(fields: [rawMaterialId], references: [id], onDelete: Restrict)
+  locationPivot RawMaterialLocationPivot @relation(fields: [rawMaterialLocationPivotId], references: [id], onDelete: Restrict)
 
-  @@id([productId, rawMaterialId])
+  @@id([productId, rawMaterialLocationPivotId])
+  @@index([rawMaterialId])
+  @@index([rawMaterialLocationPivotId])
   @@map("product_raw_materials")
 }
 

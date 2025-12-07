@@ -18,6 +18,14 @@ class ExportFiltersDto {
   @IsUUID('4', { message: 'ID do grupo de produto deve ser um UUID válido' })
   @IsOptional()
   productGroupId?: string;
+
+  @IsString()
+  @IsOptional()
+  stateUf?: string;
+
+  @IsString()
+  @IsOptional()
+  city?: string;
 }
 
 export class ExportProductsDto {
