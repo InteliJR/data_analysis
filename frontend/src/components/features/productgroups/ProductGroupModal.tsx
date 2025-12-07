@@ -1,6 +1,10 @@
-import { Modal } from '@/components/common/Modal';
-import { ProductGroupForm } from './ProductGroupForm';
-import type { ProductGroup, CreateProductGroupDTO, UpdateProductGroupDTO } from '@/types';
+import { Modal } from "@/components/common/Modal";
+import { ProductGroupForm } from "./ProductGroupForm";
+import type {
+  ProductGroup,
+  CreateProductGroupDTO,
+  UpdateProductGroupDTO,
+} from "@/types/productGroup";
 
 interface ProductGroupModalProps {
   isOpen: boolean;
@@ -21,7 +25,9 @@ export function ProductGroupModal({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={initialData ? 'Editar Grupo de Estruturas' : 'Novo Grupo de Estruturas'}
+      title={
+        initialData ? "Editar Grupo de Estruturas" : "Novo Grupo de Estruturas"
+      }
     >
       <ProductGroupForm
         initialData={initialData}

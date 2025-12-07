@@ -201,6 +201,7 @@ export class ProductsService {
   }
 
   async createFull(dto: CreateProductFullDto, userId: string) {
+    let compositionResolved: RawMaterialSelectionInput[] = [];
     // 1) Dentro da transação: criar/atualizar MPs, pivots e criar Produto com preços nulos
     const productId = await this.prisma.$transaction(async (tx) => {
       // Verificar produto duplicado por code
@@ -229,6 +230,7 @@ export class ProductsService {
 
       // Criação/atualização de MPs por code
       const rawMaterialIdByCode = new Map<string, string>();
+      const defaultPivotIdByCode = new Map<string, string>();
 
       for (const rm of dto.rawMaterials) {
         const rawMaterial = await tx.rawMaterial.upsert({
@@ -312,6 +314,10 @@ export class ProductsService {
             },
           });
 
+          if (!defaultPivotIdByCode.has(rm.code)) {
+            defaultPivotIdByCode.set(rm.code, pivot.id);
+          }
+
           // Conectar fretes à pivot
           if (loc.freightIds?.length) {
             const freights = await tx.freight.findMany({ where: { id: { in: loc.freightIds } } });
@@ -375,13 +381,27 @@ export class ProductsService {
       }
 
       // Montar composição por código
-      const composition = dto.composition.map((c) => {
-        const id = rawMaterialIdByCode.get(c.rawMaterialCode);
-        if (!id) {
+      const composition = dto.composition.map<RawMaterialSelectionInput>((c) => {
+        const rawMaterialId = rawMaterialIdByCode.get(c.rawMaterialCode);
+        if (!rawMaterialId) {
           throw new BadRequestException(`Matéria-prima não encontrada pelo código: ${c.rawMaterialCode}`);
         }
-        return { rawMaterialId: id, quantity: c.quantity };
+
+        const pivotId = defaultPivotIdByCode.get(c.rawMaterialCode);
+        if (!pivotId) {
+          throw new BadRequestException(
+            `Matéria-prima ${c.rawMaterialCode} não possui localização configurada para composição`,
+          );
+        }
+
+        return {
+          rawMaterialId,
+          rawMaterialLocationPivotId: pivotId,
+          quantity: c.quantity,
+        };
       });
+
+      compositionResolved = composition.map((item) => ({ ...item }));
 
       // Validar fretes do produto (já feitos antes) e calcular preços
       // Determinar creator obrigatório (schema exige)
@@ -425,17 +445,9 @@ export class ProductsService {
       return product.id;
     });
 
-    // 2) Fora da transação: resolver IDs das MPs por código
-    const compResolved: { rawMaterialId: string; quantity: number }[] = [];
-    for (const c of dto.composition) {
-      const rm = await this.prisma.rawMaterial.findUnique({ where: { code: c.rawMaterialCode } });
-      if (!rm) throw new BadRequestException(`Matéria-prima não encontrada pelo código: ${c.rawMaterialCode}`);
-      compResolved.push({ rawMaterialId: rm.id, quantity: c.quantity });
-    }
-
     // Calcular preços e atualizar o produto
     const calculations = await this.calculateProductPrice({
-      rawMaterials: compResolved,
+      rawMaterials: compositionResolved,
       fixedCostId: dto.fixedCostId,
       freightIds: dto.freightIds,
     });

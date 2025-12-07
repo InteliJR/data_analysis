@@ -1,6 +1,6 @@
 // src/components/features/taxes/FreightTaxForm.tsx
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Input } from "@/components/common/Input";
 import { Label } from "@/components/common/Label";
@@ -23,7 +23,6 @@ interface FreightTaxFormProps {
 export function FreightTaxForm({
   tax,
   onSubmit,
-  isLoading,
 }: FreightTaxFormProps) {
   const [freightSearch, setFreightSearch] = useState("");
   const [selectedFreightIds, setSelectedFreightIds] = useState<string[]>([]);

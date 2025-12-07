@@ -1,10 +1,10 @@
 // src/components/features/fixedCosts/FixedCostsSummaryTable.tsx
 
-import type { FixedCost } from '@/types';
-import { Text } from '@/components/common/Text';
-import { IconButton } from '@/components/common/IconButton';
-import { FiEdit2, FiTrash2, FiChevronUp } from 'react-icons/fi';
-import { formatCurrency } from '@/lib/utils';
+import type { FixedCost } from "@/types/fixed_costs";
+import { Text } from "@/components/common/Text";
+import { IconButton } from "@/components/common/IconButton";
+import { FiEdit2, FiTrash2, FiChevronUp } from "react-icons/fi";
+import { formatCurrency } from "@/lib/utils";
 
 interface FixedCostsSummaryTableProps {
   costs: FixedCost[];
@@ -12,7 +12,7 @@ interface FixedCostsSummaryTableProps {
   onDelete: (id: string) => void;
   onSort: (column: string) => void;
   sortBy: string;
-  sortOrder: 'asc' | 'desc';
+  sortOrder: "asc" | "desc";
 }
 
 export function FixedCostsSummaryTable({
@@ -23,29 +23,31 @@ export function FixedCostsSummaryTable({
   sortBy,
   sortOrder,
 }: FixedCostsSummaryTableProps) {
-  
   const calculateTotals = (costs: FixedCost[]) => {
-    return costs.reduce((acc, cost) => {
-      const c: any = cost;
-      const personnelExpenses = Number(c.personnelExpenses) || 0;
-      const generalExpenses = Number(c.generalExpenses) || 0;
-      const proLabore = Number(c.proLabore) || 0;
-      const depreciation = Number(c.depreciation) || 0;
-      const totalCost = Number(c.totalCost) || 0;
+    return costs.reduce(
+      (acc, cost) => {
+        const c: any = cost;
+        const personnelExpenses = Number(c.personnelExpenses) || 0;
+        const generalExpenses = Number(c.generalExpenses) || 0;
+        const proLabore = Number(c.proLabore) || 0;
+        const depreciation = Number(c.depreciation) || 0;
+        const totalCost = Number(c.totalCost) || 0;
 
-      acc.personnelExpenses += personnelExpenses;
-      acc.generalExpenses += generalExpenses;
-      acc.proLabore += proLabore;
-      acc.depreciation += depreciation;
-      acc.totalCost += totalCost;
-      return acc;
-    }, {
-      personnelExpenses: 0,
-      generalExpenses: 0,
-      proLabore: 0,
-      depreciation: 0,
-      totalCost: 0,
-    });
+        acc.personnelExpenses += personnelExpenses;
+        acc.generalExpenses += generalExpenses;
+        acc.proLabore += proLabore;
+        acc.depreciation += depreciation;
+        acc.totalCost += totalCost;
+        return acc;
+      },
+      {
+        personnelExpenses: 0,
+        generalExpenses: 0,
+        proLabore: 0,
+        depreciation: 0,
+        totalCost: 0,
+      }
+    );
   };
 
   const totals = calculateTotals(costs);
@@ -58,8 +60,8 @@ export function FixedCostsSummaryTable({
       <span
         className={`
           text-blue-600 w-4 h-4 transition-transform duration-200 
-          ${isActive ? 'opacity-100' : 'opacity-0'} 
-          ${isActive && sortOrder === 'desc' ? 'rotate-180' : ''}
+          ${isActive ? "opacity-100" : "opacity-0"} 
+          ${isActive && sortOrder === "desc" ? "rotate-180" : ""}
         `}
       >
         <FiChevronUp />
@@ -111,32 +113,43 @@ export function FixedCostsSummaryTable({
 
         <tbody>
           {costs.map((cost) => {
-            const c: any = cost;
-
             return (
               <tr
                 key={cost.id}
                 className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
               >
                 <td className="px-4 py-3">
-                  <Text variant="caption" className="font-semibold text-gray-900">
+                  <Text
+                    variant="caption"
+                    className="font-semibold text-gray-900"
+                  >
                     {cost.description}
                   </Text>
                 </td>
                 <td className="px-4 py-3">
-                  <Text variant="caption">{cost.code || '-'}</Text>
+                  <Text variant="caption">{cost.code || "-"}</Text>
                 </td>
                 <td className="px-4 py-3">
-                  <Text variant="caption">{formatCurrency(Number((cost as any).personnelExpenses) || 0)}</Text>
+                  <Text variant="caption">
+                    {formatCurrency(
+                      Number((cost as any).personnelExpenses) || 0
+                    )}
+                  </Text>
                 </td>
                 <td className="px-4 py-3">
-                  <Text variant="caption">{formatCurrency(Number((cost as any).generalExpenses) || 0)}</Text>
+                  <Text variant="caption">
+                    {formatCurrency(Number((cost as any).generalExpenses) || 0)}
+                  </Text>
                 </td>
                 <td className="px-4 py-3">
-                  <Text variant="caption">{formatCurrency(Number((cost as any).proLabore) || 0)}</Text>
+                  <Text variant="caption">
+                    {formatCurrency(Number((cost as any).proLabore) || 0)}
+                  </Text>
                 </td>
                 <td className="px-4 py-3">
-                  <Text variant="caption">{formatCurrency(Number((cost as any).depreciation) || 0)}</Text>
+                  <Text variant="caption">
+                    {formatCurrency(Number((cost as any).depreciation) || 0)}
+                  </Text>
                 </td>
                 <td className="px-4 py-3">
                   <Text variant="caption" className="font-semibold">
@@ -144,7 +157,9 @@ export function FixedCostsSummaryTable({
                   </Text>
                 </td>
                 <td className="px-4 py-3">
-                  <Text variant="caption">{Number((cost as any).considerationPercentage) || 0}%</Text>
+                  <Text variant="caption">
+                    {Number((cost as any).considerationPercentage) || 0}%
+                  </Text>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
@@ -170,7 +185,10 @@ export function FixedCostsSummaryTable({
         <tfoot className="bg-gray-50 border-t-2 border-gray-300">
           <tr>
             <th className="px-4 py-3 text-left" colSpan={2}>
-              <Text variant="caption" className="font-bold uppercase text-gray-700">
+              <Text
+                variant="caption"
+                className="font-bold uppercase text-gray-700"
+              >
                 TOTAL GERAL
               </Text>
             </th>

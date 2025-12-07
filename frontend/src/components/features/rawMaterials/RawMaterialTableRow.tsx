@@ -1,7 +1,7 @@
 // src/components/features/rawMaterials/RawMaterialTableRow.tsx
 
 import { useMemo } from "react";
-import type { RawMaterial } from "@/types/RawMaterials";
+import type { RawMaterial } from "@/types/rawMaterial";
 import { Text } from "@/components/common/Text";
 import { IconButton } from "@/components/common/IconButton";
 import { FiEdit2, FiTrash2 } from "react-icons/fi";

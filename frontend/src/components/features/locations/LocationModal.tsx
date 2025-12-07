@@ -21,7 +21,7 @@ import {
   useUpdateLocationMutation,
 } from "@/api/locations";
 import type { CreateLocationPayload } from "@/api/locations";
-import type { Location } from "@/types/RawMaterials";
+import type { Location } from "@/types/rawMaterial";
 
 interface LocationModalProps {
   isOpen: boolean;

@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef } from "react";
 
 /**
  * Hook personalizado para criar uma função debounced.
@@ -9,9 +9,9 @@ import { useRef } from 'react';
  */
 export function useDebounce<T extends (...args: any[]) => any>(
   callback: T,
-  delay: number,
+  delay: number
 ): (...args: Parameters<T>) => void {
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   return (...args: Parameters<T>) => {
     if (timeoutRef.current) {

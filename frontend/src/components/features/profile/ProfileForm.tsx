@@ -1,68 +1,71 @@
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Eye, EyeOff, Save } from 'lucide-react';
-import { Input } from '@/components/common/Input';
-import { Label } from '@/components/common/Label';
-import { Button } from '@/components/common/Button';
-import { LoadingSpinner } from '@/components/common/LoadingSpinner';
-import type { User } from '@/types/user';
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Eye, EyeOff, Save } from "lucide-react";
+import { Input } from "@/components/common/Input";
+import { Label } from "@/components/common/Label";
+import { Button } from "@/components/common/Button";
+import { LoadingSpinner } from "@/components/common/LoadingSpinner";
+import type { User } from "@/types/user";
 
 // ========================================
 // Schema de Validação
 // ========================================
 
-const profileSchema = z.object({
-  name: z
-    .string()
-    .min(3, 'Nome deve ter no mínimo 3 caracteres')
-    .max(100, 'Nome deve ter no máximo 100 caracteres'),
-  email: z
-    .string()
-    .email('Email inválido')
-    .max(100, 'Email deve ter no máximo 100 caracteres'),
-  currentPassword: z
-    .string()
-    .optional()
-    .refine((val) => !val || val.length >= 6, {
-      message: 'Senha atual deve ter no mínimo 6 caracteres',
-    }),
-  newPassword: z
-    .string()
-    .optional()
-    .refine((val) => !val || val.length >= 6, {
-      message: 'Nova senha deve ter no mínimo 6 caracteres',
-    })
-    .refine((val) => !val || val.length <= 50, {
-      message: 'Nova senha deve ter no máximo 50 caracteres',
-    }),
-  confirmPassword: z.string().optional(),
-}).refine(
-  (data) => {
-    // Se preencheu nova senha, precisa preencher senha atual
-    if (data.newPassword && !data.currentPassword) {
-      return false;
+const profileSchema = z
+  .object({
+    name: z
+      .string()
+      .min(3, "Nome deve ter no mínimo 3 caracteres")
+      .max(100, "Nome deve ter no máximo 100 caracteres"),
+    email: z
+      .string()
+      .email("Email inválido")
+      .max(100, "Email deve ter no máximo 100 caracteres"),
+    currentPassword: z
+      .string()
+      .optional()
+      .refine((val) => !val || val.length >= 6, {
+        message: "Senha atual deve ter no mínimo 6 caracteres",
+      }),
+    newPassword: z
+      .string()
+      .optional()
+      .refine((val) => !val || val.length >= 6, {
+        message: "Nova senha deve ter no mínimo 6 caracteres",
+      })
+      .refine((val) => !val || val.length <= 50, {
+        message: "Nova senha deve ter no máximo 50 caracteres",
+      }),
+    confirmPassword: z.string().optional(),
+  })
+  .refine(
+    (data) => {
+      // Se preencheu nova senha, precisa preencher senha atual
+      if (data.newPassword && !data.currentPassword) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "Informe a senha atual para alterar a senha",
+      path: ["currentPassword"],
     }
-    return true;
-  },
-  {
-    message: 'Informe a senha atual para alterar a senha',
-    path: ['currentPassword'],
-  }
-).refine(
-  (data) => {
-    // Se preencheu nova senha, as senhas devem coincidir
-    if (data.newPassword && data.newPassword !== data.confirmPassword) {
-      return false;
+  )
+  .refine(
+    (data) => {
+      // Se preencheu nova senha, as senhas devem coincidir
+      if (data.newPassword && data.newPassword !== data.confirmPassword) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: "As senhas não coincidem",
+      path: ["confirmPassword"],
     }
-    return true;
-  },
-  {
-    message: 'As senhas não coincidem',
-    path: ['confirmPassword'],
-  }
-);
+  );
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
@@ -101,13 +104,13 @@ export function ProfileForm({ user, onSubmit, isLoading }: ProfileFormProps) {
     defaultValues: {
       name: user.name,
       email: user.email,
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
     },
   });
 
-  const newPassword = watch('newPassword');
+  const newPassword = watch("newPassword");
   const isChangingPassword = !!newPassword;
 
   const handleFormSubmit = async (data: ProfileFormData) => {
@@ -144,9 +147,9 @@ export function ProfileForm({ user, onSubmit, isLoading }: ProfileFormProps) {
     reset({
       name: data.name,
       email: data.email,
-      currentPassword: '',
-      newPassword: '',
-      confirmPassword: '',
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
     });
   };
 
@@ -165,7 +168,7 @@ export function ProfileForm({ user, onSubmit, isLoading }: ProfileFormProps) {
           <Input
             id="name"
             type="text"
-            {...register('name')}
+            {...register("name")}
             error={errors.name?.message}
             disabled={isLoading}
             placeholder="Digite seu nome"
@@ -183,23 +186,19 @@ export function ProfileForm({ user, onSubmit, isLoading }: ProfileFormProps) {
           <Input
             id="email"
             type="email"
-            {...register('email')}
+            {...register("email")}
             error={errors.email?.message}
             disabled={isLoading}
             placeholder="seu@email.com"
             maxLength={100}
           />
-          <p className="text-xs text-gray-500 mt-1">
-            Máximo 100 caracteres
-          </p>
+          <p className="text-xs text-gray-500 mt-1">Máximo 100 caracteres</p>
         </div>
       </div>
 
       {/* Alteração de Senha */}
       <div className="space-y-4 pt-6 border-t border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900">
-          Alterar Senha
-        </h3>
+        <h3 className="text-lg font-semibold text-gray-900">Alterar Senha</h3>
         <p className="text-sm text-gray-600">
           Deixe em branco se não deseja alterar a senha
         </p>
@@ -209,8 +208,8 @@ export function ProfileForm({ user, onSubmit, isLoading }: ProfileFormProps) {
           <div className="relative">
             <Input
               id="currentPassword"
-              type={showCurrentPassword ? 'text' : 'password'}
-              {...register('currentPassword')}
+              type={showCurrentPassword ? "text" : "password"}
+              {...register("currentPassword")}
               error={errors.currentPassword?.message}
               disabled={isLoading}
               placeholder="Digite sua senha atual"
@@ -242,8 +241,8 @@ export function ProfileForm({ user, onSubmit, isLoading }: ProfileFormProps) {
           <div className="relative">
             <Input
               id="newPassword"
-              type={showNewPassword ? 'text' : 'password'}
-              {...register('newPassword')}
+              type={showNewPassword ? "text" : "password"}
+              {...register("newPassword")}
               error={errors.newPassword?.message}
               disabled={isLoading}
               placeholder="Digite sua nova senha"
@@ -273,8 +272,8 @@ export function ProfileForm({ user, onSubmit, isLoading }: ProfileFormProps) {
           <div className="relative">
             <Input
               id="confirmPassword"
-              type={showConfirmPassword ? 'text' : 'password'}
-              {...register('confirmPassword')}
+              type={showConfirmPassword ? "text" : "password"}
+              {...register("confirmPassword")}
               error={errors.confirmPassword?.message}
               disabled={isLoading}
               placeholder="Confirme sua nova senha"

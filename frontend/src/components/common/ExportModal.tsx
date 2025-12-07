@@ -1,6 +1,6 @@
 // src/components/common/ExportModal.tsx
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
 import { Input } from "./Input";

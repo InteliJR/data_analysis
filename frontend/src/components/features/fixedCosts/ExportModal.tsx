@@ -1,6 +1,6 @@
 // src/components/features/fixedCosts/ExportModal.tsx
 
-import React, { useState, useEffect } from 'react';
+import  { useState, useEffect } from 'react';
 import { Modal } from '@/components/common/Modal';
 import { Button } from '@/components/common/Button';
 import { Input } from '@/components/common/Input';

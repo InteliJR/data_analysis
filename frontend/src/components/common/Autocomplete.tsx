@@ -24,6 +24,7 @@ interface AutocompleteProps {
   isLoading?: boolean;
   error?: string;
   renderOption?: (option: AutocompleteOption) => React.ReactNode;
+  emptyMessage?: string;
 }
 
 export function Autocomplete({
@@ -38,6 +39,7 @@ export function Autocomplete({
   isLoading,
   error,
   renderOption,
+  emptyMessage = "Nenhum resultado encontrado",
 }: AutocompleteProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
@@ -153,7 +155,7 @@ export function Autocomplete({
           ) : options.length === 0 ? (
             <div className="p-4 text-center">
               <Text variant="caption" className="text-gray-500">
-                Nenhum resultado encontrado
+                {emptyMessage}
               </Text>
             </div>
           ) : (

@@ -60,7 +60,6 @@ const validateNotEmpty = (value: string | undefined): boolean => {
 export function RawMaterialForm({
   rawMaterial,
   onSubmit,
-  isLoading,
   onOpenLocationModal,
 }: RawMaterialFormProps) {
   const [freightSearch, setFreightSearch] = useState("");

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "./client";
-import type { Location } from "@/types/RawMaterials";
+import type { Location } from "@/types/rawMaterial";
 
 const MAX_LOCATIONS_PAGE_SIZE = 100;
 

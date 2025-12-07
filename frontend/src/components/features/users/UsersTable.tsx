@@ -1,4 +1,3 @@
-import React from 'react';
 import type { User } from '@/types/user';
 import { UserTableRow } from './UserTableRow';
 import { TableHeaderCell } from '@/components/common/ProductTableHeaderCell';

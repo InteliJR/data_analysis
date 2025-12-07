@@ -1,6 +1,5 @@
 // src/components/features/assumptions/AssumptionsTable.tsx
 
-import React from 'react';
 import type { AssumptionItem } from '@/types';
 import { Text } from '@/components/common/Text';
 import { TableHeaderCell } from '@/components/common/ProductTableHeaderCell';

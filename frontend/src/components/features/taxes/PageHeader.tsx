@@ -1,6 +1,5 @@
 // src/components/features/taxes/PageHeader.tsx
 
-import React from "react";
 import { SecondaryButton } from "@/components/common/SecondaryButton";
 import { Input } from "@/components/common/Input";
 import { FiPlus, FiDownload, FiSearch } from "react-icons/fi";
@@ -14,7 +13,6 @@ interface PageHeaderProps {
 }
 
 export function PageHeader({
-  title,
   onNewClick,
   onExportClick,
   onSearchChange,
