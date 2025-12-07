@@ -1,8 +1,7 @@
 // src/components/features/fixedCosts/FixedCostForm.tsx
 
-import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import type { FixedCost, FixedCostFormData } from '@/types';
+import type { FixedCost, FixedCostFormData } from '@/types/fixed_costs';
 import { Input } from '@/components/common/Input';
 import { Label } from '@/components/common/Label';
 import { CurrencyInput } from '@/components/common/CurrencyInput';
@@ -15,7 +14,7 @@ interface FixedCostFormProps {
   isLoading?: boolean;
 }
 
-export function FixedCostForm({ cost, onSubmit, isLoading }: FixedCostFormProps) {
+export function FixedCostForm({ cost, onSubmit }: FixedCostFormProps) {
   const {
     register,
     handleSubmit,

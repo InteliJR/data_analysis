@@ -1,6 +1,6 @@
 // src/components/features/freights/FreightsTable.tsx
 
-import type { Freight } from "@/types";
+import type { Freight } from "@/types/freights";
 import { Text } from "@/components/common/Text";
 import { IconButton } from "@/components/common/IconButton";
 import { FiEdit2, FiTrash2, FiChevronUp } from "react-icons/fi";

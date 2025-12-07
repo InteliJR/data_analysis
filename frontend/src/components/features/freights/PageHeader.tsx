@@ -1,6 +1,5 @@
 // src/components/features/freights/PageHeader.tsx
 
-import React from "react";
 import { SecondaryButton } from "@/components/common/SecondaryButton";
 import { Heading } from "@/components/common/Heading";
 import { Input } from "@/components/common/Input";

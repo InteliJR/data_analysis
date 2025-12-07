@@ -1,10 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from './client';
 import type {
+  ExportUsersPayload,
   PaginatedResponse,
   User,
   UserRole,
-  UserStatus,
 } from '@/types/user';
 
 // ========================================

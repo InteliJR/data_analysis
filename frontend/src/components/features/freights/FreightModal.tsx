@@ -1,7 +1,7 @@
 // src/components/features/freights/FreightModal.tsx
 
 import { toast } from 'react-hot-toast';
-import type { Freight } from '@/types';
+import type { Freight } from '@/types/freights';
 import type { CreateFreightDTO } from '@/api/freights';
 import { Modal } from '@/components/common/Modal';
 import { FreightForm } from './FreightForm';

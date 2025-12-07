@@ -1,14 +1,17 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import type { FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Eye, EyeOff } from 'lucide-react';
-import type { User, UserRole } from '@/types/user';
+import type { User } from '@/types/user';
 import { Input } from '@/components/common/Input';
 import { Select } from '@/components/common/Select';
 import { Button } from '@/components/common/Button';
 import { useCreateUserMutation, useUpdateUserMutation } from '@/api/users';
 import toast from 'react-hot-toast';
+
+const ROLE_OPTIONS = ['ADMIN', 'COMERCIAL', 'LOGISTICA', 'IMPOSTO'] as const;
 
 // ========================================
 // Schemas de Validação
@@ -19,9 +22,7 @@ const CreateUserSchema = z.object({
   name: z.string().min(3, 'O nome deve ter no mínimo 3 caracteres.'),
   password: z.string().min(8, 'A senha deve ter no mínimo 8 caracteres.'),
   confirmPassword: z.string().min(8, 'Confirmação obrigatória.'),
-  role: z.enum(['ADMIN', 'COMERCIAL', 'LOGISTICA', 'IMPOSTO'], {
-    required_error: 'A função é obrigatória.',
-  }),
+  role: z.enum(ROLE_OPTIONS),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'As senhas não coincidem.',
   path: ['confirmPassword'],
@@ -29,7 +30,7 @@ const CreateUserSchema = z.object({
 
 const UpdateUserSchema = z.object({
   name: z.string().min(3, 'O nome deve ter no mínimo 3 caracteres.'),
-  role: z.enum(['ADMIN', 'COMERCIAL', 'LOGISTICA', 'IMPOSTO']),
+  role: z.enum(ROLE_OPTIONS),
   isActive: z.boolean(),
   password: z.string().optional(),
   confirmPassword: z.string().optional(),
@@ -87,9 +88,13 @@ export function UserForm({ user, mode, onSuccess, onCancel }: UserFormProps) {
           confirmPassword: '',
         }
       : {
+          email: '',
           role: 'COMERCIAL',
         },
   });
+
+  const createErrors = errors as FieldErrors<CreateUserForm>;
+  const updateErrors = errors as FieldErrors<UpdateUserForm>;
 
   const createUserMutation = useCreateUserMutation();
   const updateUserMutation = useUpdateUserMutation();
@@ -103,7 +108,7 @@ export function UserForm({ user, mode, onSuccess, onCancel }: UserFormProps) {
           role: updateData.role,
           isActive: updateData.isActive,
         };
-        
+
         // Só envia senha se foi preenchida
         if (updateData.password && updateData.password.trim() !== '') {
           payload.password = updateData.password;
@@ -143,7 +148,7 @@ export function UserForm({ user, mode, onSuccess, onCancel }: UserFormProps) {
               placeholder="exemplo@gmail.com"
               required
               {...register('email')}
-              error={errors.email?.message}
+              error={createErrors.email?.message}
             />
           </div>
         )}
@@ -199,7 +204,7 @@ export function UserForm({ user, mode, onSuccess, onCancel }: UserFormProps) {
               {...register('isActive', { 
                 setValueAs: (v) => v === 'true' || v === true 
               })}
-              error={errors.isActive?.message}
+              error={updateErrors.isActive?.message}
             >
               <option value="true">Ativo</option>
               <option value="false">Inativo</option>

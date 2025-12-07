@@ -20,7 +20,6 @@ export function UsersActionBar({
   onRoleFilterChange,
   onStatusFilterChange,
   onExport,
-  isExporting = false,
 }: UsersActionBarProps) {
   const [searchValue, setSearchValue] = useState("");
   const debouncedSearch = useDebounce((value: string) => {

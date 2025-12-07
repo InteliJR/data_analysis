@@ -1,7 +1,7 @@
 // src/components/features/fixedCosts/FixedCostModal.tsx
 
 import { toast } from 'react-hot-toast';
-import type { FixedCost, FixedCostFormData } from '@/types';
+import type { FixedCost, FixedCostFormData } from '@/types/fixed_costs';
 import { Modal } from '@/components/common/Modal';
 import { FixedCostForm } from './FixedCostForm';
 import { Button } from '@/components/common/Button';

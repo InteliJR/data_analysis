@@ -1,7 +1,7 @@
 // src/components/features/rawMaterials/RawMaterialTable.tsx
 
 import { useMemo } from "react";
-import type { RawMaterial } from "@/types/RawMaterials";
+import type { RawMaterial } from "@/types/rawMaterial";
 import { RawMaterialTableRow } from "./RawMaterialTableRow";
 import { FiChevronUp } from "react-icons/fi";
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import type { User } from '@/types/user';
 import { Modal } from '@/components/common/Modal';
 import { UserForm } from './UserForm';

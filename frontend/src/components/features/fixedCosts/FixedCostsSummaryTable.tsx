@@ -1,6 +1,6 @@
 // src/components/features/fixedCosts/FixedCostsSummaryTable.tsx
 
-import type { FixedCost } from '@/types';
+import type { FixedCost } from '@/types/fixed_costs';
 import { Text } from '@/components/common/Text';
 import { IconButton } from '@/components/common/IconButton';
 import { FiEdit2, FiTrash2, FiChevronUp } from 'react-icons/fi';
@@ -111,7 +111,6 @@ export function FixedCostsSummaryTable({
 
         <tbody>
           {costs.map((cost) => {
-            const c: any = cost;
 
             return (
               <tr

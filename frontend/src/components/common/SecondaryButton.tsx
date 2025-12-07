@@ -1,9 +1,9 @@
-import React from 'react';
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import type { IconType } from 'react-icons';
 import { twMerge } from 'tailwind-merge';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  children: React.ReactNode;
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  children?: ReactNode;
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   leftIcon?: IconType;
   rightIcon?: IconType;

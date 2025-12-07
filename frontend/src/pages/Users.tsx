@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Users as UsersIcon } from "lucide-react";
 import type { User, UserRole } from "@/types/user";
 import { Heading } from "@/components/common/Heading";
@@ -224,7 +224,7 @@ export default function Users() {
         onConfirm={handleConfirmDelete}
         title="Desativar Usuário"
         message={`Você tem certeza que deseja desativar o usuário ${selectedUser?.email}? Ele não poderá mais fazer login até ser reativado.`}
-        confirmButtonText="Desativar"
+        confirmText="Desativar"
       />
 
       {/* Modal de Criação/Edição */}

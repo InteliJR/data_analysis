@@ -11,8 +11,6 @@ import {
   type FindAllProductGroupsQuery,
   type ExportProductGroupsPayload,
 } from "@/api/productgroups";
-import { useFixedCostsQuery } from "@/api/fixedCosts";
-import type { FindAllFixedCostsQuery } from "@/types/fixed_costs";
 
 import { Heading } from "@/components/common/Heading";
 import { ActionBar } from "@/components/features/productgroups/ActionBar";
@@ -61,13 +59,6 @@ export default function ProductGroups() {
   const updateMutation = useUpdateProductGroupMutation();
   const deleteMutation = useDeleteProductGroupMutation();
   const exportMutation = useExportProductGroupsMutation();
-
-  // Fetch fixed costs to compute considered total for overhead calculation
-  const fixedCostsQueryParams: FindAllFixedCostsQuery = {
-    page: 1,
-    limit: 1000,
-  };
-  const { data: fixedCostsData } = useFixedCostsQuery(fixedCostsQueryParams);
 
   // Handlers
   const handleFilterChange = (

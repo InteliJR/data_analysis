@@ -1,8 +1,7 @@
 // src/components/features/products/ProductModal.tsx
 
 import { toast } from 'react-hot-toast';
-import type { Product } from '@/types/products';
-import type { CreateProductDTO } from '@/api/products';
+import type { Product, CreateProductDTO } from '@/types/products';
 import { Modal } from '@/components/common/Modal';
 import { ProductForm } from './ProductForm';
 import { Button } from '@/components/common/Button';

@@ -19,7 +19,6 @@ import { FiPlus, FiTrash2 } from "react-icons/fi";
 import { formatCurrency } from "@/lib/utils";
 
 import { useFreightTaxesQuery } from "@/api/taxes";
-import { useDebounce } from "@/hooks/useDebounce";
 
 const estados: string[] = [
   "AC",
@@ -93,7 +92,6 @@ const validateNotEmpty = (value: string | undefined): boolean => {
 export function FreightForm({
   freight,
   onSubmit,
-  isLoading,
 }: FreightFormProps) {
   const [taxSearch, setTaxSearch] = useState("");
 
@@ -249,10 +247,6 @@ export function FreightForm({
     onSubmit(cleanedData);
   };
 
-  const getCurrencySymbol = (curr: string) => {
-    const symbols = { BRL: "R$", USD: "US$", EUR: "€" };
-    return symbols[curr as keyof typeof symbols] || curr;
-  };
 
   return (
     <form

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
-import type { FixedCost, OverheadGroup } from "@/types";
+import type { FixedCost } from "@/types/fixed_costs";
 import { PageHeader } from "@/components/features/fixedCosts/PageHeader";
 import { FixedCostsSummaryTable } from "@/components/features/fixedCosts/FixedCostsSummaryTable";
 import { FixedCostModal } from "@/components/features/fixedCosts/FixedCostModal";

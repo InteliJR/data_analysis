@@ -1,6 +1,10 @@
 import { Modal } from '@/components/common/Modal';
 import { ProductGroupForm } from './ProductGroupForm';
-import type { ProductGroup, CreateProductGroupDTO, UpdateProductGroupDTO } from '@/types';
+import type {
+  ProductGroup,
+  CreateProductGroupDTO,
+  UpdateProductGroupDTO,
+} from '@/types/productGroup';
 
 interface ProductGroupModalProps {
   isOpen: boolean;

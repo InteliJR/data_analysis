@@ -4,7 +4,29 @@ import { z } from 'zod';
 import { Input } from '@/components/common/Input';
 import { Textarea } from '@/components/common/Textarea';
 import { Button } from '@/components/common/Button';
-import type { ProductGroup } from '@/types';
+import { Label } from '@/components/common/Label';
+import type { ProductGroup } from '@/types/productGroup';
+
+const normalizeOptionalNumber = (value: unknown): number | undefined => {
+  if (value === '' || value === null || typeof value === 'undefined') {
+    return undefined;
+  }
+  const parsed = typeof value === 'number' ? value : Number(value);
+  return Number.isNaN(parsed) ? undefined : parsed;
+};
+
+const percentageSchema = z
+  .number()
+  .int('Deve ser um número inteiro')
+  .min(0, 'Mínimo 0%')
+  .max(100, 'Máximo 100%')
+  .optional();
+
+const volumeSchema = z
+  .number()
+  .int('Deve ser um número inteiro')
+  .min(0, 'Mínimo 0')
+  .optional();
 
 const productGroupSchema = z.object({
   name: z
@@ -19,17 +41,8 @@ const productGroupSchema = z.object({
     .max(500, 'Descrição muito longa (máximo 500 caracteres)')
     .optional()
     .or(z.literal('')),
-  porcentage: z
-    .number({ invalid_type_error: 'Porcentagem deve ser numérica' })
-    .int('Deve ser um número inteiro')
-    .min(0, 'Mínimo 0%')
-    .max(100, 'Máximo 100%')
-    .optional(),
-  volumevendasconsiderar: z
-    .number({ invalid_type_error: 'Volume deve ser numérico' })
-    .int('Deve ser um número inteiro')
-    .min(0, 'Mínimo 0')
-    .optional(),
+  porcentage: percentageSchema,
+  volumevendasconsiderar: volumeSchema,
 });
 
 type ProductGroupFormData = z.infer<typeof productGroupSchema>;
@@ -83,13 +96,17 @@ export function ProductGroupForm({
       </div>
 
       <div>
+        <Label htmlFor="description">Descrição</Label>
         <Textarea
-          label="Descrição"
+          id="description"
           placeholder="Adicione uma descrição opcional para o grupo..."
-          error={errors.description?.message}
+          className={errors.description ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : undefined}
           rows={4}
           {...register('description')}
         />
+        {errors.description && (
+          <p className="text-sm text-red-600 mt-1">{errors.description.message}</p>
+        )}
         <p className="mt-1 text-xs text-gray-500">
           {descriptionValue.length}/500 caracteres
         </p>
@@ -103,7 +120,9 @@ export function ProductGroupForm({
           min={0}
           max={100}
           error={errors.porcentage?.message}
-          {...register('porcentage', { valueAsNumber: true })}
+          {...register('porcentage', {
+            setValueAs: normalizeOptionalNumber,
+          })}
         />
         {Number.isFinite(porcentageValue) && (
           <p className="mt-1 text-xs text-gray-500">{porcentageValue}%</p>
@@ -117,7 +136,9 @@ export function ProductGroupForm({
           placeholder="Ex: 10000"
           min={0}
           error={errors.volumevendasconsiderar?.message}
-          {...register('volumevendasconsiderar', { valueAsNumber: true })}
+          {...register('volumevendasconsiderar', {
+            setValueAs: normalizeOptionalNumber,
+          })}
         />
         {Number.isFinite(volumeConsiderValue) && (
           <p className="mt-1 text-xs text-gray-500">{volumeConsiderValue}</p>

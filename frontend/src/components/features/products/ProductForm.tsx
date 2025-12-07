@@ -22,9 +22,25 @@ import { useProductGroupsQuery } from "@/api/productgroups";
 import { useFreightsQuery } from "@/api/freights";
 import { toast } from "react-hot-toast";
 
+interface RawMaterialFormInput {
+  rawMaterialId: string;
+  rawMaterialLocationPivotId: string;
+  quantity: number;
+}
+
+interface ProductFormValues {
+  code: string;
+  name: string;
+  description: string;
+  fixedCostId?: string;
+  productGroupId?: string;
+  freightIds: string[];
+  rawMaterials: RawMaterialFormInput[];
+}
+
 interface ProductFormProps {
   product?: Product | null;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: ProductFormValues) => void;
   isLoading?: boolean;
 }
 
@@ -35,7 +51,6 @@ const validateNotEmpty = (value: string | undefined): boolean => {
 export function ProductForm({
   product,
   onSubmit,
-  isLoading,
 }: ProductFormProps) {
   // Converte strings como "1.234,56" para número 1234.56
   const toNumber = (val: any): number => {
@@ -73,14 +88,14 @@ export function ProductForm({
     setValue,
     control,
     formState: { errors },
-  } = useForm<any>({
+  } = useForm<ProductFormValues>({
     defaultValues: product
       ? {
           code: product.code,
           name: product.name,
           description: product.description || "",
-          fixedCostId: product.fixedCostId || "",
-          productGroupId: product.productGroupId || "",
+          fixedCostId: product.fixedCostId || undefined,
+          productGroupId: product.productGroupId || undefined,
           freightIds: product.freights?.map((f) => f.id) || [],
           rawMaterials: product.productRawMaterials.map((rm) => ({
             rawMaterialId: rm.rawMaterialId,
@@ -92,14 +107,14 @@ export function ProductForm({
           code: "",
           name: "",
           description: "",
-          fixedCostId: "",
-          productGroupId: "",
+          fixedCostId: undefined,
+          productGroupId: undefined,
           freightIds: [],
           rawMaterials: [],
         },
   });
 
-  const { fields, append, remove } = useFieldArray({
+  const { fields, append, remove } = useFieldArray<ProductFormValues>({
     control,
     name: "rawMaterials",
   });
@@ -140,7 +155,7 @@ export function ProductForm({
   const usedPivotIds = useMemo(() => {
     return new Set(
       (rawMaterials || [])
-        .map((rm: any) => rm.rawMaterialLocationPivotId)
+        .map((rm) => rm.rawMaterialLocationPivotId)
         .filter(Boolean)
     );
   }, [rawMaterials]);
@@ -213,7 +228,7 @@ export function ProductForm({
     let mpFreightServiceTotal = 0;
     let mpFreightTaxesTotal = 0;
 
-    rawMaterials.forEach((rm: any) => {
+    rawMaterials.forEach((rm) => {
       const pivot = resolvePivot(
         rm.rawMaterialId,
         rm.rawMaterialLocationPivotId
@@ -251,7 +266,7 @@ export function ProductForm({
     let productFreightServiceCost = 0;
     let productFreightTaxes = 0;
 
-    selectedFreightIds.forEach((freightId: string) => {
+    selectedFreightIds.forEach((freightId) => {
       const freight =
         freightsData?.data?.find((f) => f.id === freightId) ||
         product?.freights?.find((f) => f.id === freightId);
@@ -350,17 +365,17 @@ export function ProductForm({
     setFreightSearch("");
   };
 
-  const truncate = (str: string, max = 25) => {
+  const truncate = (str?: string, max = 25) => {
     if (!str) return "";
     return str.length > max ? str.slice(0, max) + "..." : str;
   };
 
-  const handleFormSubmit = (data: any) => {
+  const handleFormSubmit = (data: ProductFormValues) => {
     if (data.rawMaterials.length === 0) {
       return;
     }
 
-    const cleanedData = {
+    const cleanedData: ProductFormValues = {
       ...data,
       code: data.code.trim(),
       name: data.name.trim(),
@@ -520,7 +535,9 @@ export function ProductForm({
               id="productGroupId"
               label="Grupo de Estruturas (Opcional)"
               value={selectedProductGroupId}
-              onChange={(e) => setValue("productGroupId", e.target.value)}
+              onChange={(e) =>
+                setValue("productGroupId", e.target.value || undefined)
+              }
             >
               <option value="">Selecione um grupo</option>
               {productGroupsData?.data?.map((pg) => (
@@ -537,7 +554,7 @@ export function ProductForm({
               id="fixedCostId"
               label="Custo Fixo (Opcional)"
               value={selectedFixedCostId}
-              onChange={(e) => setValue("fixedCostId", e.target.value)}
+              onChange={(e) => setValue("fixedCostId", e.target.value || undefined)}
             >
               <option value="">Selecione um custo fixo</option>
 
@@ -594,8 +611,10 @@ export function ProductForm({
                         0
                     ) + toNumber(rm.locations?.[0]?.additionalCost ?? 0)
                   )} - ${rm.measurementUnit} • ${
-                    rm.locations?.[0]?.city || "-"
-                  } / ${rm.locations?.[0]?.stateUf || "-"}`,
+                    rm.locations?.[0]?.location?.city || "-"
+                  } / ${
+                    rm.locations?.[0]?.location?.stateUf || "-"
+                  }`,
                 })) || []
             }
             value=""
@@ -965,11 +984,11 @@ export function ProductForm({
             </Text>
           </div>
 
-          {prices.finalPrice > prices.priceBase && prices.priceBase > 0 && (
+          {prices.finalPrice > prices.baseSubtotal && prices.baseSubtotal > 0 && (
             <div className="text-xs text-gray-600 text-right">
               +
               {(
-                ((prices.finalPrice - prices.priceBase) / prices.priceBase) *
+                ((prices.finalPrice - prices.baseSubtotal) / prices.baseSubtotal) *
                 100
               ).toFixed(1)}
               % de impostos, frete e custos fixos

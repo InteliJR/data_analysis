@@ -89,7 +89,7 @@ export function FilterModal({
           <Select
             label="Ordem"
             value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
+            onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
           >
             <option value="asc">Crescente</option>
             <option value="desc">Decrescente</option>

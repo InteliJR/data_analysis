@@ -24,7 +24,6 @@ interface RawMaterialTaxFormProps {
 export function RawMaterialTaxForm({
   tax,
   onSubmit,
-  isLoading,
 }: RawMaterialTaxFormProps) {
   const [rawMaterialSearch, setRawMaterialSearch] = useState("");
   const [selectedRawMaterialIds, setSelectedRawMaterialIds] = useState<
@@ -91,9 +90,10 @@ export function RawMaterialTaxForm({
     setValue("rawMaterialIds", newSelection);
   };
 
-  const getCurrencySymbol = (currency: string) => {
+  const getCurrencySymbol = (currency?: string) => {
+    const normalized = currency || "BRL";
     const symbols = { BRL: "R$", USD: "US$", EUR: "€" };
-    return symbols[currency as keyof typeof symbols] || currency;
+    return symbols[normalized as keyof typeof symbols] || normalized;
   };
 
   const handleFormSubmit = (data: CreateRawMaterialTaxDTO) => {
