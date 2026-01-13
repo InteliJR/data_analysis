@@ -4,21 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Documentação da API - Sistema de Precificação</title>
-    <meta name="description" content="Documentação completa da API para o Sistema de Gestão de Precificação, incluindo endpoints, autenticação e regras de negócio.">
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📖</text></svg>">
+    <meta name="description" content="Documentação completa da API para o Sistema de Gestão de Precificação">
     <style>
-      /* --- Reset e Configuração Global --- */
       body {
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
           line-height: 1.7;
           background-color: #ffffff;
           color: #212529;
           margin: 0 auto;
-          max-width: 900px; /* Limita a largura para melhor leitura */
+          max-width: 900px;
           padding: 2rem;
       }
 
-      /* --- Tipografia e Cabeçalhos --- */
       h1, h2, h3 {
           font-weight: 600;
           line-height: 1.3;
@@ -39,7 +36,7 @@
           font-size: 2rem;
           border-bottom: 1px solid #eaeaea;
           padding-bottom: 0.5rem;
-          margin-top: 3rem; /* Mais espaço entre as seções principais */
+          margin-top: 3rem;
       }
 
       h3 {
@@ -49,2449 +46,765 @@
       }
 
       p {
-          margin-bottom: 1.25rem;
-          font-size: 1rem;
+          margin-bottom: 1rem;
       }
 
-      /* --- Listas --- */
       ul, ol {
-          margin-bottom: 1.25rem;
-          padding-left: 2em;
+          margin-left: 1.5rem;
+          margin-bottom: 1rem;
       }
 
       li {
           margin-bottom: 0.5rem;
       }
 
-      /* --- Blocos de Código (pre) --- */
+      code {
+          background-color: #f6f8fa;
+          padding: 0.2rem 0.4rem;
+          border-radius: 3px;
+          font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+          font-size: 0.9em;
+          color: #d73a49;
+      }
+
       pre {
-          background-color: #f4f7f9; /* Um cinza-azulado claro */
-          border: 1px solid #e0e6ec;
-          border-radius: 8px; /* Cantos arredondados modernos */
-          padding: 1.25rem;
-          overflow-x: auto; /* Essencial para linhas de código longas */
-          margin-bottom: 1.5rem;
-          font-size: 0.9rem;
-          line-height: 1.5;
+          background-color: #282c34;
+          color: #abb2bf;
+          padding: 1rem;
+          border-radius: 6px;
+          overflow-x: auto;
+          margin: 1rem 0;
+          font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+          font-size: 0.9em;
       }
 
       pre code {
-          font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-          background-color: transparent; /* O <pre> já tem o fundo */
-          border: none;
+          background-color: transparent;
+          color: inherit;
           padding: 0;
-          color: #232323; /* Texto do código um pouco mais escuro */
       }
 
-      /* --- Código Inline (code) --- */
-      p code, li code, table code {
-          font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
-          background-color: #eef2f5; /* Fundo sutil */
-          color: #d63384; /* Cor rosa/magenta para destaque */
-          padding: 0.2em 0.4em;
+      .endpoint {
+          background-color: #f6f8fa;
+          padding: 1rem;
+          margin: 1rem 0;
+          border-left: 4px solid #0366d6;
           border-radius: 4px;
-          font-size: 0.875em;
       }
 
-      /* --- Destaque para Métodos HTTP (POST, GET, etc.) --- */
-      p > strong {
-          color: #0056b3; /* Um azul para dar destaque */
-          font-weight: 700;
+      .method {
+          display: inline-block;
+          padding: 0.25rem 0.75rem;
+          border-radius: 4px;
+          font-weight: 600;
+          margin-right: 0.5rem;
+          font-size: 0.85em;
       }
 
-      /* --- Linhas Horizontais (hr) --- */
-      hr {
-          border: 0;
-          border-top: 1px solid #e0e0e0;
-          margin: 3rem 0; /* Bastante espaço para separar seções */
-      }
+      .method.get { background-color: #28a745; color: white; }
+      .method.post { background-color: #0366d6; color: white; }
+      .method.patch { background-color: #f9826c; color: white; }
+      .method.delete { background-color: #d73a49; color: white; }
 
-      /* --- Tabelas --- */
       table {
           width: 100%;
           border-collapse: collapse;
-          margin-bottom: 1.5rem;
-          font-size: 0.95rem;
+          margin: 1.5rem 0;
       }
 
-      th, td {
-          border: 1px solid #ddd;
+      table th {
+          background-color: #f6f8fa;
+          color: #24292e;
           padding: 0.75rem;
           text-align: left;
+          border: 1px solid #d1d5da;
       }
 
-      th {
-          background-color: #f8f8f8;
-          font-weight: 600;
+      table td {
+          padding: 0.75rem;
+          border: 1px solid #d1d5da;
       }
 
-      tbody tr:nth-child(odd) {
-          background-color: #fdfdfd; /* Listras sutis */
+      .note {
+          background-color: #fff3cd;
+          border-left: 4px solid #ffc107;
+          padding: 1rem;
+          margin: 1rem 0;
+          border-radius: 4px;
       }
 
-      /* --- Links (se houver) --- */
-      a {
-          color: #007bff;
-          text-decoration: none;
+      .warning {
+          background-color: #f8d7da;
+          border-left: 4px solid #dc3545;
+          padding: 1rem;
+          margin: 1rem 0;
+          border-radius: 4px;
       }
 
-      a:hover {
-          text-decoration: underline;
+      .success {
+          background-color: #d4edda;
+          border-left: 4px solid #28a745;
+          padding: 1rem;
+          margin: 1rem 0;
+          border-radius: 4px;
       }
 
-      /* --- Responsividade --- */
-      @media (max-width: 768px) {
-          body {
-              padding: 1rem;
-          }
-          h1 { font-size: 2rem; }
-          h2 { font-size: 1.75rem; }
-          h3 { font-size: 1.25rem; }
-          pre {
-              padding: 1rem;
-          }
+      hr {
+          border: none;
+          border-top: 1px solid #eaeaea;
+          margin: 2rem 0;
       }
-  </style>
+    </style>
 </head>
 <body>
-    <h1 id="documentaocompletadaapisistemadeprecificao">Documentação Completa da API - Sistema de Precificação</h1>
-<h2 id="visogeraldosistema">Visão Geral do Sistema</h2>
-<p>Sistema de gestão de precificação de produtos que permite gerenciar matérias-primas, impostos, fretes, custos fixos e produtos finais. O sistema calcula automaticamente o preço dos produtos baseado nas matérias-primas utilizadas, impostos e fretes associados.</p>
-<hr />
-<h2 id="autenticao">Autenticação</h2>
-<p>Todos os endpoints (exceto login e registro) requerem autenticação via JWT Bearer Token.</p>
-<pre><code>Authorization: Bearer &lt;token&gt;
-</code></pre>
-<h3 id="1registrodeusurio">1. Registro de Usuário</h3>
-<p><strong>POST</strong> <code>/auth/register</code></p>
-<p><strong>Permissões:</strong> Público (mas usuário deve ser ativado por um ADMIN)</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "email": "usuario@exemplo.com",
-  "name": "Nome do Usuário",
-  "password": "senha_segura_123",
-  "role": "COMERCIAL"
-}
-</code></pre>
-<p><strong>Response:</strong> <code>201 Created</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "email": "usuario@exemplo.com",
-  "name": "Nome do Usuário",
-  "role": "COMERCIAL",
-  "isActive": false,
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T10:00:00.000Z"
-}
-</code></pre>
-<p><strong>Erros:</strong></p>
-<ul>
-    <li><code>400 Bad Request</code>: Dados inválidos ou email já cadastrado</li>
-    <li><code>422 Unprocessable Entity</code>: Validação falhou</li>
-</ul>
-<p><strong>Nota:</strong> </p>
-<ul>
-    <li>Campo <code>role</code> é opcional. Se não informado, será criado com role padrão definido no sistema.</li>
-    <li>Usuário é criado com <code>isActive: false</code> e precisa ser ativado por um ADMIN para fazer login.</li>
-</ul>
-<hr />
-<h3 id="2login">2. Login</h3>
-<p><strong>POST</strong> <code>/auth/login</code></p>
-<p><strong>Permissões:</strong> Público</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "email": "usuario@exemplo.com",
-  "password": "senha_segura_123"
-}
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
- "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
- "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
- "user": {
-  "id": "uuid-v4",
-  "email": "usuario@exemplo.com",
-  "name": "Nome do Usuário",
-  "createdAt": "2025-10-26T10:00:00.000Z"
- }
-}
-</code></pre>
-<p><strong>Erros:</strong></p>
-<ul>
-    <li><code>401 Unauthorized</code>: Credenciais inválidas ou usuário inativo</li>
-    <li><code>400 Bad Request</code>: Dados inválidos</li>
-</ul>
-<hr />
-<h3 id="3logout">3. Logout</h3>
-<p><strong>POST</strong> <code>/auth/logout</code></p>
-<p><strong>Permissões:</strong> Usuário autenticado</p>
-<p><strong>Headers:</strong></p>
-<pre><code>Authorization: Bearer &lt;token&gt;
-</code></pre>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
- "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "message": "Logout realizado com sucesso"
-}
-</code></pre>
-<hr />
-<h3 id="4refreshtoken">4. Refresh Token</h3>
-<p><strong>POST</strong> <code>/auth/refresh</code></p>
-<p><strong>Permissões:</strong> Usuário autenticado</p>
-<p><strong>Headers:</strong></p>
-<pre><code>Authorization: Bearer &lt;token&gt;
-</code></pre>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
- "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
- "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
- "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-</code></pre>
-<hr />
-<h3 id="45obterperfildousurioautenticado">4.5. Obter Perfil do Usuário Autenticado</h3>
-<p><strong>GET</strong> <code>/auth/me</code></p>
-<p><strong>Permissões:</strong> Usuário autenticado</p>
-<p><strong>Headers:</strong></p>
-<pre><code>Authorization: Bearer &lt;token&gt;
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
- "id": "uuid-v4",
- "email": "usuario@exemplo.com",
- "name": "Nome do Usuário",
- "role": "COMERCIAL",
- "isActive": true,
- "createdAt": "2025-10-26T10:00:00.000Z"
-}
-</code></pre>
-<hr />
-<h2 id="gestodeusurios">Gestão de Usuários</h2>
-<h3 id="5listarusurios">5. Listar Usuários</h3>
-<p><strong>GET</strong> <code>/users</code></p>
-<p><strong>Permissões:</strong> ADMIN</p>
-<p><strong>Query Parameters:</strong></p>
-<pre><code>?page=1
-&amp;limit=10
-&amp;search=nome_ou_email
-&amp;role=COMERCIAL
-&amp;isActive=true
-&amp;sortBy=name
-&amp;sortOrder=asc
-</code></pre>
-<p><em><strong>Nota:</strong> Usuários desativados (isActive: false) não conseguem fazer login, mas permanecem no sistema para preservar integridade dos logs e relações.</em></p>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "data": [
-    {
-      "id": "uuid-v4",
-      "email": "usuario@exemplo.com",
-      "name": "Nome do Usuário",
-      "role": "COMERCIAL",
-      "isActive": true,
-      "createdAt": "2025-10-26T10:00:00.000Z",
-      "updatedAt": "2025-10-26T10:00:00.000Z"
-    }
-  ],
-  "meta": {
-    "total": 50,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 5
-  }
-}
-</code></pre>
-<hr />
-<h3 id="6obterusurioporid">6. Obter Usuário por ID</h3>
-<p><strong>GET</strong> <code>/users/:id</code></p>
-<p><strong>Permissões:</strong> ADMIN</p>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "email": "usuario@exemplo.com",
-  "name": "Nome do Usuário",
-  "role": "COMERCIAL",
-  "isActive": true,
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T10:00:00.000Z"
-}
-</code></pre>
-<p><strong>Erros:</strong></p>
-<ul>
-    <li><code>404 Not Found</code>: Usuário não encontrado</li>
-</ul>
-<hr />
-<h3 id="7atualizarusurio">7. Atualizar Usuário</h3>
-<p><strong>PATCH</strong> <code>/users/:id</code></p>
-<p><strong>Permissões:</strong> ADMIN</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
- "name": "Novo Nome",
- "role": "LOGISTICA",
- "isActive": false,
- "password": "nova_senha_segura_123"
-}
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "email": "usuario@exemplo.com",
-  "name": "Novo Nome",
-  "role": "LOGISTICA",
-  "isActive": false,
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T10:30:00.000Z"
-}
-</code></pre>
-<p><strong>Nota:</strong> </p>
-<ul>
-    <li><em>Para desativar um usuário, envie <code>isActive: false</code>. Usuários desativados não conseguem fazer login.</em></li>
-    <li><em>O campo <code>password</code> é opcional e permite que o ADMIN redefina a senha do usuário.</em></li>
-    <li><em>Apenas ADMIN pode modificar <code>role</code> e <code>isActive</code>.</em></li>
-</ul>
-<p><strong>Nota sobre Exclusão de Usuários:</strong> </p>
-<ul>
-    <li><em>Não é possível deletar usuários do sistema devido às relações de auditoria (logs de alterações em matérias-primas, produtos criados, etc.). Para impedir acesso, desative o usuário através do endpoint de atualização enviando <code>isActive: false</code>.</em></li>
-</ul>
-<hr />
-<h3 id="8atualizarprprioperfil">8. Atualizar Próprio Perfil</h3>
-<p><strong>PATCH</strong> <code>/users/me</code></p>
-<p><strong>Permissões:</strong> Usuário autenticado</p>
-<p><strong>Headers:</strong></p>
-<pre><code>Authorization: Bearer &lt;token&gt;
-</code></pre>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
- "name": "Novo Nome",
- "password": "nova_senha_123"
-}
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
- "id": "uuid-v4",
- "email": "usuario@exemplo.com",
- "name": "Novo Nome",
- "role": "COMERCIAL",
- "isActive": true,
- "createdAt": "2025-10-26T10:00:00.000Z",
- "updatedAt": "2025-10-26T10:30:00.000Z"
-}
-</code></pre>
-<p><em><strong>Nota:</strong> Usuários comuns só podem alterar seu próprio nome e senha. Não podem modificar email, role ou status.</em></p>
-<hr />
-<h3 id="9obterprprioperfil">9. Obter Próprio Perfil</h3>
-<p><strong>GET</strong> <code>/users/me</code></p>
-<p><strong>Permissões:</strong> Usuário autenticado</p>
-<p><strong>Headers:</strong></p>
-<pre><code>Authorization: Bearer &lt;token&gt;
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "email": "usuario@exemplo.com",
-  "name": "Nome do Usuário",
-  "role": "COMERCIAL",
-  "isActive": true,
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T10:00:00.000Z"
-}
-</code></pre>
-<p><em>Nota: Este endpoint retorna os dados completos do usuário autenticado. Diferente do /auth/me que retorna apenas informações básicas.</em></p>
-<hr />
-<h2 id="impostostaxes">Impostos (Taxes)</h2>
-<h3 id="9criarimposto">9. Criar Imposto</h3>
-<p><strong>POST</strong> <code>/taxes</code></p>
-<p><strong>Permissões:</strong> ADMIN, IMPOSTO</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "name": "Simples Nacional",
-  "description": "Regime tributário simplificado",
-  "items": [
-    {
-      "name": "PIS",
-      "rate": 1.65,
-      "recoverable": true
-    },
-    {
-      "name": "COFINS",
-      "rate": 7.60,
-      "recoverable": true
-    },
-    {
-      "name": "ICMS",
-      "rate": 18.00,
-      "recoverable": false
-    }
-  ]
-}
-</code></pre>
-<p><strong>Response:</strong> <code>201 Created</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "name": "Simples Nacional",
-  "description": "Regime tributário simplificado",
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T10:00:00.000Z",
-  "taxItems": [
-    {
-      "id": "uuid-v4",
-      "taxId": "uuid-v4",
-      "name": "PIS",
-      "rate": 1.65,
-      "recoverable": true,
-      "createdAt": "2025-10-26T10:00:00.000Z",
-      "updatedAt": "2025-10-26T10:00:00.000Z"
-    },
-    {
-      "id": "uuid-v4",
-      "taxId": "uuid-v4",
-      "name": "COFINS",
-      "rate": 7.60,
-      "recoverable": true,
-      "createdAt": "2025-10-26T10:00:00.000Z",
-      "updatedAt": "2025-10-26T10:00:00.000Z"
-    }
-  ]
-}
-</code></pre>
-<hr />
-<h3 id="10listarimpostos">10. Listar Impostos</h3>
-<p><strong>GET</strong> <code>/taxes</code></p>
-<p><strong>Permissões:</strong> ADMIN, IMPOSTO, COMERCIAL (para associar a matérias-primas)</p>
-<p><strong>Query Parameters:</strong></p>
-<pre><code>?page=1
-&amp;limit=10
-&amp;search=nome
-&amp;sortBy=name
-&amp;sortOrder=asc
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "data": [
-    {
-      "id": "uuid-v4",
-      "name": "Simples Nacional",
-      "description": "Regime tributário simplificado",
-      "createdAt": "2025-10-26T10:00:00.000Z",
-      "updatedAt": "2025-10-26T10:00:00.000Z",
-      "taxItems": [
-        {
-          "id": "uuid-v4",
-          "name": "PIS",
-          "rate": 1.65,
-          "recoverable": true
-        },
-        {
-          "id": "uuid-v4",
-          "name": "COFINS",
-          "rate": 7.60,
-          "recoverable": true
-        }
-      ]
-    }
-  ],
-  "meta": {
-    "total": 5,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 1
-  }
-}
-</code></pre>
-<hr />
-<h3 id="11obterimpostoporid">11. Obter Imposto por ID</h3>
-<p><strong>GET</strong> <code>/taxes/:id</code></p>
-<p><strong>Permissões:</strong> ADMIN, IMPOSTO, COMERCIAL</p>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "name": "Simples Nacional",
-  "description": "Regime tributário simplificado",
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T10:00:00.000Z",
-  "taxItems": [
-    {
-      "id": "uuid-v4",
-      "taxId": "uuid-v4",
-      "name": "PIS",
-      "rate": 1.65,
-      "recoverable": true,
-      "createdAt": "2025-10-26T10:00:00.000Z",
-      "updatedAt": "2025-10-26T10:00:00.000Z"
-    }
-  ]
-}
-</code></pre>
-<hr />
-<h3 id="12atualizarimposto">12. Atualizar Imposto</h3>
-<p><strong>PATCH</strong> <code>/taxes/:id</code></p>
-<p><strong>Permissões:</strong> ADMIN, IMPOSTO</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "name": "Simples Nacional Atualizado",
-  "description": "Nova descrição",
-  "items": [
-    {
-      "id": "uuid-existing",
-      "name": "PIS",
-      "rate": 1.70,
-      "recoverable": true
-    },
-    {
-      "name": "IPI",
-      "rate": 5.00,
-      "recoverable": false
-    }
-  ]
-}
-</code></pre>
-<p><strong>Nota:</strong> Items sem ID serão criados, items com ID serão atualizados, items não enviados serão deletados.</p>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "name": "Simples Nacional Atualizado",
-  "description": "Nova descrição",
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T10:30:00.000Z",
-  "taxItems": [
-    {
-      "id": "uuid-existing",
-      "taxId": "uuid-v4",
-      "name": "PIS",
-      "rate": 1.70,
-      "recoverable": true,
-      "createdAt": "2025-10-26T10:00:00.000Z",
-      "updatedAt": "2025-10-26T10:30:00.000Z"
-    },
-    {
-      "id": "uuid-new",
-      "taxId": "uuid-v4",
-      "name": "IPI",
-      "rate": 5.00,
-      "recoverable": false,
-      "createdAt": "2025-10-26T10:30:00.000Z",
-      "updatedAt": "2025-10-26T10:30:00.000Z"
-    }
-  ]
-}
-</code></pre>
-<hr />
-<h3 id="13deletarimposto">13. Deletar Imposto</h3>
-<p><strong>DELETE</strong> <code>/taxes/:id</code></p>
-<p><strong>Permissões:</strong> ADMIN, IMPOSTO</p>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "message": "Imposto deletado com sucesso"
-}
-</code></pre>
-<p><strong>Erros:</strong></p>
-<ul>
-    <li><code>409 Conflict</code>: Imposto está associado a matérias-primas</li>
-</ul>
-<hr />
-<h3 id="14exportarimpostoscsv">14. Exportar Impostos (CSV)</h3>
-<p><strong>POST</strong> <code>/taxes/export</code></p>
-<p><strong>Permissões:</strong> ADMIN, IMPOSTO</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "format": "csv",
-  "limit": 100,
-  "sortBy": "name",
-  "sortOrder": "asc",
-  "filters": {
-    "search": "simples"
-  }
-}
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code>Content-Type: text/csv
-Content-Disposition: attachment; filename="impostos-2025-10-26.csv"
+    <h1>Documentação da API - Sistema de Precificação</h1>
 
-ID,Nome,Descrição,Itens,Data de Criação
-uuid-1,Simples Nacional,Regime simplificado,"PIS (1.65%), COFINS (7.60%)",2025-10-26
-</code></pre>
-<hr />
-<h2 id="fretesfreights">Fretes (Freights)</h2>
-<h3 id="15criarfrete">15. Criar Frete</h3>
-<p><strong>POST</strong> <code>/freights</code></p>
-<p><strong>Permissões:</strong> ADMIN, LOGISTICA</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "name": "Transporte Rodoviário SP-RJ",
-  "description": "Frete rodoviário com prazo de 5 dias",
-  "paymentTerm": 30,
-  "unitPrice": 150.00,
-  "currency": "BRL",
-  "additionalCosts": 25.50,
-  "freightTaxes": [
-    {
-      "name": "ICMS",
-      "rate": 12.00
-    },
-    {
-      "name": "PIS",
-      "rate": 1.65
-    },
-    {
-      "name": "COFINS",
-      "rate": 7.60
-    }
-  ]
-}
-</code></pre>
-<p><strong>Response:</strong> <code>201 Created</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "name": "Transporte Rodoviário SP-RJ",
-  "description": "Frete rodoviário com prazo de 5 dias",
-  "paymentTerm": 30,
-  "unitPrice": 150.00,
-  "currency": "BRL",
-  "additionalCosts": 25.50,
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T10:00:00.000Z",
-  "freightTaxes": [
-    {
-      "id": "uuid-v4",
-      "freightId": "uuid-v4",
-      "name": "ICMS",
-      "rate": 12.00,
-      "createdAt": "2025-10-26T10:00:00.000Z",
-      "updatedAt": "2025-10-26T10:00:00.000Z"
-    }
-  ]
-}
-</code></pre>
-<hr />
-<h3 id="16listarfretes">16. Listar Fretes</h3>
-<p><strong>GET</strong> <code>/freights</code></p>
-<p><strong>Permissões:</strong> ADMIN, LOGISTICA</p>
-<p><strong>Query Parameters:</strong></p>
-<pre><code>?page=1
-&amp;limit=10
-&amp;search=nome_ou_descricao
-&amp;currency=BRL
-&amp;sortBy=name
-&amp;sortOrder=asc
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "data": [
-    {
-      "id": "uuid-v4",
-      "name": "Transporte Rodoviário SP-RJ",
-      "description": "Frete rodoviário com prazo de 5 dias",
-      "paymentTerm": 30,
-      "unitPrice": 150.00,
-      "currency": "BRL",
-      "additionalCosts": 25.50,
-      "createdAt": "2025-10-26T10:00:00.000Z",
-      "updatedAt": "2025-10-26T10:00:00.000Z",
-      "freightTaxes": [
-        {
-          "id": "uuid-v4",
-          "name": "ICMS",
-          "rate": 12.00
-        }
-      ]
-    }
-  ],
-  "meta": {
-    "total": 15,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 2
-  }
-}
-</code></pre>
-<hr />
-<h3 id="17obterfreteporid">17. Obter Frete por ID</h3>
-<p><strong>GET</strong> <code>/freights/:id</code></p>
-<p><strong>Permissões:</strong> ADMIN, LOGISTICA</p>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "name": "Transporte Rodoviário SP-RJ",
-  "description": "Frete rodoviário com prazo de 5 dias",
-  "paymentTerm": 30,
-  "unitPrice": 150.00,
-  "currency": "BRL",
-  "additionalCosts": 25.50,
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T10:00:00.000Z",
-  "freightTaxes": [
-    {
-      "id": "uuid-v4",
-      "freightId": "uuid-v4",
-      "name": "ICMS",
-      "rate": 12.00,
-      "createdAt": "2025-10-26T10:00:00.000Z",
-      "updatedAt": "2025-10-26T10:00:00.000Z"
-    }
-  ]
-}
-</code></pre>
-<hr />
-<h3 id="18atualizarfrete">18. Atualizar Frete</h3>
-<p><strong>PATCH</strong> <code>/freights/:id</code></p>
-<p><strong>Permissões:</strong> ADMIN, LOGISTICA</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "name": "Transporte Rodoviário SP-RJ Atualizado",
-  "unitPrice": 160.00,
-  "freightTaxes": [
-    {
-      "id": "uuid-existing",
-      "name": "ICMS",
-      "rate": 13.00
-    },
-    {
-      "name": "ISS",
-      "rate": 5.00
-    }
-  ]
-}
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "name": "Transporte Rodoviário SP-RJ Atualizado",
-  "description": "Frete rodoviário com prazo de 5 dias",
-  "paymentTerm": 30,
-  "unitPrice": 160.00,
-  "currency": "BRL",
-  "additionalCosts": 25.50,
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T10:30:00.000Z",
-  "freightTaxes": [
-    {
-      "id": "uuid-existing",
-      "freightId": "uuid-v4",
-      "name": "ICMS",
-      "rate": 13.00,
-      "createdAt": "2025-10-26T10:00:00.000Z",
-      "updatedAt": "2025-10-26T10:30:00.000Z"
-    },
-    {
-      "id": "uuid-new",
-      "freightId": "uuid-v4",
-      "name": "ISS",
-      "rate": 5.00,
-      "createdAt": "2025-10-26T10:30:00.000Z",
-      "updatedAt": "2025-10-26T10:30:00.000Z"
-    }
-  ]
-}
-</code></pre>
-<hr />
-<h3 id="19deletarfrete">19. Deletar Frete</h3>
-<p><strong>DELETE</strong> <code>/freights/:id</code></p>
-<p><strong>Permissões:</strong> ADMIN, LOGISTICA</p>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "message": "Frete deletado com sucesso"
-}
-</code></pre>
-<p><strong>Erros:</strong></p>
-<ul>
-    <li><code>409 Conflict</code>: Frete está associado a matérias-primas</li>
-</ul>
-<hr />
-<h3 id="20exportarfretescsv">20. Exportar Fretes (CSV)</h3>
-<p><strong>POST</strong> <code>/freights/export</code></p>
-<p><strong>Permissões:</strong> ADMIN, LOGISTICA</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "format": "csv",
-  "limit": 100,
-  "sortBy": "name",
-  "sortOrder": "asc",
-  "filters": {
-    "search": "rodoviário",
-    "currency": "BRL"
-  }
-}
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code>Content-Type: text/csv
-Content-Disposition: attachment; filename="fretes-2025-10-26.csv"
+    <p><strong>Base URL:</strong> <code>https://seu-dominio.com/api/v1</code></p>
+    <p><strong>Versão:</strong> 1.0.0</p>
 
-ID,Nome,Descrição,Prazo,Preço,Moeda,Custos Adicionais,Impostos
-uuid-1,Transporte Rodoviário,Frete com prazo de 5 dias,30,150.00,BRL,25.50,"ICMS (12%), PIS (1.65%)"
-</code></pre>
-<hr />
-<h2 id="matriasprimasrawmaterials">Matérias-Primas (Raw Materials)</h2>
-<h3 id="21criarmatriaprima">21. Criar Matéria-Prima</h3>
-<p><strong>POST</strong> <code>/raw-materials</code></p>
-<p><strong>Permissões:</strong> ADMIN, COMERCIAL</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "code": "MP-2024-001",
-  "name": "Resina Poliéster",
-  "description": "Resina de alta qualidade para laminação",
-  "measurementUnit": "KG",
-  "inputGroup": "Resinas",
-  "paymentTerm": 30,
-  "acquisitionPrice": 25.50,
-  "currency": "BRL",
-  "priceConvertedBrl": 25.50,
-  "additionalCost": 2.30,
-  "taxId": "uuid-tax",
-  "freightId": "uuid-freight"
-}
-</code></pre>
-<p><strong>Response:</strong> <code>201 Created</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "code": "MP-2024-001",
-  "name": "Resina Poliéster",
-  "description": "Resina de alta qualidade para laminação",
-  "measurementUnit": "KG",
-  "inputGroup": "Resinas",
-  "paymentTerm": 30,
-  "acquisitionPrice": 25.50,
-  "currency": "BRL",
-  "priceConvertedBrl": 25.50,
-  "additionalCost": 2.30,
-  "taxId": "uuid-tax",
-  "freightId": "uuid-freight",
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T10:00:00.000Z",
-  "tax": {
-    "id": "uuid-tax",
-    "name": "Simples Nacional",
-    "taxItems": [
-      {
-        "name": "PIS",
-        "rate": 1.65,
-        "recoverable": true
-      }
-    ]
-  },
-  "freight": {
-    "id": "uuid-freight",
-    "name": "Transporte Rodoviário",
-    "unitPrice": 150.00,
-    "freightTaxes": [
-      {
-        "name": "ICMS",
-        "rate": 12.00
-      }
-    ]
-  }
-}
-</code></pre>
-<hr />
-<h3 id="22listarmatriasprimas">22. Listar Matérias-Primas</h3>
-<p><strong>GET</strong> <code>/raw-materials</code></p>
-<p><strong>Permissões:</strong> ADMIN, COMERCIAL, IMPOSTO</p>
-<p><strong>Query Parameters:</strong></p>
-<pre><code>?page=1
-&amp;limit=10
-&amp;search=codigo_ou_nome
-&amp;measurementUnit=KG
-&amp;inputGroup=Resinas
-&amp;currency=BRL
-&amp;sortBy=name
-&amp;sortOrder=asc
-&amp;includeTax=true
-&amp;includeFreight=true
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "data": [
+    <hr>
+
+    <h2>📋 Índice</h2>
+    <ul>
+        <li><a href="#modelagem-banco">Modelagem do Banco de Dados</a></li>
+        <li><a href="#endpoint-publico">Endpoint Público para Clientes (EXTERNAL_API_TOKEN)</a></li>
+        <li><a href="#autenticacao">Autenticação</a></li>
+        <li><a href="#usuarios">Usuários</a></li>
+        <li><a href="#impostos">Impostos</a></li>
+        <li><a href="#fretes">Fretes</a></li>
+        <li><a href="#materias-primas">Matérias-Primas</a></li>
+        <li><a href="#produtos">Produtos</a></li>
+        <li><a href="#grupos-produtos">Grupos de Produtos</a></li>
+        <li><a href="#custos-fixos">Custos Fixos</a></li>
+        <li><a href="#localizacoes">Localizações</a></li>
+        <li><a href="#health">Health Check</a></li>
+    </ul>
+
+    <hr>
+
+    <h2 id="modelagem-banco">🗄️ Modelagem do Banco de Dados</h2>
+
+    <p>O diagrama abaixo representa a estrutura lógica do banco de dados do sistema, mostrando todas as entidades, seus relacionamentos e principais campos.</p>
+
+    <div style="background-color: #f6f8fa; padding: 1.5rem; border-radius: 6px; margin: 1.5rem 0; text-align: center;">
+        <img src="/assets/logic_database_modelling.svg" alt="Diagrama de Modelagem do Banco de Dados" style="max-width: 100%; height: auto; border: 1px solid #d1d5da; border-radius: 4px;">
+    </div>
+
+    <div class="note">
+        <strong>📝 Principais Entidades:</strong>
+        <ul>
+            <li><strong>User:</strong> Usuários do sistema com diferentes roles (ADMIN, COMERCIAL, LOGISTICA, IMPOSTO)</li>
+            <li><strong>Product:</strong> Produtos finais com composição de matérias-primas</li>
+            <li><strong>RawMaterial:</strong> Matérias-primas com múltiplas localizações de fornecimento</li>
+            <li><strong>Location:</strong> Localizações/fornecedores com preços específicos</li>
+            <li><strong>FreightTax / RawMaterialTax:</strong> Impostos aplicados a fretes e matérias-primas</li>
+            <li><strong>Freight:</strong> Fretes com custos e impostos associados</li>
+            <li><strong>FixedCost:</strong> Custos fixos para cálculo de overhead</li>
+            <li><strong>ProductGroup:</strong> Agrupamento de produtos para análise</li>
+        </ul>
+    </div>
+
+    <hr>
+
+    <h2 id="endpoint-publico">🌐 Endpoint Público para Clientes (EXTERNAL_API_TOKEN)</h2>
+
+    <div class="warning">
+        <strong>⚠️ Autenticação Especial:</strong> Este endpoint é destinado a clientes externos para popular o banco de dados. 
+        Requer o token <code>EXTERNAL_API_TOKEN</code> configurado nas variáveis de ambiente.
+    </div>
+
+    <h3>POST /products/full-create</h3>
+
+    <p><strong>Descrição:</strong> Endpoint completo para criação de produto com todas as dependências (matérias-primas, localizações, impostos e fretes). Permite que o cliente crie produtos complexos em uma única requisição.</p>
+
+    <p><strong>Autenticação:</strong></p>
+    <pre><code>Authorization: Bearer &lt;EXTERNAL_API_TOKEN&gt;</code></pre>
+
+    <div class="note">
+        <strong>📝 Importante:</strong> O valor do <code>EXTERNAL_API_TOKEN</code> deve ser configurado no arquivo <code>.env</code> do servidor e mantido em segredo.
+    </div>
+
+    <h4>Request Body Completo:</h4>
+
+    <pre><code class="language-json">{
+  "code": "PROD-001",
+  "name": "Nome do Produto",
+  "description": "Descrição do produto",
+  "productGroupId": "uuid-do-grupo", // opcional
+  "fixedCostId": "uuid-do-custo-fixo", // opcional
+  "freightIds": ["uuid-frete-1", "uuid-frete-2"], // opcional
+  "stateUf": "SP", // opcional
+  "city": "São Paulo", // opcional
+  
+  "rawMaterials": [
     {
-      "id": "uuid-v4",
-      "code": "MP-2024-001",
+      "code": "MP-001",
       "name": "Resina Poliéster",
       "description": "Resina de alta qualidade",
-      "measurementUnit": "KG",
-      "inputGroup": "Resinas",
-      "paymentTerm": 30,
-      "acquisitionPrice": 25.50,
-      "currency": "BRL",
-      "priceConvertedBrl": 25.50,
-      "additionalCost": 2.30,
-      "taxId": "uuid-tax",
-      "freightId": "uuid-freight",
-      "createdAt": "2025-10-26T10:00:00.000Z",
-      "updatedAt": "2025-10-26T10:00:00.000Z",
-      "tax": {
-        "id": "uuid-tax",
-        "name": "Simples Nacional"
-      },
-      "freight": {
-        "id": "uuid-freight",
-        "name": "Transporte Rodoviário"
-      }
-    }
-  ],
-  "meta": {
-    "total": 150,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 15
-  }
-}
-</code></pre>
-<hr />
-<h3 id="23obtermatriaprimaporid">23. Obter Matéria-Prima por ID</h3>
-<p><strong>GET</strong> <code>/raw-materials/:id</code></p>
-<p><strong>Permissões:</strong> ADMIN, COMERCIAL, IMPOSTO</p>
-<p><strong>Query Parameters:</strong></p>
-<pre><code>?includeChangeLogs=true
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "code": "MP-2024-001",
-  "name": "Resina Poliéster",
-  "description": "Resina de alta qualidade para laminação",
-  "measurementUnit": "KG",
-  "inputGroup": "Resinas",
-  "paymentTerm": 30,
-  "acquisitionPrice": 25.50,
-  "currency": "BRL",
-  "priceConvertedBrl": 25.50,
-  "additionalCost": 2.30,
-  "taxId": "uuid-tax",
-  "freightId": "uuid-freight",
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T10:00:00.000Z",
-  "tax": {
-    "id": "uuid-tax",
-    "name": "Simples Nacional",
-    "taxItems": [
-      {
-        "name": "PIS",
-        "rate": 1.65,
-        "recoverable": true
-      },
-      {
-        "name": "COFINS",
-        "rate": 7.60,
-        "recoverable": true
-      }
-    ]
-  },
-  "freight": {
-    "id": "uuid-freight",
-    "name": "Transporte Rodoviário",
-    "unitPrice": 150.00,
-    "currency": "BRL",
-    "additionalCosts": 25.50,
-    "freightTaxes": [
-      {
-        "name": "ICMS",
-        "rate": 12.00
-      }
-    ]
-  },
-  "changeLogs": [
-    {
-      "id": "uuid-log",
-      "field": "acquisitionPrice",
-      "oldValue": "24.00",
-      "newValue": "25.50",
-      "changedBy": "uuid-user",
-      "changedAt": "2025-10-26T10:00:00.000Z"
-    }
-  ]
-}
-</code></pre>
-<hr />
-<h3 id="24atualizarmatriaprima">24. Atualizar Matéria-Prima</h3>
-<p><strong>PATCH</strong> <code>/raw-materials/:id</code></p>
-<p><strong>Permissões:</strong> ADMIN, COMERCIAL</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "name": "Resina Poliéster Premium",
-  "acquisitionPrice": 27.00,
-  "taxId": "uuid-new-tax",
-  "additionalCost": 3.00
-}
-</code></pre>
-<p><strong>Nota:</strong> Todas as alterações são registradas no log de mudanças automaticamente.</p>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "code": "MP-2024-001",
-  "name": "Resina Poliéster Premium",
-  "description": "Resina de alta qualidade para laminação",
-  "measurementUnit": "KG",
-  "inputGroup": "Resinas",
-  "paymentTerm": 30,
-  "acquisitionPrice": 27.00,
-  "currency": "BRL",
-  "priceConvertedBrl": 27.00,
-  "additionalCost": 3.00,
-  "taxId": "uuid-new-tax",
-  "freightId": "uuid-freight",
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T10:30:00.000Z",
-  "tax": {
-    "id": "uuid-new-tax",
-    "name": "Lucro Real"
-  },
-  "freight": {
-    "id": "uuid-freight",
-    "name": "Transporte Rodoviário"
-  }
-}
-</code></pre>
-<hr />
-<h3 id="25deletarmatriaprima">25. Deletar Matéria-Prima</h3>
-<p><strong>DELETE</strong> <code>/raw-materials/:id</code></p>
-<p><strong>Permissões:</strong> ADMIN, COMERCIAL</p>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "message": "Matéria-prima deletada com sucesso"
-}
-</code></pre>
-<p><strong>Erros:</strong></p>
-<ul>
-    <li><code>409 Conflict</code>: Matéria-prima está associada a produtos</li>
-</ul>
-<hr />
-<h3 id="26obterlogdealteraes">26. Obter Log de Alterações</h3>
-<p><strong>GET</strong> <code>/raw-materials/:id/change-logs</code></p>
-<p><strong>Permissões:</strong> ADMIN, COMERCIAL</p>
-<p><strong>Query Parameters:</strong></p>
-<pre><code>?page=1
-&amp;limit=20
-&amp;field=acquisitionPrice
-&amp;startDate=2025-01-01
-&amp;endDate=2025-12-31
-&amp;sortOrder=desc
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "data": [
-    {
-      "id": "uuid-log",
-      "rawMaterialId": "uuid-v4",
-      "field": "acquisitionPrice",
-      "oldValue": "24.00",
-      "newValue": "25.50",
-      "changedBy": "uuid-user",
-      "changedByUser": {
-        "name": "João Silva",
-        "email": "joao@exemplo.com"
-      },
-      "changedAt": "2025-10-26T10:00:00.000Z"
-    },
-    {
-      "id": "uuid-log-2",
-      "rawMaterialId": "uuid-v4",
-      "field": "taxId",
-      "oldValue": "uuid-old-tax",
-      "newValue": "uuid-new-tax",
-      "changedBy": "uuid-user",
-      "changedByUser": {
-        "name": "João Silva",
-        "email": "joao@exemplo.com"
-      },
-      "changedAt": "2025-10-26T09:30:00.000Z"
-    }
-  ],
-  "meta": {
-    "total": 45,
-    "page": 1,
-    "limit": 20,
-    "totalPages": 3
-  }
-}
-</code></pre>
-<hr />
-<h3 id="27exportarmatriasprimascsv">27. Exportar Matérias-Primas (CSV)</h3>
-<p><strong>POST</strong> <code>/raw-materials/export</code></p>
-<p><strong>Permissões:</strong> ADMIN, COMERCIAL</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "format": "csv",
-  "limit": 500,
-  "sortBy": "code",
-  "sortOrder": "asc",
-  "filters": {
-    "search": "resina",
-    "inputGroup": "Resinas",
-    "measurementUnit": "KG"
-  },
-  "includeDetails": true
-}
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code>Content-Type: text/csv
-Content-Disposition: attachment; filename="materias-primas-2025-10-26.csv"
-
-Código,Nome,Descrição,Unidade,Grupo,Prazo Pagamento,Preço Aquisição,Moeda,Custo Adicional,Imposto,Frete,Data Criação
-MP-2024-001,Resina Poliéster,Resina de alta qualidade,KG,Resinas,30,25.50,BRL,2.30,Simples Nacional,Transporte Rodoviário,2025-10-26
-</code></pre>
-<hr />
-<h2 id="produtosproducts">Produtos (Products)</h2>
-<h3 id="28criarproduto">28. Criar Produto</h3>
-<p><strong>POST</strong> <code>/products</code></p>
-<p><strong>Permissões:</strong> ADMIN, COMERCIAL</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "code": "20462",
-  "name": "Produto X",
-  "description": "Descrição do produto",
-  "fixedCostId": "uuid-fixed-cost",
-  "rawMaterials": [
-    {
-      "rawMaterialId": "uuid-rm-1",
-      "quantity": 2.5
-    },
-    {
-      "rawMaterialId": "uuid-rm-2",
-      "quantity": 1.0
-    }
-  ]
-}
-</code></pre>
-<p><strong>Nota:</strong> </p>
-<ul>
-    <li>Código deve ser numérico</li>
-    <li>Preço é calculado automaticamente</li>
-    <li>fixedCostId é opcional (0 ou 1)</li>
-    <li>Deve ter no mínimo 1 matéria-prima</li>
-</ul>
-<p><strong>Response:</strong> <code>201 Created</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "code": "20462",
-  "name": "Produto X",
-  "description": "Descrição do produto",
-  "creatorId": "uuid-user",
-  "fixedCostId": "uuid-fixed-cost",
-  "priceWithoutTaxesAndFreight": 125.50,
-  "priceWithTaxesAndFreight": 145.80,
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T10:00:00.000Z",
-  "creator": {
-    "id": "uuid-user",
-    "name": "João Silva",
-    "email": "joao@exemplo.com"
-  },
-  "fixedCost": {
-    "id": "uuid-fixed-cost",
-    "description": "DESPESAS COM PESSOAL",
-    "overheadPerUnit": 0.3695
-  },
-  "productRawMaterials": [
-    {
-      "rawMaterialId": "uuid-rm-1",
-      "quantity": 2.5,
-      "rawMaterial": {
-        "id": "uuid-rm-1",
-        "code": "MP-2024-001",
-        "name": "Resina Poliéster",
-        "measurementUnit": "KG",
-        "acquisitionPrice": 25.50,
-        "currency": "BRL"
-      }
-    },
-    {
-      "rawMaterialId": "uuid-rm-2",
-      "quantity": 1.0,
-      "rawMaterial": {
-        "id": "uuid-rm-2",
-        "code": "MP-2024-002",
-        "name": "Fibra de Vidro",
-        "measurementUnit": "KG",
-        "acquisitionPrice": 45.00,
-        "currency": "BRL"
-      }
-    }
-  ],
-  "calculations": {
-    "rawMaterialsSubtotal": 108.75,
-    "taxesTotal": 15.30,
-    "freightTotal": 21.75,
-    "priceWithoutTaxesAndFreight": 125.50,
-    "priceWithTaxesAndFreight": 145.80,
-    "fixedCostOverhead": 0.3695
-  }
-}
-</code></pre>
-<hr />
-<h3 id="29listarprodutos">29. Listar Produtos</h3>
-<p><strong>GET</strong> <code>/products</code></p>
-<p><strong>Permissões:</strong> ADMIN, COMERCIAL</p>
-<p><strong>Query Parameters:</strong></p>
-<pre><code>?page=1
-&amp;limit=10
-&amp;search=codigo_ou_nome
-&amp;sortBy=code
-&amp;sortOrder=asc
-&amp;includeRawMaterials=true
-&amp;includeFixedCost=true
-&amp;includeCalculations=true
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "data": [
-    {
-      "id": "uuid-v4",
-      "code": "20462",
-      "name": "Produto X",
-      "description": "Descrição do produto",
-      "creatorId": "uuid-user",
-      "fixedCostId": "uuid-fixed-cost",
-      "priceWithoutTaxesAndFreight": 125.50,
-      "priceWithTaxesAndFreight": 145.80,
-      "createdAt": "2025-10-26T10:00:00.000Z",
-      "updatedAt": "2025-10-26T10:00:00.000Z",
-      "creator": {
-        "name": "João Silva"
-      },
-      "fixedCost": {
-        "description": "DESPESAS COM PESSOAL",
-        "overheadPerUnit": 0.3695
-      },
-      "productRawMaterials": [
+      "measurementUnit": "KG", // KG, G, L, ML, M, CM, UN, CX, PC
+      "inputGroup": "Resinas", // opcional
+      "paymentTerm": 30, // dias
+      
+      "locations": [
         {
-          "quantity": 2.5,
-          "rawMaterial": {
-            "code": "MP-2024-001",
-            "name": "Resina Poliéster",
-            "measurementUnit": "KG"
-          }
+          // Opção 1: Referenciar localização existente
+          "locationId": "uuid-da-localizacao",
+          
+          // Opção 2: Criar nova localização
+          "location": {
+            "name": "Fornecedor ABC",
+            "stateUf": "SP",
+            "city": "São Paulo",
+            "country": "BR" // opcional, padrão: BR
+          },
+          
+          "acquisitionPrice": 25.50,
+          "currency": "BRL", // BRL, USD, EUR
+          "priceConvertedBrl": 25.50, // opcional, calculado se moeda diferente
+          "additionalCost": 2.30, // opcional
+          
+          "freightIds": ["uuid-frete-1"], // opcional
+          
+          "taxes": [
+            {
+              // Opção 1: Referenciar imposto existente
+              "taxId": "uuid-do-imposto",
+              
+              // Opção 2: Criar novo imposto inline
+              "name": "ICMS",
+              "rate": 12.0,
+              "recoverable": false
+            }
+          ]
         }
       ]
     }
   ],
-  "meta": {
-    "total": 200,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 20
-  }
-}
-</code></pre>
-<hr />
-<h3 id="30obterprodutoporid">30. Obter Produto por ID</h3>
-<p><strong>GET</strong> <code>/products/:id</code></p>
-<p><strong>Permissões:</strong> ADMIN, COMERCIAL</p>
-<p><strong>Query Parameters:</strong></p>
-<pre><code>?includeRawMaterials=true
-&amp;includeFixedCost=true
-&amp;includeCalculations=true
-&amp;includeDetailedTaxes=true
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "code": "20462",
-  "name": "Produto X",
+  
+  "composition": [
+    {
+      "rawMaterialCode": "MP-001", // deve corresponder ao código acima
+      "quantity": 2.5,
+      "measurementUnit": "KG" // opcional, usa da matéria-prima se omitido
+    }
+  ],
+  
+  "pricing": { // opcional, apenas informativo
+    "additionalCosts": 5.0,
+    "margin": 15.0
+  },
+  
+  "measurementUnit": "UN", // opcional
+  "paymentTerm": 30 // opcional
+}</code></pre>
+
+    <h4>Fluxo de Criação:</h4>
+
+    <ol>
+        <li><strong>Validação do Token:</strong> Sistema valida o <code>EXTERNAL_API_TOKEN</code></li>
+        <li><strong>Criação de Localizações:</strong> Se <code>location</code> for fornecido, cria nova localização; se <code>locationId</code>, reutiliza existente</li>
+        <li><strong>Criação de Impostos:</strong> Se <code>name</code> e <code>rate</code> fornecidos, cria novos impostos; se <code>taxId</code>, reutiliza existentes</li>
+        <li><strong>Criação de Matérias-Primas:</strong> Cria ou atualiza matérias-primas com suas localizações e impostos</li>
+        <li><strong>Criação da Composição:</strong> Vincula matérias-primas ao produto</li>
+        <li><strong>Cálculo do Preço:</strong> Calcula automaticamente o preço baseado nas matérias-primas, impostos, fretes e custos fixos</li>
+        <li><strong>Criação do Produto:</strong> Salva produto com todas as informações calculadas</li>
+    </ol>
+
+    <h4>Response (201 Created):</h4>
+
+    <pre><code class="language-json">{
+  "id": "uuid-produto",
+  "code": "PROD-001",
+  "name": "Nome do Produto",
   "description": "Descrição do produto",
-  "creatorId": "uuid-user",
-  "fixedCostId": "uuid-fixed-cost",
-  "priceWithoutTaxesAndFreight": 125.50,
-  "priceWithTaxesAndFreight": 145.80,
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T10:00:00.000Z",
-  "creator": {
-    "id": "uuid-user",
-    "name": "João Silva",
-    "email": "joao@exemplo.com",
+  "productGroupId": "uuid-do-grupo",
+  "fixedCostId": "uuid-do-custo-fixo",
+  "stateUf": "SP",
+  "city": "São Paulo",
+  "priceWithoutTaxes": 125.50,
+  "priceWithTaxes": 145.80,
+  "overheadPerUnit": 5.25,
+  "finalPrice": 151.05,
+  "createdAt": "2025-12-07T10:00:00Z",
+  "updatedAt": "2025-12-07T10:00:00Z",
+  "rawMaterials": [
+    {
+      "id": "uuid-materia-prima",
+      "code": "MP-001",
+      "name": "Resina Poliéster",
+      "measurementUnit": "KG",
+      "locations": [...]
+    }
+  ],
+  "composition": [
+    {
+      "rawMaterialId": "uuid-materia-prima",
+      "quantity": 2.5,
+      "measurementUnit": "KG"
+    }
+  ]
+}</code></pre>
+
+    <h4>Códigos de Status:</h4>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Descrição</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>201</code></td>
+                <td>Produto criado com sucesso</td>
+            </tr>
+            <tr>
+                <td><code>400</code></td>
+                <td>Erro de validação no payload (campos obrigatórios faltando ou formato inválido)</td>
+            </tr>
+            <tr>
+                <td><code>401</code></td>
+                <td>Token ausente ou inválido</td>
+            </tr>
+            <tr>
+                <td><code>409</code></td>
+                <td>Produto com este código já existe</td>
+            </tr>
+            <tr>
+                <td><code>500</code></td>
+                <td>Erro interno do servidor</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h4>Exemplo de Erro (400 Bad Request):</h4>
+
+    <pre><code class="language-json">{
+  "statusCode": 400,
+  "message": [
+    "code deve ser uma string não vazia",
+    "rawMaterials deve conter ao menos 1 item",
+    "composition[0].quantity deve ser maior que 0"
+  ],
+  "error": "Bad Request"
+}</code></pre>
+
+    <div class="note">
+        <strong>💡 Dicas de Uso:</strong>
+        <ul>
+            <li>Use <code>locationId</code> e <code>taxId</code> para reutilizar entidades existentes</li>
+            <li>Crie novas entidades inline quando necessário com <code>location</code> e detalhes do imposto</li>
+            <li>O campo <code>composition</code> deve referenciar os códigos das matérias-primas enviadas no mesmo payload</li>
+            <li>Unidades de medida: KG, G, L, ML, M, CM, UN, CX, PC</li>
+            <li>Moedas suportadas: BRL, USD, EUR</li>
+        </ul>
+    </div>
+
+    <hr>
+
+    <h2 id="autenticacao">🔐 Autenticação</h2>
+
+    <p>A maioria dos endpoints requer autenticação via JWT Bearer Token.</p>
+
+    <h3>POST /auth/register</h3>
+    <p><strong>Descrição:</strong> Registrar novo usuário (requer ativação por ADMIN)</p>
+    <pre><code>{
+  "email": "usuario@exemplo.com",
+  "name": "Nome do Usuário",
+  "password": "senha123",
+  "role": "COMERCIAL" // opcional: ADMIN, COMERCIAL, LOGISTICA, IMPOSTO
+}</code></pre>
+
+    <h3>POST /auth/login</h3>
+    <p><strong>Descrição:</strong> Fazer login e obter tokens</p>
+    <pre><code>{
+  "email": "usuario@exemplo.com",
+  "password": "senha123"
+}</code></pre>
+    <p><strong>Response:</strong></p>
+    <pre><code>{
+  "accessToken": "eyJhbGc...",
+  "refreshToken": "eyJhbGc...",
+  "user": {
+    "id": "uuid",
+    "email": "usuario@exemplo.com",
+    "name": "Nome",
     "role": "COMERCIAL"
-  },
-  "fixedCost": {
-    "id": "uuid-fixed-cost",
-    "description": "DESPESAS COM PESSOAL",
-    "code": "FC-001",
-    "personnelExpenses": 53188.59,
-    "generalExpenses": 49913.50,
-    "proLabore": 0,
-    "depreciation": 0,
-    "totalCost": 103102.09,
-    "considerationPercentage": 100.00,
-    "salesVolume": 130000.00,
-    "overheadPerUnit": 0.3695
-  },
-  "productRawMaterials": [
-    {
-      "productId": "uuid-v4",
-      "rawMaterialId": "uuid-rm-1",
-      "quantity": 2.5,
-      "createdAt": "2025-10-26T10:00:00.000Z",
-      "updatedAt": "2025-10-26T10:00:00.000Z",
-      "rawMaterial": {
-        "id": "uuid-rm-1",
-        "code": "MP-2024-001",
-        "name": "Resina Poliéster",
-        "measurementUnit": "KG",
-        "acquisitionPrice": 25.50,
-        "currency": "BRL",
-        "priceConvertedBrl": 25.50,
-        "additionalCost": 2.30,
-        "tax": {
-          "id": "uuid-tax",
-          "name": "Simples Nacional",
-          "taxItems": [
-            {
-              "name": "PIS",
-              "rate": 1.65,
-              "recoverable": true
-            },
-            {
-              "name": "COFINS",
-              "rate": 7.60,
-              "recoverable": true
-            }
-          ]
-        },
-        "freight": {
-          "id": "uuid-freight",
-          "name": "Transporte Rodoviário",
-          "unitPrice": 150.00,
-          "currency": "BRL",
-          "additionalCosts": 25.50,
-          "freightTaxes": [
-            {
-              "name": "ICMS",
-              "rate": 12.00
-            }
-          ]
-        }
-      }
-    },
-    {
-      "productId": "uuid-v4",
-      "rawMaterialId": "uuid-rm-2",
-      "quantity": 1.0,
-      "createdAt": "2025-10-26T10:00:00.000Z",
-      "updatedAt": "2025-10-26T10:00:00.000Z",
-      "rawMaterial": {
-        "id": "uuid-rm-2",
-        "code": "MP-2024-002",
-        "name": "Fibra de Vidro",
-        "measurementUnit": "KG",
-        "acquisitionPrice": 45.00,
-        "currency": "BRL",
-        "priceConvertedBrl": 45.00,
-        "additionalCost": 3.50,
-        "tax": {
-          "id": "uuid-tax-2",
-          "name": "Lucro Real",
-          "taxItems": [
-            {
-              "name": "PIS",
-              "rate": 1.65,
-              "recoverable": false
-            },
-            {
-              "name": "COFINS",
-              "rate": 7.60,
-              "recoverable": false
-            }
-          ]
-        },
-        "freight": {
-          "id": "uuid-freight-2",
-          "name": "Transporte Marítimo",
-          "unitPrice": 200.00,
-          "currency": "USD",
-          "additionalCosts": 50.00
-        }
-      }
-    }
-  ],
-  "calculations": {
-    "rawMaterials": [
-      {
-        "rawMaterialCode": "MP-2024-001",
-        "rawMaterialName": "Resina Poliéster",
-        "quantity": 2.5,
-        "unitPrice": 25.50,
-        "subtotal": 63.75,
-        "taxes": {
-          "PIS": 1.05,
-          "COFINS": 4.85,
-          "total": 5.90
-        },
-        "freight": {
-          "unitPrice": 150.00,
-          "quantity": 2.5,
-          "subtotal": 6.25,
-          "taxes": {
-            "ICMS": 0.75
-          }
-        },
-        "totalWithoutTaxesAndFreight": 63.75,
-        "totalWithTaxesAndFreight": 76.65
-      },
-      {
-        "rawMaterialCode": "MP-2024-002",
-        "rawMaterialName": "Fibra de Vidro",
-        "quantity": 1.0,
-        "unitPrice": 45.00,
-        "subtotal": 45.00,
-        "taxes": {
-          "PIS": 0.74,
-          "COFINS": 3.42,
-          "total": 4.16
-        },
-        "freight": {
-          "unitPrice": 200.00,
-          "quantity": 1.0,
-          "subtotal": 5.00,
-          "taxes": {}
-        },
-        "totalWithoutTaxesAndFreight": 45.00,
-        "totalWithTaxesAndFreight": 54.16
-      }
-    ],
-    "summary": {
-      "rawMaterialsSubtotal": 108.75,
-      "taxesTotal": 10.06,
-      "freightTotal": 11.25,
-      "additionalCostsTotal": 5.80,
-      "priceWithoutTaxesAndFreight": 125.50,
-      "priceWithTaxesAndFreight": 145.80,
-      "fixedCostOverhead": 0.3695,
-      "finalPriceWithOverhead": 146.17
-    }
   }
-}
-</code></pre>
-<hr />
-<h3 id="31atualizarproduto">31. Atualizar Produto</h3>
-<p><strong>PATCH</strong> <code>/products/:id</code></p>
-<p><strong>Permissões:</strong> ADMIN, COMERCIAL</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "name": "Produto X Atualizado",
-  "description": "Nova descrição",
-  "fixedCostId": "uuid-new-fixed-cost",
-  "rawMaterials": [
-    {
-      "rawMaterialId": "uuid-rm-1",
-      "quantity": 3.0
-    },
-    {
-      "rawMaterialId": "uuid-rm-3",
-      "quantity": 0.5
-    }
-  ]
-}
-</code></pre>
-<p><strong>Nota:</strong> </p>
-<ul>
-    <li>Ao atualizar rawMaterials, a lista enviada substitui completamente as associações anteriores</li>
-    <li>Preços são recalculados automaticamente</li>
-</ul>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "code": "20462",
-  "name": "Produto X Atualizado",
-  "description": "Nova descrição",
-  "creatorId": "uuid-user",
-  "fixedCostId": "uuid-new-fixed-cost",
-  "priceWithoutTaxesAndFreight": 142.30,
-  "priceWithTaxesAndFreight": 165.45,
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T11:00:00.000Z",
-  "creator": {
-    "name": "João Silva"
-  },
-  "fixedCost": {
-    "description": "GASTOS GERAIS API",
-    "overheadPerUnit": 0.4200
-  },
-  "productRawMaterials": [
-    {
-      "rawMaterialId": "uuid-rm-1",
-      "quantity": 3.0,
-      "rawMaterial": {
-        "code": "MP-2024-001",
-        "name": "Resina Poliéster"
-      }
-    },
-    {
-      "rawMaterialId": "uuid-rm-3",
-      "quantity": 0.5,
-      "rawMaterial": {
-        "code": "MP-2024-003",
-        "name": "Catalisador"
-      }
-    }
-  ]
-}
-</code></pre>
-<hr />
-<h3 id="32deletarproduto">32. Deletar Produto</h3>
-<p><strong>DELETE</strong> <code>/products/:id</code></p>
-<p><strong>Permissões:</strong> ADMIN, COMERCIAL</p>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "message": "Produto deletado com sucesso"
-}
-</code></pre>
-<hr />
-<h3 id="33calcularpreodoprodutopreview">33. Calcular Preço do Produto (Preview)</h3>
-<p><strong>POST</strong> <code>/products/calculate-price</code></p>
-<p><strong>Permissões:</strong> ADMIN, COMERCIAL</p>
-<p><strong>Nota:</strong> Este endpoint permite calcular o preço sem criar o produto (útil para preview na interface)</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "rawMaterials": [
-    {
-      "rawMaterialId": "uuid-rm-1",
-      "quantity": 2.5
-    },
-    {
-      "rawMaterialId": "uuid-rm-2",
-      "quantity": 1.0
-    }
-  ],
-  "fixedCostId": "uuid-fixed-cost"
-}
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "calculations": {
-    "rawMaterialsSubtotal": 108.75,
-    "taxesTotal": 10.06,
-    "freightTotal": 11.25,
-    "additionalCostsTotal": 5.80,
-    "priceWithoutTaxesAndFreight": 125.50,
-    "priceWithTaxesAndFreight": 145.80,
-    "fixedCostOverhead": 0.3695,
-    "finalPriceWithOverhead": 146.17
-  },
-  "breakdown": [
-    {
-      "rawMaterialCode": "MP-2024-001",
-      "rawMaterialName": "Resina Poliéster",
-      "quantity": 2.5,
-      "unitPrice": 25.50,
-      "subtotal": 63.75,
-      "taxes": 5.90,
-      "freight": 6.25
-    },
-    {
-      "rawMaterialCode": "MP-2024-002",
-      "rawMaterialName": "Fibra de Vidro",
-      "quantity": 1.0,
-      "unitPrice": 45.00,
-      "subtotal": 45.00,
-      "taxes": 4.16,
-      "freight": 5.00
-    }
-  ]
-}
-</code></pre>
-<hr />
-<h3 id="34exportarprodutoscsv">34. Exportar Produtos (CSV)</h3>
-<p><strong>POST</strong> <code>/products/export</code></p>
-<p><strong>Permissões:</strong> ADMIN, COMERCIAL</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "format": "csv",
-  "limit": 500,
-  "sortBy": "code",
-  "sortOrder": "asc",
-  "filters": {
-    "search": "produto x"
-  },
-  "includeRawMaterials": true,
-  "includeCalculations": true
-}
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code>Content-Type: text/csv
-Content-Disposition: attachment; filename="produtos-2025-10-26.csv"
+}</code></pre>
 
-Código,Nome,Descrição,Grupo,Preço sem Impostos,Preço com Impostos,Moeda,Custos Adicionais,Matérias-Primas,Data Criação
-20462,Produto X,Descrição,1,125.50,145.80,Real,4.95,"Resina Poliéster (2.5 KG), Fibra de Vidro (1.0 KG)",2025-10-26
-</code></pre>
-<hr />
-<h2 id="custosfixosfixedcosts">Custos Fixos (Fixed Costs)</h2>
-<h3 id="35criarcustofixo">35. Criar Custo Fixo</h3>
-<p><strong>POST</strong> <code>/fixed-costs</code></p>
-<p><strong>Permissões:</strong> ADMIN</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "description": "DESPESAS COM PESSOAL",
+    <h3>POST /auth/refresh</h3>
+    <p><strong>Descrição:</strong> Renovar access token</p>
+    <pre><code>{ "refreshToken": "eyJhbGc..." }</code></pre>
+
+    <h3>POST /auth/logout</h3>
+    <p><strong>Descrição:</strong> Fazer logout e invalidar tokens</p>
+    <p><strong>Requer:</strong> JWT no header</p>
+    <pre><code>{ "refreshToken": "eyJhbGc..." }</code></pre>
+
+    <h3>GET /auth/me</h3>
+    <p><strong>Descrição:</strong> Obter perfil do usuário autenticado</p>
+    <p><strong>Requer:</strong> JWT no header</p>
+
+    <hr>
+
+    <h2 id="usuarios">👥 Usuários</h2>
+
+    <p><strong>Permissões:</strong> ADMIN (exceto rotas /me)</p>
+
+    <h3>GET /users</h3>
+    <p>Listar usuários com paginação e filtros</p>
+    <p><strong>Query Params:</strong> <code>?page=1&limit=10&search=nome&role=COMERCIAL&isActive=true&sortBy=name&sortOrder=asc</code></p>
+
+    <h3>GET /users/:id</h3>
+    <p>Obter usuário por ID</p>
+
+    <h3>GET /users/me</h3>
+    <p>Obter dados do próprio usuário (qualquer autenticado)</p>
+
+    <h3>PATCH /users/:id</h3>
+    <p>Atualizar usuário (ADMIN)</p>
+    <pre><code>{
+  "name": "Novo Nome",
+  "role": "ADMIN",
+  "isActive": true,
+  "password": "novaSenha123" // opcional
+}</code></pre>
+
+    <h3>PATCH /users/me</h3>
+    <p>Atualizar próprio perfil (qualquer autenticado)</p>
+    <pre><code>{
+  "name": "Novo Nome",
+  "email": "novo@email.com", // requer currentPassword
+  "currentPassword": "senhaAtual",
+  "newPassword": "novaSenha123" // requer currentPassword
+}</code></pre>
+
+    <h3>POST /users/export</h3>
+    <p>Exportar usuários em CSV</p>
+    <pre><code>{
+  "columns": ["name", "email", "role", "isActive", "createdAt"],
+  "search": "termo", // opcional
+  "role": "COMERCIAL" // opcional
+}</code></pre>
+
+    <hr>
+
+    <h2 id="impostos">💰 Impostos</h2>
+
+    <p><strong>Permissões:</strong> ADMIN, IMPOSTO (leitura: COMERCIAL, LOGISTICA)</p>
+
+    <h3>Impostos de Frete</h3>
+
+    <div class="endpoint">
+        <p><span class="method get">GET</span> <code>/taxes/freight</code> - Listar impostos de frete</p>
+        <p><span class="method get">GET</span> <code>/taxes/freight/:id</code> - Obter imposto de frete</p>
+        <p><span class="method post">POST</span> <code>/taxes/freight</code> - Criar imposto de frete</p>
+        <p><span class="method patch">PATCH</span> <code>/taxes/freight/:id</code> - Atualizar imposto de frete</p>
+        <p><span class="method delete">DELETE</span> <code>/taxes/freight/:id</code> - Deletar imposto de frete</p>
+        <p><span class="method post">POST</span> <code>/taxes/freight/export</code> - Exportar em CSV</p>
+    </div>
+
+    <h4>Exemplo de Criação:</h4>
+    <pre><code>{
+  "name": "ICMS Frete",
+  "rate": 12.0,
+  "recoverable": false
+}</code></pre>
+
+    <h3>Impostos de Matéria-Prima</h3>
+
+    <div class="endpoint">
+        <p><span class="method get">GET</span> <code>/taxes/raw-material</code> - Listar impostos de MP</p>
+        <p><span class="method get">GET</span> <code>/taxes/raw-material/:id</code> - Obter imposto de MP</p>
+        <p><span class="method post">POST</span> <code>/taxes/raw-material</code> - Criar imposto de MP</p>
+        <p><span class="method patch">PATCH</span> <code>/taxes/raw-material/:id</code> - Atualizar imposto de MP</p>
+        <p><span class="method delete">DELETE</span> <code>/taxes/raw-material/:id</code> - Deletar imposto de MP</p>
+        <p><span class="method post">POST</span> <code>/taxes/raw-material/export</code> - Exportar em CSV</p>
+    </div>
+
+    <hr>
+
+    <h2 id="fretes">🚚 Fretes</h2>
+
+    <p><strong>Permissões:</strong> ADMIN, LOGISTICA</p>
+
+    <div class="endpoint">
+        <p><span class="method get">GET</span> <code>/freights</code> - Listar fretes</p>
+        <p><span class="method get">GET</span> <code>/freights/:id</code> - Obter frete</p>
+        <p><span class="method get">GET</span> <code>/freights/statistics</code> - Estatísticas</p>
+        <p><span class="method post">POST</span> <code>/freights</code> - Criar frete</p>
+        <p><span class="method patch">PATCH</span> <code>/freights/:id</code> - Atualizar frete</p>
+        <p><span class="method delete">DELETE</span> <code>/freights/:id</code> - Deletar frete</p>
+        <p><span class="method delete">DELETE</span> <code>/freights/:freightId/taxes/:taxId</code> - Remover imposto</p>
+        <p><span class="method post">POST</span> <code>/freights/export</code> - Exportar em CSV</p>
+    </div>
+
+    <h4>Query Params (GET /freights):</h4>
+    <p><code>?page=1&limit=10&search=termo&currency=BRL&operationType=INTERNAL&originUf=SP&destinationUf=RJ&sortBy=name&sortOrder=asc</code></p>
+
+    <h4>Exemplo de Criação:</h4>
+    <pre><code>{
+  "name": "Transporte Rodoviário SP-RJ",
+  "description": "Frete com prazo de 5 dias",
+  "price": 150.00,
+  "currency": "BRL",
+  "originCity": "São Paulo",
+  "originUf": "SP",
+  "destinationCity": "Rio de Janeiro",
+  "destinationUf": "RJ",
+  "operationType": "INTERNAL", // INTERNAL ou EXTERNAL
+  "cargoType": "Geral",
+  "additionalCost": 25.50,
+  "deliveryTime": 5,
+  "taxIds": ["uuid-imposto-1", "uuid-imposto-2"] // opcional
+}</code></pre>
+
+    <hr>
+
+    <h2 id="materias-primas">📦 Matérias-Primas</h2>
+
+    <p><strong>Permissões:</strong> ADMIN, COMERCIAL</p>
+
+    <div class="endpoint">
+        <p><span class="method get">GET</span> <code>/raw-materials</code> - Listar matérias-primas</p>
+        <p><span class="method get">GET</span> <code>/raw-materials/:id</code> - Obter matéria-prima</p>
+        <p><span class="method get">GET</span> <code>/raw-materials/recent-changes</code> - Mudanças recentes</p>
+        <p><span class="method get">GET</span> <code>/raw-materials/:id/change-logs</code> - Histórico de alterações</p>
+        <p><span class="method post">POST</span> <code>/raw-materials</code> - Criar matéria-prima</p>
+        <p><span class="method patch">PATCH</span> <code>/raw-materials/:id</code> - Atualizar matéria-prima</p>
+        <p><span class="method delete">DELETE</span> <code>/raw-materials/:id</code> - Deletar matéria-prima</p>
+        <p><span class="method post">POST</span> <code>/raw-materials/export</code> - Exportar em CSV</p>
+    </div>
+
+    <h4>Query Params (GET /raw-materials):</h4>
+    <p><code>?page=1&limit=10&search=codigo_ou_nome&measurementUnit=KG&inputGroup=Resinas&currency=BRL&sortBy=name&sortOrder=asc</code></p>
+
+    <h4>Exemplo de Criação:</h4>
+    <pre><code>{
+  "code": "MP-001",
+  "name": "Resina Poliéster",
+  "description": "Resina de alta qualidade",
+  "measurementUnit": "KG",
+  "inputGroup": "Resinas",
+  "paymentTerm": 30
+}</code></pre>
+
+    <div class="note">
+        <strong>📝 Nota:</strong> Todas as alterações em matérias-primas são registradas automaticamente no log de mudanças.
+    </div>
+
+    <hr>
+
+    <h2 id="produtos">🏷️ Produtos</h2>
+
+    <p><strong>Permissões:</strong> ADMIN, COMERCIAL (leitura: qualquer autenticado)</p>
+
+    <div class="endpoint">
+        <p><span class="method get">GET</span> <code>/products</code> - Listar produtos</p>
+        <p><span class="method get">GET</span> <code>/products/:id</code> - Obter produto</p>
+        <p><span class="method post">POST</span> <code>/products</code> - Criar produto</p>
+        <p><span class="method post">POST</span> <code>/products/full-create</code> - Criar produto completo (EXTERNAL_API_TOKEN)</p>
+        <p><span class="method post">POST</span> <code>/products/calculate-price</code> - Calcular preço (preview)</p>
+        <p><span class="method patch">PATCH</span> <code>/products/:id</code> - Atualizar produto</p>
+        <p><span class="method delete">DELETE</span> <code>/products/:id</code> - Deletar produto</p>
+        <p><span class="method post">POST</span> <code>/products/export</code> - Exportar em CSV</p>
+    </div>
+
+    <h4>Query Params (GET /products):</h4>
+    <p><code>?page=1&limit=10&search=codigo_ou_nome&productGroupId=uuid&stateUf=SP&city=Sao Paulo&sortBy=code&sortOrder=asc</code></p>
+
+    <h4>Exemplo de Criação Simples:</h4>
+    <pre><code>{
+  "code": "PROD-001",
+  "name": "Produto Exemplo",
+  "description": "Descrição",
+  "productGroupId": "uuid-grupo",
+  "fixedCostId": "uuid-custo-fixo",
+  "rawMaterialIds": ["uuid-mp-1", "uuid-mp-2"],
+  "freightIds": ["uuid-frete-1"]
+}</code></pre>
+
+    <hr>
+
+    <h2 id="grupos-produtos">📊 Grupos de Produtos</h2>
+
+    <p><strong>Permissões:</strong> ADMIN, COMERCIAL</p>
+
+    <div class="endpoint">
+        <p><span class="method get">GET</span> <code>/product-groups</code> - Listar grupos</p>
+        <p><span class="method get">GET</span> <code>/product-groups/:id</code> - Obter grupo</p>
+        <p><span class="method post">POST</span> <code>/product-groups</code> - Criar grupo</p>
+        <p><span class="method patch">PATCH</span> <code>/product-groups/:id</code> - Atualizar grupo</p>
+        <p><span class="method delete">DELETE</span> <code>/product-groups/:id</code> - Deletar grupo</p>
+        <p><span class="method post">POST</span> <code>/product-groups/export</code> - Exportar em CSV</p>
+    </div>
+
+    <h4>Exemplo de Criação:</h4>
+    <pre><code>{
+  "name": "Grupo A",
+  "description": "Descrição do grupo",
+  "porcentage": 25.5,
+  "volumevendasconsiderar": 10000
+}</code></pre>
+
+    <hr>
+
+    <h2 id="custos-fixos">💵 Custos Fixos</h2>
+
+    <p><strong>Permissões:</strong> ADMIN</p>
+
+    <div class="endpoint">
+        <p><span class="method get">GET</span> <code>/fixed-costs</code> - Listar custos fixos</p>
+        <p><span class="method get">GET</span> <code>/fixed-costs/:id</code> - Obter custo fixo</p>
+        <p><span class="method post">POST</span> <code>/fixed-costs</code> - Criar custo fixo</p>
+        <p><span class="method patch">PATCH</span> <code>/fixed-costs/:id</code> - Atualizar custo fixo</p>
+        <p><span class="method delete">DELETE</span> <code>/fixed-costs/:id</code> - Deletar custo fixo</p>
+        <p><span class="method post">POST</span> <code>/fixed-costs/:id/calculate-overhead</code> - Calcular overhead</p>
+        <p><span class="method post">POST</span> <code>/fixed-costs/export</code> - Exportar em CSV</p>
+    </div>
+
+    <h4>Exemplo de Criação:</h4>
+    <pre><code>{
   "code": "FC-001",
-  "personnelExpenses": 53188.59,
-  "generalExpenses": 49913.50,
+  "description": "Despesas com Pessoal",
+  "personnel": 53188.59,
+  "other": 49913.50,
   "proLabore": 0,
   "depreciation": 0,
-  "considerationPercentage": 100.00,
-  "salesVolume": 130000.00
-}
-</code></pre>
-<p><strong>Nota:</strong> </p>
-<ul>
-    <li>totalCost é calculado automaticamente (personnelExpenses + generalExpenses + proLabore + depreciation)</li>
-    <li>overheadPerUnit é calculado automaticamente ((totalCost * considerationPercentage / 100) / salesVolume)</li>
-</ul>
-<p><strong>Response:</strong> <code>201 Created</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "description": "DESPESAS COM PESSOAL",
-  "code": "FC-001",
-  "personnelExpenses": 53188.59,
-  "generalExpenses": 49913.50,
-  "proLabore": 0,
-  "depreciation": 0,
-  "totalCost": 103102.09,
-  "considerationPercentage": 100.00,
+  "percentageToConsider": 100,
   "salesVolume": 130000.00,
-  "overheadPerUnit": 0.7931,
-  "calculationDate": "2025-10-26T10:00:00.000Z",
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T10:00:00.000Z"
-}
-</code></pre>
-<hr />
-<h3 id="36listarcustosfixos">36. Listar Custos Fixos</h3>
-<p><strong>GET</strong> <code>/fixed-costs</code></p>
-<p><strong>Permissões:</strong> ADMIN</p>
-<p><strong>Query Parameters:</strong></p>
-<pre><code>?page=1
-&amp;limit=10
-&amp;search=descricao_ou_codigo
-&amp;sortBy=calculationDate
-&amp;sortOrder=desc
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "data": [
-    {
-      "id": "uuid-v4",
-      "description": "DESPESAS COM PESSOAL",
-      "code": "FC-001",
-      "personnelExpenses": 53188.59,
-      "generalExpenses": 49913.50,
-      "proLabore": 0,
-      "depreciation": 0,
-      "totalCost": 103102.09,
-      "considerationPercentage": 100.00,
-      "salesVolume": 130000.00,
-      "overheadPerUnit": 0.7931,
-      "calculationDate": "2025-10-26T10:00:00.000Z",
-      "createdAt": "2025-10-26T10:00:00.000Z",
-      "updatedAt": "2025-10-26T10:00:00.000Z",
-      "_count": {
-        "products": 15
-      }
-    }
-  ],
-  "meta": {
-    "total": 8,
-    "page": 1,
-    "limit": 10,
-    "totalPages": 1
-  }
-}
-</code></pre>
-<hr />
-<h3 id="37obtercustofixoporid">37. Obter Custo Fixo por ID</h3>
-<p><strong>GET</strong> <code>/fixed-costs/:id</code></p>
-<p><strong>Permissões:</strong> ADMIN</p>
-<p><strong>Query Parameters:</strong></p>
-<pre><code>?includeProducts=true
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "description": "DESPESAS COM PESSOAL",
-  "code": "FC-001",
-  "personnelExpenses": 53188.59,
-  "generalExpenses": 49913.50,
-  "proLabore": 0,
-  "depreciation": 0,
-  "totalCost": 103102.09,
-  "considerationPercentage": 100.00,
-  "salesVolume": 130000.00,
-  "overheadPerUnit": 0.7931,
-  "calculationDate": "2025-10-26T10:00:00.000Z",
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T10:00:00.000Z",
-  "products": [
-    {
-      "id": "uuid-product-1",
-      "code": "20462",
-      "name": "Produto X",
-      "priceWithoutTaxesAndFreight": 125.50,
-      "priceWithTaxesAndFreight": 145.80
-    }
-  ]
-}
-</code></pre>
-<hr />
-<h3 id="38atualizarcustofixo">38. Atualizar Custo Fixo</h3>
-<p><strong>PATCH</strong> <code>/fixed-costs/:id</code></p>
-<p><strong>Permissões:</strong> ADMIN</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "description": "DESPESAS COM PESSOAL - ATUALIZADO",
-  "personnelExpenses": 55000.00,
-  "salesVolume": 140000.00,
-  "considerationPercentage": 95.00
-}
-</code></pre>
-<p><strong>Nota:</strong> </p>
-<ul>
-    <li>totalCost e overheadPerUnit são recalculados automaticamente</li>
-    <li>Produtos associados terão seus preços recalculados</li>
-</ul>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "id": "uuid-v4",
-  "description": "DESPESAS COM PESSOAL - ATUALIZADO",
-  "code": "FC-001",
-  "personnelExpenses": 55000.00,
-  "generalExpenses": 49913.50,
-  "proLabore": 0,
-  "depreciation": 0,
-  "totalCost": 104913.50,
-  "considerationPercentage": 95.00,
-  "salesVolume": 140000.00,
-  "overheadPerUnit": 0.7119,
-  "calculationDate": "2025-10-26T10:00:00.000Z",
-  "createdAt": "2025-10-26T10:00:00.000Z",
-  "updatedAt": "2025-10-26T11:00:00.000Z",
-  "affectedProducts": {
-    "count": 15,
-    "recalculated": true
-  }
-}
-</code></pre>
-<hr />
-<h3 id="39deletarcustofixo">39. Deletar Custo Fixo</h3>
-<p><strong>DELETE</strong> <code>/fixed-costs/:id</code></p>
-<p><strong>Permissões:</strong> ADMIN</p>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "message": "Custo fixo deletado com sucesso",
-  "affectedProducts": {
-    "count": 15,
-    "action": "fixedCostId set to null"
-  }
-}
-</code></pre>
-<p><strong>Nota:</strong> Produtos associados terão fixedCostId definido como null, mas não serão deletados.</p>
-<hr />
-<h3 id="40calcularoverheadgeraroverhead">40. Calcular Overhead (Gerar Overhead)</h3>
-<p><strong>POST</strong> <code>/fixed-costs/:id/calculate-overhead</code></p>
-<p><strong>Permissões:</strong> ADMIN</p>
-<p><strong>Nota:</strong> Este endpoint permite recalcular o overhead e aplicar aos produtos sem precisar atualizar o custo fixo. Útil para a funcionalidade "gerar overhead" mencionada nos requisitos.</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "applyToProducts": true,
-  "productIds": ["uuid-product-1", "uuid-product-2"]
-}
-</code></pre>
-<p><strong>Nota:</strong> </p>
-<ul>
-    <li>Se applyToProducts = true e productIds está vazio, aplica a todos os produtos com este fixedCostId</li>
-    <li>Se applyToProducts = false, apenas retorna os cálculos sem aplicar</li>
-</ul>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "fixedCost": {
-    "id": "uuid-v4",
-    "description": "DESPESAS COM PESSOAL",
-    "totalCost": 103102.09,
-    "overheadPerUnit": 0.7931
-  },
-  "affectedProducts": [
-    {
-      "id": "uuid-product-1",
-      "code": "20462",
-      "name": "Produto X",
-      "priceBeforeOverhead": 145.80,
-      "overheadApplied": 0.7931,
-      "priceAfterOverhead": 146.59,
-      "updated": true
-    },
-    {
-      "id": "uuid-product-2",
-      "code": "18933",
-      "name": "Produto Y",
-      "priceBeforeOverhead": 89.95,
-      "overheadApplied": 0.7931,
-      "priceAfterOverhead": 90.74,
-      "updated": true
-    }
-  ],
-  "summary": {
-    "totalProductsAffected": 15,
-    "totalOverheadDistributed": 11.90,
-    "applied": true
-  }
-}
-</code></pre>
-<hr />
-<h3 id="41exportarcustosfixoscsv">41. Exportar Custos Fixos (CSV)</h3>
-<p><strong>POST</strong> <code>/fixed-costs/export</code></p>
-<p><strong>Permissões:</strong> ADMIN</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "format": "csv",
-  "limit": 100,
-  "sortBy": "calculationDate",
-  "sortOrder": "desc",
-  "includeProducts": true
-}
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code>Content-Type: text/csv
-Content-Disposition: attachment; filename="custos-fixos-2025-10-26.csv"
+  "calculationDate": "2025-12-01"
+}</code></pre>
 
-Código,Descrição,Pessoal,Outros,Pró-Labore,Depreciação,Total,% Considerar,Volume Vendas,Overhead/Unidade,Produtos Associados,Data Cálculo
-FC-001,DESPESAS COM PESSOAL,53188.59,49913.50,0,0,103102.09,100%,130000.00,0.7931,15,2025-10-26
-</code></pre>
-<hr />
-<h2 id="exportaoglobal">Exportação Global</h2>
-<h3 id="42exportarrelatrioconsolidado">42. Exportar Relatório Consolidado</h3>
-<p><strong>POST</strong> <code>/export/consolidated-report</code></p>
-<p><strong>Permissões:</strong> ADMIN</p>
-<p><strong>Request Body:</strong></p>
-<pre><code class="json language-json">{
-  "format": "csv",
-  "includeProducts": true,
-  "includeRawMaterials": true,
-  "includeTaxes": true,
-  "includeFreights": true,
-  "includeFixedCosts": true,
-  "filters": {
-    "dateFrom": "2025-01-01",
-    "dateTo": "2025-12-31"
-  }
-}
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code>Content-Type: application/zip
-Content-Disposition: attachment; filename="relatorio-consolidado-2025-10-26.zip"
+    <hr>
 
-[ZIP contendo múltiplos arquivos CSV:]
-- produtos.csv
-- materias-primas.csv
-- impostos.csv
-- fretes.csv
-- custos-fixos.csv
-- resumo.csv
-</code></pre>
-<hr />
-<h2 id="healthcheck">Health Check</h2>
-<h3 id="43verificarstatusdaapi">43. Verificar Status da API</h3>
-<p><strong>GET</strong> <code>/health</code></p>
-<p><strong>Permissões:</strong> Público</p>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
+    <h2 id="localizacoes">📍 Localizações</h2>
+
+    <p><strong>Permissões:</strong> ADMIN, LOGISTICA (leitura: COMERCIAL)</p>
+
+    <div class="endpoint">
+        <p><span class="method get">GET</span> <code>/locations</code> - Listar localizações</p>
+        <p><span class="method get">GET</span> <code>/locations/:id</code> - Obter localização</p>
+        <p><span class="method get">GET</span> <code>/locations/:id/change-logs</code> - Histórico</p>
+        <p><span class="method post">POST</span> <code>/locations</code> - Criar localização</p>
+        <p><span class="method patch">PATCH</span> <code>/locations/:id</code> - Atualizar localização</p>
+        <p><span class="method delete">DELETE</span> <code>/locations/:id</code> - Deletar localização</p>
+    </div>
+
+    <h4>Exemplo de Criação:</h4>
+    <pre><code>{
+  "name": "Fornecedor ABC",
+  "stateUf": "SP",
+  "city": "São Paulo",
+  "country": "BR"
+}</code></pre>
+
+    <hr>
+
+    <h2 id="health">🏥 Health Check</h2>
+
+    <h3>GET /health</h3>
+    <p><strong>Descrição:</strong> Verificar status da API e banco de dados</p>
+    <p><strong>Permissões:</strong> Público</p>
+
+    <pre><code>{
   "status": "ok",
-  "timestamp": "2025-10-26T10:00:00.000Z",
+  "timestamp": "2025-12-07T10:00:00.000Z",
   "uptime": 86400,
   "database": {
     "status": "connected",
     "responseTime": 5
   },
   "version": "1.0.0"
-}
-</code></pre>
-<hr /> <h3 id="435exibirdocumentacao">43.5. Exibir Documentação da API</h3> <p><strong>GET</strong> <code>/docs</code></p> <p><strong>Permissões:</strong> Público</p> <p><strong>Response (Success):</strong> <code>200 OK</code></p> <ul> <li>Retorna uma página <code>Content-Type: text/html</code> com a documentação estática da API.</li> </ul> <p><strong>Response (Error):</strong> <code>404 Not Found</code></p> <pre><code class="json language-json">{ "statusCode": 404, "message": "Documentation file not found", "error": "Not Found" } </code></pre> <hr />
-<h2 id="regrasdenegciodetalhadas">Regras de Negócio Detalhadas</h2>
-<h3 id="clculodepreosdeprodutos">Cálculo de Preços de Produtos</h3>
-<p>O preço de um produto é calculado seguindo estas etapas:</p>
-<ol>
-    <li><strong>Subtotal das Matérias-Primas:</strong></li>
-</ol>
-<pre><code>   Para cada matéria-prima:
-   subtotal = quantidade × preço_aquisição_convertido_brl
-</code></pre>
-<ol start="2">
-    <li><strong>Impostos das Matérias-Primas:</strong></li>
-</ol>
-<pre><code>   Para cada matéria-prima:
-   Para cada item de imposto:
-   valor_imposto = subtotal × (taxa / 100)
+}</code></pre>
 
-   total_impostos_materia_prima = soma de todos os impostos
-</code></pre>
-<ol start="3">
-    <li><strong>Frete das Matérias-Primas:</strong></li>
-</ol>
-<pre><code>   Para cada matéria-prima:
-   incidencia_frete = (quantidade / volume_total) × preco_unitario_frete
+    <h3>GET /docs</h3>
+    <p><strong>Descrição:</strong> Exibir esta documentação</p>
+    <p><strong>Permissões:</strong> Público</p>
 
-   Para cada imposto do frete:
-   valor_imposto_frete = incidencia_frete × (taxa / 100)
+    <hr>
 
-   total_frete = incidencia_frete + soma_impostos_frete
-</code></pre>
-<ol start="4">
-    <li><strong>Custos Adicionais:</strong></li>
-</ol>
-<pre><code>   Para cada matéria-prima:
-   custo_adicional_proporcional = custo_adicional × quantidade
-</code></pre>
-<ol start="5">
-    <li><strong>Preço sem Impostos e Frete:</strong></li>
-</ol>
-<pre><code>   preco_sem_impostos_frete = soma_subtotais + soma_custos_adicionais
-</code></pre>
-<ol start="6">
-    <li><strong>Preço com Impostos e Frete:</strong></li>
-</ol>
-<pre><code>   preco_com_impostos_frete = preco_sem_impostos_frete + soma_impostos + soma_fretes
-</code></pre>
-<ol start="7">
-    <li><strong>Overhead (se houver custo fixo):</strong></li>
-</ol>
-<pre><code>   preco_final = preco_com_impostos_frete + overhead_por_unidade
-</code></pre>
-<h3 id="premissasrecuperveis">Premissas Recuperáveis</h3>
-<p>Impostos marcados como <code>recoverable: true</code> são considerados premissas recuperáveis. No cálculo do preço:</p>
-<ul>
-    <li>São somados ao custo total para transparência</li>
-    <li>Mas podem ser exibidos separadamente na interface para análise</li>
-    <li>O sistema registra quais impostos são recuperáveis para relatórios financeiros</li>
-</ul>
-<h3 id="controledeacessoporrearole">Controle de Acesso por Área (Role)</h3>
-<p><strong>ADMIN:</strong></p>
-<ul>
-    <li>Acesso total ao sistema</li>
-    <li>Gestão de usuários</li>
-    <li>Todos os recursos de COMERCIAL, LOGISTICA e IMPOSTO</li>
-</ul>
-<p><strong>COMERCIAL:</strong></p>
-<ul>
-    <li>Visualizar e gerenciar produtos</li>
-    <li>Visualizar e gerenciar matérias-primas</li>
-    <li>Visualizar impostos (para associar a matérias-primas)</li>
-    <li>Visualizar fretes existentes apenas através de autocomplete (para associar a matérias-primas, sem acesso à gestão completa)</li>
-    <li>Não pode gerenciar usuários, impostos ou criar/editar/deletar fretes</li>
-</ul>
-<p><strong>LOGISTICA:</strong></p>
-<ul>
-    <li>Visualizar e gerenciar fretes (CRUD completo)</li>
-    <li>Único além de ADMIN que tem acesso à gestão completa de fretes</li>
-    <li>Não acessa produtos, matérias-primas, impostos ou usuários</li>
-</ul>
-<p><strong>IMPOSTO:</strong></p>
-<ul>
-    <li>Visualizar e gerenciar impostos (premissas)</li>
-    <li>Visualizar matérias-primas (para entender impacto das premissas)</li>
-    <li>Não acessa produtos, fretes ou usuários</li>
-</ul>
-<hr />
-<h2 id="cdigosdestatushttp">Códigos de Status HTTP</h2>
-<table>
-  <thead>
-    <tr>
-      <th>Código</th>
-      <th>Significado</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>200</td>
-      <td>OK - Requisição bem-sucedida</td>
-    </tr>
-    <tr>
-      <td>201</td>
-      <td>Created - Recurso criado com sucesso</td>
-    </tr>
-    <tr>
-      <td>400</td>
-      <td>Bad Request - Dados inválidos ou mal formatados</td>
-    </tr>
-    <tr>
-      <td>401</td>
-      <td>Unauthorized - Não autenticado ou token inválido</td>
-    </tr>
-    <tr>
-      <td>403</td>
-      <td>Forbidden - Autenticado mas sem permissão para o recurso</td>
-    </tr>
-    <tr>
-      <td>404</td>
-      <td>Not Found - Recurso não encontrado</td>
-    </tr>
-    <tr>
-      <td>409</td>
-      <td>Conflict - Conflito (ex: recurso está sendo usado)</td>
-    </tr>
-    <tr>
-      <td>422</td>
-      <td>Unprocessable Entity - Validação falhou</td>
-    </tr>
-    <tr>
-      <td>500</td>
-      <td>Internal Server Error - Erro interno do servidor</td>
-    </tr>
-  </tbody>
-</table>
-<hr />
-<h2 id="estruturadeerros">Estrutura de Erros</h2>
-<p>Todos os erros seguem o padrão:</p>
-<pre><code class="json language-json">{
+    <h2>📝 Regras Gerais</h2>
+
+    <h3>Paginação</h3>
+    <p>Todos os endpoints de listagem suportam:</p>
+    <ul>
+        <li><code>page</code> - Número da página (padrão: 1)</li>
+        <li><code>limit</code> - Itens por página (padrão: 10, máximo: 100)</li>
+        <li><code>sortBy</code> - Campo para ordenação</li>
+        <li><code>sortOrder</code> - Direção: <code>asc</code> ou <code>desc</code></li>
+    </ul>
+
+    <h3>Roles (Perfis)</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Role</th>
+                <th>Descrição</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><code>ADMIN</code></td>
+                <td>Acesso total ao sistema</td>
+            </tr>
+            <tr>
+                <td><code>COMERCIAL</code></td>
+                <td>Gerencia produtos, matérias-primas e grupos</td>
+            </tr>
+            <tr>
+                <td><code>LOGISTICA</code></td>
+                <td>Gerencia fretes e localizações</td>
+            </tr>
+            <tr>
+                <td><code>IMPOSTO</code></td>
+                <td>Gerencia impostos</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Unidades de Medida</h3>
+    <p><code>KG</code>, <code>G</code>, <code>L</code>, <code>ML</code>, <code>M</code>, <code>CM</code>, <code>UN</code>, <code>CX</code>, <code>PC</code></p>
+
+    <h3>Moedas</h3>
+    <p><code>BRL</code>, <code>USD</code>, <code>EUR</code></p>
+
+    <h3>Códigos de Status HTTP</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Descrição</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr><td><code>200</code></td><td>OK - Sucesso</td></tr>
+            <tr><td><code>201</code></td><td>Created - Recurso criado</td></tr>
+            <tr><td><code>400</code></td><td>Bad Request - Erro de validação</td></tr>
+            <tr><td><code>401</code></td><td>Unauthorized - Não autenticado</td></tr>
+            <tr><td><code>403</code></td><td>Forbidden - Sem permissão</td></tr>
+            <tr><td><code>404</code></td><td>Not Found - Recurso não encontrado</td></tr>
+            <tr><td><code>409</code></td><td>Conflict - Conflito (ex: duplicação)</td></tr>
+            <tr><td><code>500</code></td><td>Internal Server Error - Erro do servidor</td></tr>
+        </tbody>
+    </table>
+
+    <h3>Estrutura de Erro</h3>
+    <pre><code>{
   "statusCode": 400,
-  "message": "Descrição do erro",
-  "error": "Bad Request",
-  "details": [
-    {
-      "field": "email",
-      "message": "Email já está em uso"
-    }
-  ],
-  "timestamp": "2025-10-26T10:00:00.000Z",
-  "path": "/auth/register"
-}
-</code></pre>
-<hr />
-<h2 id="paginaopadro">Paginação Padrão</h2>
-<p>Todos os endpoints de listagem seguem este padrão:</p>
-<p><strong>Query Parameters:</strong></p>
-<pre><code>?page=1          // Número da página (inicia em 1)
-&amp;limit=10        // Itens por página (padrão: 10, máximo: 100)
-&amp;sortBy=field    // Campo para ordenação
-&amp;sortOrder=asc   // Direção: asc ou desc
-</code></pre>
-<p><strong>Response Structure:</strong></p>
-<pre><code class="json language-json">{
-  "data": [...],
-  "meta": {
-    "total": 150,      // Total de registros
-    "page": 1,         // Página atual
-    "limit": 10,       // Itens por página
-    "totalPages": 15   // Total de páginas
-  }
-}
-</code></pre>
-<hr />
-<h2 id="filtrosdisponveisporrecurso">Filtros Disponíveis por Recurso</h2>
-<h3 id="usurios">Usuários</h3>
-<ul>
-    <li><code>search</code>: Busca por nome ou email</li>
-    <li><code>role</code>: Filtrar por role (ADMIN, COMERCIAL, LOGISTICA, IMPOSTO)</li>
-    <li><code>isActive</code>: Filtrar por status (true/false)</li>
-</ul>
-<h3 id="impostos">Impostos</h3>
-<ul>
-    <li><code>search</code>: Busca por nome</li>
-</ul>
-<h3 id="fretes">Fretes</h3>
-<ul>
-    <li><code>search</code>: Busca por nome ou descrição</li>
-    <li><code>currency</code>: Filtrar por moeda (BRL, USD, EUR)</li>
-</ul>
-<h3 id="matriasprimas">Matérias-Primas</h3>
-<ul>
-    <li><code>search</code>: Busca por código ou nome</li>
-    <li><code>measurementUnit</code>: Filtrar por unidade de medida</li>
-    <li><code>inputGroup</code>: Filtrar por grupo de insumo</li>
-    <li><code>currency</code>: Filtrar por moeda</li>
-</ul>
-<h3 id="produtos">Produtos</h3>
-<ul>
-    <li><code>search</code>: Busca por código ou nome</li>
-</ul>
-<h3 id="custosfixos">Custos Fixos</h3>
-<ul>
-    <li><code>search</code>: Busca por descrição ou código</li>
-</ul>
-<hr />
-<h2 id="ordenaodisponvelporrecurso">Ordenação Disponível por Recurso</h2>
-<h3 id="usurios-1">Usuários</h3>
-<ul>
-    <li><code>name</code>, <code>email</code>, <code>role</code>, <code>createdAt</code>, <code>updatedAt</code></li>
-</ul>
-<h3 id="impostos-1">Impostos</h3>
-<ul>
-    <li><code>name</code>, <code>createdAt</code>, <code>updatedAt</code></li>
-</ul>
-<h3 id="fretes-1">Fretes</h3>
-<ul>
-    <li><code>name</code>, <code>unitPrice</code>, <code>paymentTerm</code>, <code>createdAt</code>, <code>updatedAt</code></li>
-</ul>
-<h3 id="matriasprimas-1">Matérias-Primas</h3>
-<ul>
-    <li><code>code</code>, <code>name</code>, <code>acquisitionPrice</code>, <code>inputGroup</code>, <code>createdAt</code>, <code>updatedAt</code></li>
-</ul>
-<h3 id="produtos-1">Produtos</h3>
-<ul>
-    <li><code>code</code>, <code>name</code>, <code>priceWithoutTaxesAndFreight</code>, <code>priceWithTaxesAndFreight</code>, <code>createdAt</code>, <code>updatedAt</code></li>
-</ul>
-<h3 id="custosfixos-1">Custos Fixos</h3>
-<ul>
-    <li><code>description</code>, <code>code</code>, <code>totalCost</code>, <code>overheadPerUnit</code>, <code>calculationDate</code>, <code>createdAt</code>, <code>updatedAt</code></li>
-</ul>
-<hr />
-<h2 id="formatosdeexportao">Formatos de Exportação</h2>
-<p>Todos os endpoints de exportação suportam:</p>
-<p><strong>CSV:</strong></p>
-<pre><code class="json language-json">{
-  "format": "csv",
-  "delimiter": ",",        // Opcional: vírgula (padrão) ou ponto-e-vírgula
-  "encoding": "utf-8",     // Opcional: utf-8 (padrão) ou latin1
-  "includeHeaders": true   // Opcional: incluir cabeçalhos (padrão: true)
-}
-</code></pre>
-<h2 id="ratelimiting">Rate Limiting</h2>
-<p>A API implementa rate limiting para proteger contra abuso:</p>
-<ul>
-    <li><strong>Registro:</strong> 5 tentativas por minuto</li>
-    <li><strong>Login:</strong> 3 tentativas por minuto (proteção contra brute force)</li>
-    <li><strong>Refresh Token:</strong> 10 tentativas por minuto</li>
-    <li><strong>Logout, Perfil (me) e endpoints gerais autenticados:</strong> Sem rate limiting (usuário já autenticado)</li>
-    <li><strong>Outros endpoints públicos:</strong> 100 requisições por minuto por IP</li>
-    <li><strong>Exportações:</strong> 10 requisições por hora por usuário</li>
-</ul>
-<p><strong>Headers de Rate Limit:</strong></p>
-<pre><code>X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 95
-X-RateLimit-Reset: 1698345600
-</code></pre>
-<h2 id="validaesdedados">Validações de Dados</h2>
-<h3 id="usurios-2">Usuários</h3>
-<ul>
-    <li><code>email</code>: Formato de email válido, único no sistema, não pode ser alterado após criação</li>
-    <li><code>password</code>: Mínimo 8 caracteres, sem requisitos adicionais de complexidade</li>
-    <li><code>name</code>: Mínimo 3 caracteres, máximo 100</li>
-    <li><code>role</code>: Deve ser um dos valores do enum UserRole (apenas ADMIN pode alterar)</li>
-    <li><code>isActive</code>: Boolean, padrão true (apenas ADMIN pode alterar)</li>
-</ul>
-<h3 id="impostos-2">Impostos</h3>
-<ul>
-    <li><code>name</code>: Obrigatório, mínimo 3 caracteres</li>
-    <li><code>taxItems.name</code>: Obrigatório</li>
-    <li><code>taxItems.rate</code>: Decimal entre 0 e 100</li>
-</ul>
-<h3 id="fretes-2">Fretes</h3>
-<ul>
-    <li><code>name</code>: Obrigatório, mínimo 3 caracteres</li>
-    <li><code>paymentTerm</code>: Inteiro positivo (dias)</li>
-    <li><code>unitPrice</code>: Decimal positivo</li>
-    <li><code>currency</code>: Deve ser um dos valores do enum Currency</li>
-    <li><code>freightTaxes.rate</code>: Decimal entre 0 e 100</li>
-</ul>
-<h3 id="matriasprimas-2">Matérias-Primas</h3>
-<ul>
-    <li><code>code</code>: Obrigatório, único no sistema</li>
-    <li><code>name</code>: Obrigatório, mínimo 3 caracteres</li>
-    <li><code>measurementUnit</code>: Deve ser um dos valores do enum MeasurementUnit</li>
-    <li><code>paymentTerm</code>: Inteiro positivo (dias)</li>
-    <li><code>acquisitionPrice</code>: Decimal positivo</li>
-    <li><code>currency</code>: Deve ser um dos valores do enum Currency</li>
-    <li><code>taxId</code>: UUID válido, referência existente</li>
-    <li><code>freightId</code>: UUID válido, referência existente</li>
-</ul>
-<h3 id="produtos-2">Produtos</h3>
-<ul>
-    <li><code>code</code>: Obrigatório, numérico apenas, único no sistema</li>
-    <li><code>name</code>: Obrigatório, mínimo 3 caracteres</li>
-    <li><code>rawMaterials</code>: Array com no mínimo 1 item</li>
-    <li><code>rawMaterials[].rawMaterialId</code>: UUID válido, referência existente</li>
-    <li><code>rawMaterials[].quantity</code>: Decimal positivo</li>
-    <li><code>fixedCostId</code>: Opcional, UUID válido se fornecido</li>
-</ul>
-<h3 id="custosfixos-2">Custos Fixos</h3>
-<ul>
-    <li><code>description</code>: Obrigatório, mínimo 3 caracteres</li>
-    <li><code>code</code>: Opcional, único se fornecido</li>
-    <li><code>personnelExpenses</code>: Decimal não negativo</li>
-    <li><code>generalExpenses</code>: Decimal não negativo</li>
-    <li><code>proLabore</code>: Decimal não negativo</li>
-    <li><code>depreciation</code>: Decimal não negativo</li>
-    <li><code>considerationPercentage</code>: Decimal entre 0 e 100</li>
-    <li><code>salesVolume</code>: Decimal positivo</li>
-</ul>
-<hr />
-<h2 id="logsdeauditoria">Logs de Auditoria</h2>
-<p>O sistema registra automaticamente:</p>
-<h3 id="alteraesemmatriasprimas">Alterações em Matérias-Primas</h3>
-<p>Todos os campos alterados são registrados em <code>RawMaterialChangeLog</code>:</p>
-<ul>
-    <li>Campo alterado</li>
-    <li>Valor antigo</li>
-    <li>Valor novo</li>
-    <li>Usuário que fez a alteração</li>
-    <li>Data e hora da alteração</li>
-</ul>
-<hr />
-<h2 id="endpointsdebuscaeautocomplete">Endpoints de Busca e Autocomplete</h2>
-<p>Os endpoints de busca/autocomplete são essenciais para a usabilidade do sistema. São utilizados quando:</p>
-<ul>
-    <li>O usuário precisa <strong>associar uma matéria-prima a um produto</strong> e precisa buscar na lista de matérias-primas disponíveis</li>
-    <li>Ao criar/editar uma matéria-prima e precisa <strong>selecionar um imposto</strong> da lista de impostos cadastrados</li>
-    <li>Ao criar/editar uma matéria-prima e precisa <strong>selecionar um frete</strong> da lista de fretes cadastrados </li>
-    <li>Ao criar/editar um produto e precisa <strong>selecionar um custo fixo</strong> (opcional)</li>
-</ul>
-<p>Estes endpoints retornam resultados filtrados rapidamente enquanto o usuário digita, melhorando significativamente a experiência de uso.</p>
-<h3 id="45buscarmatriasprimasautocomplete">45. Buscar Matérias-Primas (Autocomplete)</h3>
-<p><strong>GET</strong> <code>/raw-materials/search</code></p>
-<p><strong>Permissões:</strong> ADMIN, COMERCIAL</p>
-<p><strong>Query Parameters:</strong></p>
-<pre><code>?q=resina          // Termo de busca
-&amp;limit=10          // Máximo de resultados
-&amp;fields=id,code,name,measurementUnit  // Campos a retornar
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "results": [
-    {
-      "id": "uuid-v4",
-      "code": "MP-2024-001",
-      "name": "Resina Poliéster",
-      "measurementUnit": "KG"
-    },
-    {
-      "id": "uuid-v5",
-      "code": "MP-2024-015",
-      "name": "Resina Epóxi",
-      "measurementUnit": "KG"
-    }
-  ],
-  "total": 2
-}
-</code></pre>
-<hr />
-<h3 id="46buscarimpostosautocomplete">46. Buscar Impostos (Autocomplete)</h3>
-<p><strong>GET</strong> <code>/taxes/search</code></p>
-<p><strong>Permissões:</strong> ADMIN, IMPOSTO, COMERCIAL</p>
-<p><strong>Query Parameters:</strong></p>
-<pre><code>?q=simples
-&amp;limit=10
-&amp;fields=id,name
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "results": [
-    {
-      "id": "uuid-v4",
-      "name": "Simples Nacional"
-    }
-  ],
-  "total": 1
-}
-</code></pre>
-<hr />
-<h3 id="47buscarfretesautocomplete">47. Buscar Fretes (Autocomplete)</h3>
-<p><strong>GET</strong> <code>/freights/search</code></p>
-<p><strong>Permissões:</strong> ADMIN, LOGISTICA, COMERCIAL</p>
-<p><strong>Query Parameters:</strong></p>
-<pre><code>?q=rodoviário
-&amp;limit=10
-&amp;fields=id,name,unitPrice,currency
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "results": [
-    {
-      "id": "uuid-v4",
-      "name": "Transporte Rodoviário SP-RJ",
-      "unitPrice": 150.00,
-      "currency": "BRL"
-    }
-  ],
-  "total": 1
-}
-</code></pre>
-<hr />
-<h3 id="48buscarcustosfixosautocomplete">48. Buscar Custos Fixos (Autocomplete)</h3>
-<p><strong>GET</strong> <code>/fixed-costs/search</code></p>
-<p><strong>Permissões:</strong> ADMIN, COMERCIAL</p>
-<p><strong>Query Parameters:</strong></p>
-<pre><code>?q=pessoal
-&amp;limit=10
-&amp;fields=id,description,overheadPerUnit
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "results": [
-    {
-      "id": "uuid-v4",
-      "description": "DESPESAS COM PESSOAL",
-      "overheadPerUnit": 0.7931
-    }
-  ],
-  "total": 1
-}
-</code></pre>
-<hr />
-<h2 id="importaodedados">Importação de Dados</h2>
-<h3 id="52importarmatriasprimascsv">52. Importar Matérias-Primas (CSV)</h3>
-<p><strong>POST</strong> <code>/raw-materials/import</code></p>
-<p><strong>Permissões:</strong> ADMIN</p>
-<p><strong>Content-Type:</strong> <code>multipart/form-data</code></p>
-<p><strong>Form Data:</strong></p>
-<pre><code>file: arquivo.csv
-skipErrors: true  // Continuar mesmo se houver erros
-updateExisting: false  // Atualizar registros existentes pelo código
-</code></pre>
-<p><strong>Formato CSV Esperado:</strong></p>
-<pre><code class="csv language-csv">code,name,description,measurementUnit,inputGroup,paymentTerm,acquisitionPrice,currency,additionalCost,taxCode,freightCode
-MP-001,Resina,Descrição,KG,Resinas,30,25.50,BRL,2.30,TAX-001,FRT-001
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "imported": 45,
-  "updated": 5,
-  "failed": 2,
-  "errors": [
-    {
-      "row": 3,
-      "code": "MP-003",
-      "error": "Tax code TAX-999 not found"
-    },
-    {
-      "row": 7,
-      "code": "MP-007",
-      "error": "Invalid measurement unit"
-    }
-  ]
-}
-</code></pre>
-<hr />
-<h3 id="53importarprodutoscsv">53. Importar Produtos (CSV)</h3>
-<p><strong>POST</strong> <code>/products/import</code></p>
-<p><strong>Permissões:</strong> ADMIN</p>
-<p><strong>Content-Type:</strong> <code>multipart/form-data</code></p>
-<p><strong>Form Data:</strong></p>
-<pre><code>file: arquivo.csv
-skipErrors: true
-updateExisting: false
-</code></pre>
-<p><strong>Formato CSV Esperado:</strong></p>
-<pre><code class="csv language-csv">code,name,description,fixedCostCode,rawMaterialCode1,quantity1,rawMaterialCode2,quantity2
-20462,Produto X,Descrição,FC-001,MP-001,2.5,MP-002,1.0
-</code></pre>
-<p><strong>Response:</strong> <code>200 OK</code></p>
-<pre><code class="json language-json">{
-  "imported": 30,
-  "updated": 3,
-  "failed": 1,
-  "errors": [
-    {
-      "row": 5,
-      "code": "20465",
-      "error": "Raw material MP-999 not found"
-    }
-  ]
-}
-</code></pre>
-<hr />
-<h2 id="observaesfinais">Observações Finais</h2>
-<h3 id="performance">Performance</h3>
-<ul>
-    <li>Todos os endpoints de listagem suportam paginação</li>
-    <li>Índices criados nos campos mais consultados (código, nome, datas)</li>
-    <li>Cache pode ser implementado em endpoints de leitura frequente</li>
-</ul>
-<h3 id="segurana">Segurança</h3>
-<ul>
-    <li>Todos os endpoints (exceto login/registro) requerem JWT</li>
-    <li>Senhas hasheadas com argon2</li>
-    <li>Rate limiting implementado</li>
-    <li>Tokens revogados são armazenados e verificados</li>
-    <li>CORS configurado adequadamente</li>
-</ul>
-<h3 id="manutenibilidade">Manutenibilidade</h3>
-<ul>
-    <li>Estrutura modular do NestJS</li>
-    <li>DTOs para validação de entrada</li>
-    <li>Entities para representação de dados</li>
-    <li>Services isolados para lógica de negócio</li>
-    <li>Guards para controle de acesso</li>
-</ul>
-<h3 id="escalabilidade">Escalabilidade</h3>
-<ul>
-    <li>Prisma ORM para abstração de banco de dados</li>
-    <li>Suporte a múltiplas moedas</li>
-    <li>Log de alterações para auditoria</li>
-    <li>Estrutura preparada para webhooks</li>
-    <li>Batch operations para operações em massa</li>
-</ul>
-<hr />
-<h2 id="resumodeendpointspormdulo">Resumo de Endpoints por Módulo</h2>
-<table>
-  <thead>
-    <tr>
-      <th>Módulo</th>
-      <th>Endpoints</th>
-      <th>Permissões Principais</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>Auth</td>
-      <td>5</td>
-      <td>Público, Autenticado</td>
-    </tr>
-    <tr>
-      <td>Users</td>
-      <td>5</td>
-      <td>ADMIN, Próprio usuário</td>
-    </tr>
-    <tr>
-      <td>Taxes</td>
-      <td>6</td>
-      <td>ADMIN, IMPOSTO</td>
-    </tr>
-    <tr>
-      <td>Freights</td>
-      <td>6</td>
-      <td>ADMIN, LOGISTICA</td>
-    </tr>
-    <tr>
-      <td>Raw Materials</td>
-      <td>8</td>
-      <td>ADMIN, COMERCIAL, IMPOSTO (read)</td>
-    </tr>
-    <tr>
-      <td>Products</td>
-      <td>7</td>
-      <td>ADMIN, COMERCIAL</td>
-    </tr>
-    <tr>
-      <td>Fixed Costs</td>
-      <td>7</td>
-      <td>ADMIN</td>
-    </tr>
-    <tr>
-      <td>Export</td>
-      <td>1</td>
-      <td>ADMIN</td>
-    </tr>
-    <tr>
-      <td>Search</td>
-      <td>4</td>
-      <td>Variado</td>
-    </tr>
-    <tr>
-      <td>Import</td>
-      <td>2</td>
-      <td>ADMIN</td>
-    </tr>
-    <tr>
-      <td>Health</td>
-      <td>1</td>
-      <td>Público</td>
-    </tr>
-    <tr>
-      <td>Docs</td>
-      <td>1</td>
-      <td>Público</td>
-    </tr>
-  </tbody>
-</table>
-<p><strong>Total: 53 endpoints principais</strong></p>
+  "message": "Mensagem de erro ou array de erros",
+  "error": "Bad Request"
+}</code></pre>
+
+    <hr>
+
+    <p style="text-align: center; color: #666; margin-top: 40px;">
+        <strong>Sistema de Precificação</strong> - Documentação v1.0.0<br>
+        Atualizado em: Dezembro 2025
+    </p>
+
+    </div>
 </body>
 </html>

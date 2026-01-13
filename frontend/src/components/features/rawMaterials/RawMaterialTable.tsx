@@ -1,0 +1,156 @@
+// src/components/features/rawMaterials/RawMaterialTable.tsx
+
+import { useMemo } from "react";
+import type { RawMaterial } from "@/types/rawMaterial";
+import { RawMaterialTableRow } from "./RawMaterialTableRow";
+import { FiChevronUp } from "react-icons/fi";
+
+type LocationColumn = {
+  id: string;
+  title: string;
+  subtitle?: string;
+};
+
+interface RawMaterialTableProps {
+  rawMaterials: RawMaterial[];
+  onEdit: (rawMaterial: RawMaterial) => void;
+  onDelete: (id: string) => void;
+  onSort: (column: string) => void;
+  sortBy: string;
+  sortOrder: "asc" | "desc";
+}
+
+export function RawMaterialTable({
+  rawMaterials,
+  onEdit,
+  onDelete,
+  onSort,
+  sortBy,
+  sortOrder,
+}: RawMaterialTableProps) {
+  const locationColumns = useMemo<LocationColumn[]>(() => {
+    const locationsMap = new Map<string, LocationColumn>();
+
+    rawMaterials.forEach((material) => {
+      material.locations?.forEach((pivot) => {
+        const location = pivot.location;
+        if (!location || locationsMap.has(location.id)) return;
+
+        const title = location.name?.trim()
+          ? location.name.trim()
+          : `${location.city}/${location.stateUf}`;
+        const subtitle = location.name?.trim()
+          ? `${location.city}/${location.stateUf}`
+          : undefined;
+
+        locationsMap.set(location.id, {
+          id: location.id,
+          title,
+          subtitle,
+        });
+      });
+    });
+
+    return Array.from(locationsMap.values());
+  }, [rawMaterials]);
+
+  const SortIcon = ({ column }: { column: string }) => {
+    const isActive = sortBy === column;
+
+    return (
+      <span
+        className={`
+          text-blue-600 w-4 h-4 transition-transform duration-200 
+          ${isActive ? "opacity-100" : "opacity-0"} 
+          ${isActive && sortOrder === "desc" ? "rotate-180" : ""}
+        `}
+      >
+        <FiChevronUp />
+      </span>
+    );
+  };
+
+  const SortableHeader = ({
+    column,
+    label,
+    width,
+  }: {
+    column: string;
+    label: string;
+    width?: string;
+  }) => (
+    <th
+      onClick={() => onSort(column)}
+      aria-label={`Ordenar por ${label}`}
+      style={{ width }}
+      className="px-4 py-3 text-left text-sm font-semibold text-gray-700 cursor-pointer hover:bg-gray-100 select-none transition-colors"
+    >
+      <span className="flex items-center gap-1 whitespace-nowrap">
+        {label}
+        <SortIcon column={column} />
+      </span>
+    </th>
+  );
+
+  return (
+    <div className="bg-white shadow-sm rounded-lg overflow-hidden mb-8">
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-max table-fixed">
+          <thead className="bg-gray-50 border-b border-gray-200">
+            <tr>
+              <SortableHeader column="code" label="Código" width="120px" />
+              <SortableHeader column="name" label="Nome" width="200px" />
+              <SortableHeader
+                column="measurementUnit"
+                label="Unidade"
+                width="100px"
+              />
+              <SortableHeader column="inputGroup" label="Grupo" width="140px" />
+              <SortableHeader
+                column="paymentTerm"
+                label="Prazo Pgto"
+                width="120px"
+              />
+              {locationColumns.length > 0 ? (
+                locationColumns.map((location) => (
+                  <th
+                    key={location.id}
+                    className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[180px]"
+                  >
+                    <div className="flex flex-col">
+                      <span>{location.title}</span>
+                      {location.subtitle && (
+                        <span className="text-xs text-gray-500 font-normal">
+                          {location.subtitle}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                ))
+              ) : (
+                <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[200px]">
+                  Preços por localidade
+                </th>
+              )}
+              <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 w-[100px]">
+                Ações
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {rawMaterials.map((rawMaterial) => (
+              <RawMaterialTableRow
+                key={rawMaterial.id}
+                rawMaterial={rawMaterial}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                locationColumns={locationColumns}
+              />
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

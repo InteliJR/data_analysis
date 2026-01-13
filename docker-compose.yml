@@ -33,6 +33,7 @@ services:
       NODE_ENV: development
       DATABASE_URL: postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-postgres}@db:5432/${DB_NAME:-gw_dev}
       PORT: 3000
+      EXTERNAL_API_TOKEN: ${EXTERNAL_API_TOKEN}
     ports:
       - "3000:3000"
     volumes:

@@ -164,6 +164,8 @@ export interface RawMaterialChangeLog {
   };
 }
 
+// src/types/api.ts
+
 export interface RawMaterial {
   id: string;
   code: string;
@@ -176,12 +178,12 @@ export interface RawMaterial {
   currency: Currency;
   priceConvertedBrl: number;
   additionalCost: number;
-  taxId: string;
-  freightId: string;
   createdAt: string;
   updatedAt: string;
-  tax?: Tax;
-  freight?: Freight;
+  tax?: Tax; // Se ainda existir a relação direta, senão remova
+  rawMaterialTaxes?: any[]; // Ajustado para array conforme resposta do back
+  freights?: Freight[]; 
+  
   changeLogs?: RawMaterialChangeLog[];
 }
 
@@ -299,8 +301,6 @@ export interface FixedCost {
   depreciation: number;
   totalCost: number;
   considerationPercentage: number;
-  salesVolume: number;
-  overheadPerUnit: number;
   calculationDate: string;
   createdAt: string;
   updatedAt: string;
@@ -319,7 +319,6 @@ export interface CreateFixedCostRequest {
   proLabore: number;
   depreciation: number;
   considerationPercentage: number;
-  salesVolume: number;
 }
 
 export interface UpdateFixedCostRequest {
@@ -330,7 +329,6 @@ export interface UpdateFixedCostRequest {
   proLabore?: number;
   depreciation?: number;
   considerationPercentage?: number;
-  salesVolume?: number;
 }
 
 // Para funcionalidade "Gerar Overhead"
@@ -344,7 +342,9 @@ export interface OverheadCalculationResult {
     id: string;
     description: string;
     totalCost: number;
-    overheadPerUnit: number;
+    considerationPercentage: number;
+    overheadTotal: number;
+    perProductOverhead: number;
   };
   affectedProducts: Array<{
     id: string;

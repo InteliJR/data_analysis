@@ -1,9 +1,13 @@
-import { Injectable, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from '../users/users.service';
-import { TokenRevocationService } from '../token-revocation/token-revocation.service';
 import { UserRole } from '@prisma/client';
 import { randomBytes } from 'crypto';
+import { TokenRevocationService } from '../token-revocation/token-revocation.service';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class AuthService {
@@ -13,22 +17,30 @@ export class AuthService {
     private tokenRevocationService: TokenRevocationService,
   ) {}
 
-  async register(email: string, name: string, password: string, role?: UserRole) {
+  async register(
+    email: string,
+    name: string,
+    password: string,
+    role?: UserRole,
+  ) {
     if (role === UserRole.ADMIN) {
-      throw new ForbiddenException('Não é permitido criar usuários ADMIN via registro');
+      throw new ForbiddenException(
+        'Não é permitido criar usuários ADMIN via registro',
+      );
     }
 
-    const user = await this.usersService.create(
-      email, 
-      name, 
-      password, 
-      role || UserRole.COMERCIAL,
-      false
-    );
+    const user = await this.usersService.create({
+      email,
+      name,
+      password,
+      role: role || UserRole.COMERCIAL,
+      
+    });
 
     return {
       user,
-      message: 'Usuário criado com sucesso. Aguarde ativação por um administrador.',
+      message:
+        'Usuário criado com sucesso. Aguarde ativação por um administrador.',
     };
   }
 
@@ -40,10 +52,15 @@ export class AuthService {
     }
 
     if (!user.isActive) {
-      throw new UnauthorizedException('Usuário inativo. Entre em contato com o administrador.');
+      throw new UnauthorizedException(
+        'Usuário inativo. Entre em contato com o administrador.',
+      );
     }
 
-    const isPasswordValid = await this.usersService.validatePassword(user, password);
+    const isPasswordValid = await this.usersService.validatePassword(
+      user,
+      password,
+    );
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Credenciais inválidas');
@@ -65,37 +82,37 @@ export class AuthService {
 
   async validateUser(userId: string) {
     const user = await this.usersService.findById(userId);
-    
+
     if (!user.isActive) {
       throw new UnauthorizedException('Usuário foi desativado');
     }
-    
+
     return user;
   }
 
   private async generateTokens(userId: string, email: string, role: UserRole) {
     // ✅ Adicionar jti (JWT ID) único para garantir tokens diferentes
     const jti = randomBytes(16).toString('hex');
-    
-    const payload = { 
-      sub: userId, 
-      email, 
+
+    const payload = {
+      sub: userId,
+      email,
       role,
-      jti // Identificador único do token
+      jti, // Identificador único do token
     };
 
     // Access token usa a configuração padrão do módulo (15min)
     const accessToken = await this.jwtService.signAsync(payload);
-    
+
     // ✅ Refresh token com JTI diferente para garantir unicidade
     const refreshJti = randomBytes(16).toString('hex');
     const refreshPayload = {
       sub: userId,
       email,
       role,
-      jti: refreshJti
+      jti: refreshJti,
     };
-    
+
     // Refresh token tem secret e expiração próprios
     const refreshToken = await this.jwtService.signAsync(refreshPayload, {
       secret: process.env.JWT_REFRESH_SECRET || 'refresh-secret-key',
@@ -108,7 +125,8 @@ export class AuthService {
   async refreshTokens(refreshToken: string) {
     try {
       // 1. Verificar se está na blacklist
-      const isRevoked = await this.tokenRevocationService.isTokenRevoked(refreshToken);
+      const isRevoked =
+        await this.tokenRevocationService.isTokenRevoked(refreshToken);
       if (isRevoked) {
         throw new UnauthorizedException('Token revogado');
       }
@@ -128,12 +146,20 @@ export class AuthService {
       const decoded = this.jwtService.decode(refreshToken) as any;
       if (decoded && decoded.exp) {
         const expiresAt = new Date(decoded.exp * 1000);
-        await this.tokenRevocationService.revokeToken(refreshToken, payload.sub, expiresAt);
+        await this.tokenRevocationService.revokeToken(
+          refreshToken,
+          payload.sub,
+          expiresAt,
+        );
       }
 
       // 5. Gerar novos tokens (com novos JTIs únicos)
-      const newTokens = await this.generateTokens(payload.sub, payload.email, payload.role);
-      
+      const newTokens = await this.generateTokens(
+        payload.sub,
+        payload.email,
+        payload.role,
+      );
+
       return newTokens;
     } catch (error) {
       // Preservar mensagens específicas de UnauthorizedException
@@ -177,9 +203,10 @@ export class AuthService {
   async logoutAllDevices(userId: string) {
     // Implementação básica - tokens serão invalidados naturalmente
     // Para invalidação imediata, implemente tokenVersion no User model
-    return { 
-      message: 'Sessões encerradas. Tokens refresh serão invalidados na próxima tentativa de uso.',
-      note: 'Para invalidação imediata, implemente tokenVersion no User model'
+    return {
+      message:
+        'Sessões encerradas. Tokens refresh serão invalidados na próxima tentativa de uso.',
+      note: 'Para invalidação imediata, implemente tokenVersion no User model',
     };
   }
 }

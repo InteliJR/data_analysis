@@ -1,3 +1,5 @@
+// src/taxes/taxes.controller.ts
+
 import {
   Controller,
   Get,
@@ -7,10 +9,17 @@ import {
   Param,
   Delete,
   UseGuards,
+  Query,
+  Res,
 } from '@nestjs/common';
+import type { Response } from 'express';
 import { TaxesService } from './taxes.service';
-import { CreateTaxDto } from './dto/create-tax.dto';
-import { UpdateTaxDto } from './dto/update-tax.dto';
+import { CreateFreightTaxDto } from './dto/create-freight-tax.dto';
+import { UpdateFreightTaxDto } from './dto/update-freight-tax.dto';
+import { CreateRawMaterialTaxDto } from './dto/create-raw-material-tax.dto';
+import { UpdateRawMaterialTaxDto } from './dto/update-raw-material-tax.dto';
+import { QueryTaxesDto } from './dto/query-taxes.dto';
+import { ExportTaxesDto } from './dto/export-taxes.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -18,35 +27,108 @@ import { UserRole } from '@prisma/client';
 
 @Controller('taxes')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN, UserRole.IMPOSTO) // Apenas ADMIN e IMPOSTO mexem nas premissas
 export class TaxesController {
   constructor(private readonly taxesService: TaxesService) {}
 
-  @Post()
+  // ========================================
+  // FREIGHT TAXES
+  // ========================================
+
+  @Get('freight')
+  @Roles(UserRole.ADMIN, UserRole.IMPOSTO, UserRole.LOGISTICA)
+  findAllFreightTaxes(@Query() query: QueryTaxesDto) {
+    return this.taxesService.findAllFreightTaxes(query);
+  }
+
+  @Get('freight/:id')
+  @Roles(UserRole.ADMIN, UserRole.IMPOSTO, UserRole.LOGISTICA)
+  findOneFreightTax(@Param('id') id: string) {
+    return this.taxesService.findOneFreightTax(id);
+  }
+
+  @Post('freight')
   @Roles(UserRole.ADMIN, UserRole.IMPOSTO)
-  create(@Body() createTaxDto: CreateTaxDto) {
-    return this.taxesService.create(createTaxDto);
+  createFreightTax(@Body() dto: CreateFreightTaxDto) {
+    return this.taxesService.createFreightTax(dto);
   }
 
-  @Get()
-  findAll() {
-    return this.taxesService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.taxesService.findOne(id);
-  }
-
-  @Patch(':id')
+  @Patch('freight/:id')
   @Roles(UserRole.ADMIN, UserRole.IMPOSTO)
-  update(@Param('id') id: string, @Body() updateTaxDto: UpdateTaxDto) {
-    return this.taxesService.update(id, updateTaxDto);
+  updateFreightTax(
+    @Param('id') id: string,
+    @Body() dto: UpdateFreightTaxDto,
+  ) {
+    return this.taxesService.updateFreightTax(id, dto);
   }
 
-  @Delete(':id')
-  @Roles(UserRole.ADMIN)
-  remove(@Param('id') id: string) {
-    return this.taxesService.remove(id);
+  @Delete('freight/:id')
+  @Roles(UserRole.ADMIN, UserRole.IMPOSTO)
+  removeFreightTax(@Param('id') id: string) {
+    return this.taxesService.removeFreightTax(id);
+  }
+
+  @Post('freight/export')
+  @Roles(UserRole.ADMIN, UserRole.IMPOSTO)
+  async exportFreightTaxes(
+    @Body() dto: ExportTaxesDto,
+    @Res() res: Response,
+  ) {
+    const csv = await this.taxesService.exportFreightTaxes(dto);
+    const filename = `impostos-frete-${new Date().toISOString().split('T')[0]}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send('\uFEFF' + csv); // BOM para UTF-8
+  }
+
+  // ========================================
+  // RAW MATERIAL TAXES
+  // ========================================
+
+  @Get('raw-material')
+  @Roles(UserRole.ADMIN, UserRole.IMPOSTO, UserRole.COMERCIAL)
+  findAllRawMaterialTaxes(@Query() query: QueryTaxesDto) {
+    return this.taxesService.findAllRawMaterialTaxes(query);
+  }
+
+  @Get('raw-material/:id')
+  @Roles(UserRole.ADMIN, UserRole.IMPOSTO, UserRole.COMERCIAL)
+  findOneRawMaterialTax(@Param('id') id: string) {
+    return this.taxesService.findOneRawMaterialTax(id);
+  }
+
+  @Post('raw-material')
+  @Roles(UserRole.ADMIN, UserRole.IMPOSTO)
+  createRawMaterialTax(@Body() dto: CreateRawMaterialTaxDto) {
+    return this.taxesService.createRawMaterialTax(dto);
+  }
+
+  @Patch('raw-material/:id')
+  @Roles(UserRole.ADMIN, UserRole.IMPOSTO)
+  updateRawMaterialTax(
+    @Param('id') id: string,
+    @Body() dto: UpdateRawMaterialTaxDto,
+  ) {
+    return this.taxesService.updateRawMaterialTax(id, dto);
+  }
+
+  @Delete('raw-material/:id')
+  @Roles(UserRole.ADMIN, UserRole.IMPOSTO)
+  removeRawMaterialTax(@Param('id') id: string) {
+    return this.taxesService.removeRawMaterialTax(id);
+  }
+
+  @Post('raw-material/export')
+  @Roles(UserRole.ADMIN, UserRole.IMPOSTO)
+  async exportRawMaterialTaxes(
+    @Body() dto: ExportTaxesDto,
+    @Res() res: Response,
+  ) {
+    const csv = await this.taxesService.exportRawMaterialTaxes(dto);
+    const filename = `impostos-materia-prima-${new Date().toISOString().split('T')[0]}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send('\uFEFF' + csv); // BOM para UTF-8
   }
 }

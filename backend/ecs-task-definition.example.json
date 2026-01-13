@@ -1,0 +1,122 @@
+{
+  "family": "pricehub-staging",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::<ID_CONTA_AWS>:role/ecsTaskExecutionRole",
+  "containerDefinitions": [
+    {
+      "name": "postgres",
+      "image": "postgres:15-alpine",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 5432,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "POSTGRES_DB",
+          "value": "pricehub_staging"
+        },
+        {
+          "name": "POSTGRES_USER",
+          "value": "postgres"
+        },
+        {
+          "name": "POSTGRES_PASSWORD",
+          "value": "###################################################################"
+        }
+      ],
+      "mountPoints": [
+        {
+          "sourceVolume": "postgres-data",
+          "containerPath": "/var/lib/postgresql/data"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/pricehub-staging",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "postgres"
+        }
+      }
+    },
+    {
+      "name": "backend",
+      "image": "<ID_CONTA_AWS>.dkr.ecr.us-east-1.amazonaws.com/pricehub-backend:latest",
+      "essential": true,
+      "dependsOn": [
+        {
+          "containerName": "postgres",
+          "condition": "START"
+        }
+      ],
+      "portMappings": [
+        {
+          "containerPort": 3000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "DATABASE_URL",
+          "value": "postgresql://postgres:#########################################################@localhost:5432/pricehub_staging"
+        },
+        {
+          "name": "NODE_ENV",
+          "value": "production"
+        },
+        {
+          "name": "PORT",
+          "value": "3000"
+        },
+        {
+          "name": "JWT_SECRET",
+          "value": "############################################################################"
+        },
+        {
+          "name": "JWT_EXPIRATION",
+          "value": "15m"
+        },
+        {
+          "name": "JWT_REFRESH_SECRET",
+          "value": "############################################################################"
+        },
+        {
+          "name": "JWT_REFRESH_EXPIRATION",
+          "value": "7d"
+        },
+        {
+          "name": "PASSWORD_PEPPER",
+          "value": "################################################"
+        },
+        {
+          "name": "API_PREFIX",
+          "value": "api/v1"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/pricehub-staging",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "backend"
+        }
+      },
+      "command": [
+        "sh",
+        "-c",
+        "npx prisma migrate deploy && node dist/prisma/seed.js && node dist/src/main"
+       ]
+    }
+  ],
+  "volumes": [
+    {
+      "name": "postgres-data"
+    }
+  ]
+}

@@ -80,7 +80,6 @@ apiClient.interceptors.response.use(
       }
 
       try {
-        // ✅ REMOVIDO: Authorization header do refresh
         // O backend não precisa validar o access token no refresh
         const { data } = await axios.post(
           `${API_URL}/auth/refresh`,

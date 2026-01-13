@@ -1,54 +1,58 @@
-// src/components/layout/Sidebar.tsx
-import { NavLink } from 'react-router-dom';
+import { NavLink } from "react-router-dom";
 import {
   Boxes,
+  Layers,
   Component,
   Landmark,
   Truck,
   PieChart,
   Users,
-  Building,
-} from 'lucide-react';
+} from "lucide-react";
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
-import type { UserRole } from '@/types/api';
 
 const navItems = [
   {
-    label: 'Produtos',
-    path: '/produtos',
+    label: "Estruturas",
+    path: "/produtos",
     icon: Boxes,
+    allowedRoles: ["ADMIN", "COMERCIAL"],
+  },
+  {
+    label: 'Grupos',
+    path: '/grupos',
+    icon: Layers,
     allowedRoles: ['ADMIN', 'COMERCIAL'],
   },
   {
-    label: 'Matérias-primas',
+    label: 'Produtos',
     path: '/materias-primas',
     icon: Component,
-    allowedRoles: ['ADMIN', 'COMERCIAL', 'IMPOSTO'],
+    allowedRoles: ["ADMIN", "COMERCIAL", "IMPOSTO"],
   },
   {
-    label: 'Premissas',
-    path: '/premissas',
+    label: "Impostos",
+    path: "/impostos",
     icon: Landmark,
-    allowedRoles: ['ADMIN', 'IMPOSTO', 'COMERCIAL'],
+    allowedRoles: ["ADMIN", "IMPOSTO", "COMERCIAL"],
   },
   {
-    label: 'Frete',
-    path: '/frete',
+    label: "Frete",
+    path: "/frete",
     icon: Truck,
-    allowedRoles: ['ADMIN', 'LOGISTICA'],
+    allowedRoles: ["ADMIN", "LOGISTICA"],
   },
   {
-    label: 'Custos Fixos',
-    path: '/custos-fixos',
+    label: "Custos Fixos",
+    path: "/custos-fixos",
     icon: PieChart,
-    allowedRoles: ['ADMIN'],
+    allowedRoles: ["ADMIN"],
   },
   {
-    label: 'Usuários',
-    path: '/usuarios',
+    label: "Usuários",
+    path: "/usuarios",
     icon: Users,
-    allowedRoles: ['ADMIN'],
+    allowedRoles: ["ADMIN"],
   },
 ];
 
@@ -59,27 +63,86 @@ export function Sidebar() {
     (item) => user && item.allowedRoles.includes(user.role)
   );
 
-  const baseLinkClass =
-    'flex items-center gap-3 rounded-lg px-3 py-2 text-gray-300 transition-all hover:text-white hover:bg-gray-700';
-  const activeLinkClass = 'bg-gray-700 text-white';
-
   return (
-    <aside className="hidden w-64 flex-col border-r bg-gray-800 p-4 md:flex">
-      <div className="flex h-16 items-center gap-2 px-3 text-white">
-        <Building className="h-6 w-6" />
-        <span className="text-xl font-semibold">GR Water</span>
+    <aside
+      className="
+        fixed left-4 top-1/2 -translate-y-1/2
+        z-50
+        flex flex-col 
+        w-16 hover:w-52
+        bg-gray-900 
+        rounded-2xl shadow-2xl 
+        py-4
+        transition-all duration-300
+        overflow-hidden
+        group 
+      "
+    >
+      {/* Logo Container */}
+      <div className="flex items-center mb-6 px-4">
+        {/* Logo - Sempre fixo à esquerda */}
+        <div
+          className="
+            flex-shrink-0 
+            h-8 w-8 
+            flex items-center justify-center 
+            bg-gray-100/90 
+            rounded-md 
+            p-0.5
+          "
+        >
+          <img
+            src="/logo_symbol.png"
+            alt="GR Water Logo Symbol"
+            className="h-full w-full object-contain"
+          />
+        </div>
+
+        {/* Texto - Aparece no hover */}
+        <span
+          className="
+            ml-3
+            text-lg font-semibold text-white
+            whitespace-nowrap 
+            opacity-0 
+            transition-opacity duration-300 
+            group-hover:opacity-100
+          "
+        >
+          GR Water
+        </span>
       </div>
-      <nav className="flex flex-1 flex-col gap-1 mt-4">
+
+      {/* Navegação */}
+      <nav className="flex flex-col gap-2 px-2">
         {accessibleNavItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             className={({ isActive }) =>
-              cn(baseLinkClass, isActive && activeLinkClass)
+              cn(
+                "relative flex items-center rounded-xl py-2.5 text-gray-300 transition-all duration-300 hover:bg-gray-700 hover:text-white",
+                isActive && "bg-gray-700 text-white shadow-md"
+              )
             }
           >
-            <item.icon className="h-4 w-4" />
-            {item.label}
+            {/* Container do Ícone - Largura fixa */}
+            <div className="flex items-center justify-center w-12 flex-shrink-0">
+              <item.icon className="h-5 w-5" />
+            </div>
+
+            {/* Texto - Aparece no hover do grupo */}
+            <span
+              className="
+                whitespace-nowrap 
+                opacity-0 
+                transition-opacity duration-300 
+                group-hover:opacity-100
+                pr-4
+              "
+            >
+              {item.label}
+            </span>
           </NavLink>
         ))}
       </nav>
