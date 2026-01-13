@@ -79,11 +79,19 @@ export default function Login() {
             - 'mb-10' para dar mais espaço.
           */}
           <div className="rounded-3xl bg-gray-100/30 p-4 pb-6 mb-6">
+            <a
+              href="https://grwatersolutions.com.br/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="GR Water Solutions - Visite o site"
+              className="inline-block group focus:outline-none focus:ring-2 focus:ring-blue-400 rounded-xl"
+            >
               <img
                 src="/logo_symbol_and_letters_light.png"
                 alt="Logo Sistema de Precificação"
-                className="w-full max-w-lg mx-auto"
+                className="w-full max-w-lg mx-auto transform transition duration-200 ease-in-out group-hover:scale-105 group-hover:shadow-lg cursor-pointer"
               />
+            </a>
           </div>
           <h1 className="text-white text-4xl font-bold mb-4">
             Sistema de Precificação
@@ -105,13 +113,21 @@ export default function Login() {
             - 'lg:hidden' (exibido apenas em telas menores que 'lg' 1024px)
           */}
           <div className="lg:hidden text-center mb-8">
-            <div className="w-32 h-32 mx-auto mb-4  rounded-2xl flex items-center justify-center p-3">
-              <img
-                src="/logo_symbol.png"
-                alt="Logo"
-                className="w-full h-full object-contain"
-              />
-            </div>
+            <a
+              href="https://grwatersolutions.com.br/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="GR Water Solutions - Visite o site"
+              className="inline-block focus:outline-none focus:ring-2 focus:ring-blue-400 rounded-2xl"
+            >
+              <div className="w-32 h-32 mx-auto mb-4 rounded-2xl flex items-center justify-center p-3 overflow-hidden">
+                <img
+                  src="/logo_symbol.png"
+                  alt="Logo"
+                  className="w-full h-full object-contain transform transition duration-200 ease-in-out hover:scale-105 cursor-pointer"
+                />
+              </div>
+            </a>
             <h2 className="text-2xl font-bold text-gray-900">
               Sistema de Precificação
             </h2>
@@ -185,6 +201,18 @@ export default function Login() {
 
           <div className="mt-8 text-center text-sm text-gray-500">
             <p>© 2025 Sistema de Precificação. Todos os direitos reservados.</p>
+            <p className="mt-2">
+              Pertence a{' '}
+              <a
+                href="https://grwatersolutions.com.br/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 hover:underline font-medium"
+                aria-label="GR Water Solutions - Visite o site"
+              >
+                GR Water Solutions
+              </a>
+            </p>
           </div>
         </div>
       </div>

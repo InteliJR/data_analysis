@@ -424,7 +424,11 @@ export class ProductsService {
         priceWithoutTaxesAndFreight: null,
         totalCostWithAllFreights: null,
         productRawMaterials: {
-          create: composition.map((rm) => ({ rawMaterialId: rm.rawMaterialId, quantity: rm.quantity })),
+          create: composition.map((rm) => ({
+            rawMaterialId: rm.rawMaterialId,
+            rawMaterialLocationPivotId: rm.rawMaterialLocationPivotId,
+            quantity: rm.quantity,
+          })),
         },
         creator: { connect: { id: creatorIdToUse! } },
       };

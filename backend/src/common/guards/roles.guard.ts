@@ -25,6 +25,14 @@ export class RolesGuard implements CanActivate {
 
     // 4. Verificar se usuário tem alguma das roles requeridas
     const hasRole = requiredRoles.some((role) => user?.role === role);
+    // Debug: log roles evaluation
+    if (!hasRole) {
+      const currentRole = user?.role;
+      const rolesList = requiredRoles.join(', ');
+      // Use console.warn to ensure visibility regardless of Nest logger level
+      // eslint-disable-next-line no-console
+      console.warn(`RolesGuard: usuário com role=${currentRole} não possui uma das necessárias: ${rolesList}`);
+    }
 
     if (!hasRole) {
       throw new ForbiddenException(

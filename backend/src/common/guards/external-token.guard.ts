@@ -1,4 +1,5 @@
 import { CanActivate, ExecutionContext, Injectable, Logger } from '@nestjs/common';
+import { UserRole } from '@prisma/client';
 
 // Guard para autorizar requisições externas via token estático (sem login)
 // Usa o header Authorization: Bearer <EXTERNAL_API_TOKEN>
@@ -38,7 +39,8 @@ export class ExternalTokenGuard implements CanActivate {
       id: 'system-external-user',
       sub: 'system-external-user',
       email: 'external@system.local',
-      role: 'COMERCIAL',
+      role: UserRole.COMERCIAL,
+      isActive: true,
     };
 
     return true;
